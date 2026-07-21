@@ -1,0 +1,142 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes phase ordering from phase_energies.csv and compares to paper-reported crossover values; collinearity is verified against the paper's collinearity claim with a threshold.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "phase_energies.csv": "metric_recompute",
+    "crossover_values.json": "reference_match",
+    "collinearity_result.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Crossover U/t values and collinearity threshold",
+      "source_provenance": "Paper Fig.1 and text: vertical-diagonal crossover ~3.6, diagonal-polaron ~8.0; collinearity: spins collinear for U/t <= 20",
+      "generation_method": "Extracted from paper's reported values",
+      "why_not_fabricated": "These are the actual published numbers; the checker merely verifies that reproduction aligns with those values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phase_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "U_over_t",
+            "phase",
+            "energy_per_site"
+          ]
+        },
+        "description": "CSV with columns U_over_t (float), phase (string: vertical_wall, diagonal_wall, polaron), energy_per_site (float). Rows for U/t = 2,4,6,8,10,12,14,16,18,20 for each phase."
+      },
+      {
+        "file": "crossover_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "vertical_to_diagonal_crossover_U_over_t": "float",
+            "diagonal_to_polaron_crossover_U_over_t": "float"
+          }
+        },
+        "description": "JSON object with two crossover U/t midpoints derived from the lowest-energy phase data."
+      },
+      {
+        "file": "collinearity_result.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "collinear_for_U_t_le_20": "boolean",
+            "max_angular_deviation_degrees": "float"
+          }
+        },
+        "description": "JSON object with collinearity boolean and maximum angular deviation. The checker verifies that collinear_for_U_t_le_20 is true and max_angular_deviation_degrees < 5."
+      }
+    ],
+    "notes": "The simulation produces a raw evidence file (converged_spins_charge.npz) which is not scored but required for downstream steps. The checker recomputes crossover U/t values from phase_energies.csv and compares them to paper-reported references with tolerance. Collinearity result is verified against the 5-degree bound."
+  },
+  "steps": [
+    {
+      "id": "phase_energies_check",
+      "output_file": "phase_energies.csv",
+      "kind": "custom",
+      "weight": 0.6,
+      "target_policy": "metric_recompute",
+      "description": "Verify that the lowest-energy phase at each U/t matches the expected phase sequence (vertical at U=2, diagonal at U=4,6; either diagonal or polaron at U=8; polaron at higher U)",
+      "gold": {
+        "phase_expected": {
+          "2": [
+            "vertical_wall"
+          ],
+          "4": [
+            "diagonal_wall"
+          ],
+          "6": [
+            "diagonal_wall"
+          ],
+          "8": [
+            "diagonal_wall",
+            "polaron"
+          ],
+          "10": [
+            "polaron"
+          ],
+          "12": [
+            "polaron"
+          ],
+          "14": [
+            "polaron"
+          ],
+          "16": [
+            "polaron"
+          ],
+          "18": [
+            "polaron"
+          ],
+          "20": [
+            "polaron"
+          ]
+        }
+      }
+    },
+    {
+      "id": "crossover_values_check",
+      "output_file": "crossover_values.json",
+      "kind": "json_field",
+      "weight": 0.2,
+      "target_policy": "reference_match",
+      "description": "Verify that reported crossover values are within tolerance of paper gold (3.6 and 8.0 with ±0.5)",
+      "gold": {
+        "vertical_to_diagonal_crossover_U_over_t": {
+          "target": 3.6,
+          "tolerance": 0.5
+        },
+        "diagonal_to_polaron_crossover_U_over_t": {
+          "target": 8.0,
+          "tolerance": 0.5
+        }
+      }
+    },
+    {
+      "id": "collinearity_check",
+      "output_file": "collinearity_result.json",
+      "kind": "json_field",
+      "weight": 0.2,
+      "target_policy": "threshold_or_better",
+      "description": "Verify collinearity claim: boolean true and max angular deviation < 5°",
+      "gold": {
+        "collinear_for_U_t_le_20": true,
+        "max_angular_deviation_degrees": 5.0
+      }
+    }
+  ]
+}

@@ -1,208 +1,137 @@
 from __future__ import annotations
 
-import json
-import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from tests.test_materials_benchmark_review_e1 import (
-    REPO_ROOT,
-    RUNNER,
-    copy_source_package,
-    run_review,
-    write_public_valid_dispersion,
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS = (
+    REPO_ROOT
+    / ".cursor"
+    / "skills"
+    / "materials-benchmark-review"
+    / "scripts"
 )
+sys.path.insert(0, str(SCRIPTS))
+
+import deterministic_contract  # noqa: E402
+import dynamic_checker_probe  # noqa: E402
 
 
 class MaterialsCheckerScientificProbeTests(unittest.TestCase):
-    def test_missing_public_valid_fixture_is_scored_as_a_limitation(
-        self,
-    ) -> None:
+    def test_schema_derived_cases_include_malformed_full_partial_and_wrong(self) -> None:
+        specification = {
+            "output_contract": {
+                "outputs": [
+                    {
+                        "file": "result.json",
+                        "format": "json",
+                        "schema": {"required": {"prediction": {"type": "number"}}},
+                    },
+                    {
+                        "file": "support.csv",
+                        "format": "csv",
+                        "schema": {
+                            "required_columns": [
+                                {"name": "x"},
+                                {"name": "y"},
+                            ]
+                        },
+                    },
+                ]
+            },
+            "steps": [
+                {"id": "result", "output_file": "result.json", "weight": 0.6},
+                {"id": "support", "output_file": "support.csv", "weight": 0.4},
+            ],
+        }
         with tempfile.TemporaryDirectory() as temporary:
-            workspace = Path(temporary)
-            package = workspace / "paper-fixture"
-            copy_source_package(package)
-
-            completed = subprocess.run(
-                [
-                    sys.executable,
-                    str(RUNNER),
-                    str(package),
-                    "--paper-mode",
-                    "no_paper",
-                    "--execution-level",
-                    "E1",
-                ],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                timeout=120,
-                check=False,
+            oracle = Path(temporary) / "oracle"
+            oracle.mkdir()
+            dynamic_checker_probe.write_synthetic_outputs(
+                oracle, specification, "full"
+            )
+            plan, reason = dynamic_checker_probe.schema_derived_probe_plan(
+                specification, oracle
             )
 
-            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
-            checker = json.loads(
-                (package / "benchmark_audit/checker_tests.json").read_text(
-                    encoding="utf-8"
-                )
+        self.assertIsNone(reason)
+        self.assertEqual(plan[0]["case"], "all_wrong")
+        self.assertEqual(
+            [item["case"] for item in plan[1:]],
+            ["partial__result", "partial__support"],
+        )
+        self.assertTrue(
+            all(
+                item["probe_origin"] == "SCHEMA_DERIVED_DETERMINISTIC"
+                for item in plan
             )
-            coverage = checker["probe_coverage"]
-            self.assertEqual(coverage["negative"]["status"], "ASSESSED")
-            self.assertEqual(
-                coverage["discrimination"]["status"], "NOT_ASSESSABLE"
-            )
-            self.assertEqual(
-                coverage["equivalence"]["status"], "NOT_ASSESSABLE"
-            )
-            self.assertFalse(
-                coverage["discrimination"]["provenance"]["oracle_used"]
-            )
-            report = json.loads(
-                (package / "benchmark_audit/audit_report.json").read_text(
-                    encoding="utf-8"
-                )
-            )
-            robustness = next(
-                item
-                for item in report["dimension_scores"]
-                if item["dimension"] == "robustness_discrimination"
-            )
-            self.assertIn(
-                robustness["status"], {"PASS", "WARNING", "FAIL"}
-            )
-            self.assertIsInstance(
-                robustness["points_earned"], (int, float)
-            )
-            self.assertTrue(robustness["evidence"])
-            self.assertIn(
-                "INDEPENDENT_PUBLIC_FIXTURE_UNAVAILABLE",
-                {finding["title"] for finding in report["findings"]},
-            )
+        )
 
-    def test_public_audit_runs_gaming_gradient_and_invariance_probes(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            workspace = Path(temporary)
-            package = workspace / "paper-fixture"
-            copy_source_package(package)
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
-
-            completed = run_review(package, valid_output)
-
-            self.assertEqual(
-                completed.returncode,
-                0,
-                msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
-            )
-            audit = json.loads(
-                (package / "benchmark_audit/checker_tests.json").read_text(
-                    encoding="utf-8"
-                )
-            )
-            tests = {item["test_type"]: item for item in audit["tests"]}
-            self.assertTrue(
-                {
-                    "missing_outputs",
-                    "empty_valid_shape",
-                    "malformed_outputs",
-                    "random_baseline",
-                    "minimal_gold_shape",
-                    "duplicate_gold_rows",
-                    "nonfinite_values",
-                    "known_valid_public",
-                    "quality_gradient_small_error",
-                    "quality_gradient_large_error",
-                    "metamorphic_equivalent_representation",
-                }.issubset(tests)
-            )
-            valid_score = tests["known_valid_public"]["observed_score"]
-            small_score = tests["quality_gradient_small_error"]["observed_score"]
-            large_score = tests["quality_gradient_large_error"]["observed_score"]
-            equivalent_score = tests[
-                "metamorphic_equivalent_representation"
-            ]["observed_score"]
-            self.assertGreaterEqual(valid_score, small_score)
-            self.assertGreaterEqual(small_score, large_score)
-            self.assertAlmostEqual(valid_score, equivalent_score, places=9)
-            self.assertFalse(
-                {
-                    "SCIENTIFIC_QUALITY_GRADIENT_VIOLATION",
-                    "SCIENTIFIC_INVARIANCE_VIOLATION",
-                }
-                & {item["code"] for item in audit["findings"]}
-            )
-            self.assertFalse(audit["solution_content_inspected"])
-            self.assertEqual(
-                set(audit["probe_coverage"]),
-                {
-                    "positive",
-                    "negative",
-                    "discrimination",
-                    "equivalence",
-                    "component_isolation",
-                },
-            )
-
-    def test_equivalent_representation_defect_is_repairable(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            workspace = Path(temporary)
-            package = workspace / "paper-fixture"
-            copy_source_package(package)
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
-
-            checker_path = package / "tests/checker.py"
-            checker_path.write_text(
-                """
-import csv
-import json
-import os
-
-output = "/app/outputs/dispersion_curves.csv"
-reward = 0.0
-if os.path.isfile(output):
-    try:
-        with open(output, newline="", encoding="utf-8") as handle:
-            reader = csv.DictReader(handle)
-            rows = list(reader)
-        if rows and reader.fieldnames == ["direction", "mode", "k", "frequency"]:
-            reward = 1.0
-    except (csv.Error, UnicodeError):
-        reward = 0.0
-os.makedirs("/logs/verifier", exist_ok=True)
-with open("/logs/verifier/reward.txt", "w", encoding="utf-8") as handle:
-    handle.write(str(reward))
-with open("/logs/verifier/breakdown.json", "w", encoding="utf-8") as handle:
-    json.dump({"order_sensitive_fixture": reward}, handle)
-""",
-                encoding="utf-8",
-            )
-
-            completed = run_review(package, valid_output)
-
-            self.assertEqual(
-                completed.returncode,
-                0,
-                msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
-            )
-            report = json.loads(
-                (package / "benchmark_audit/audit_report.json").read_text(
-                    encoding="utf-8"
-                )
-            )
-            findings = {
-                item["title"]: item for item in report["findings"]
+    def test_malformed_outputs_are_generated_from_declared_contract(self) -> None:
+        specification = {
+            "output_contract": {
+                "outputs": [
+                    {
+                        "file": "result.json",
+                        "format": "json",
+                        "schema": {"required": {"prediction": {"type": "number"}}},
+                    }
+                ]
             }
-            self.assertEqual(
-                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            created = dynamic_checker_probe.write_malformed_outputs(
+                output, specification
             )
-            self.assertFalse(report["summary"]["hard_gate_triggered"])
+            self.assertEqual(created, ["result.json"])
             self.assertEqual(
-                findings["SCIENTIFIC_INVARIANCE_VIOLATION"]["severity"],
-                "HIGH",
+                (output / "result.json").read_text(encoding="utf-8"),
+                '{"malformed": ',
             )
+
+    def test_quality_findings_have_no_deterministic_ownership(self) -> None:
+        findings = deterministic_contract.annotate_findings(
+            [
+                {
+                    "finding_id": "quality-1",
+                    "title": "SCIENTIFIC_QUALITY_GRADIENT_VIOLATION",
+                    "status": "OPEN",
+                    "repairable": True,
+                    "evidence": {"probe_class": "discrimination"},
+                },
+                {
+                    "finding_id": "core-1",
+                    "title": "CORE_RUNTIME_ORDERING_VIOLATION",
+                    "status": "OPEN",
+                    "repairable": True,
+                    "evidence": {"deterministic_core": True},
+                },
+            ]
+        )
+        by_id = {item["finding_id"]: item for item in findings}
+        self.assertEqual(by_id["quality-1"]["lane"], "quality_results")
+        self.assertIsNone(by_id["quality-1"]["deterministic_check"])
+        self.assertFalse(by_id["quality-1"]["blocking"])
+        self.assertEqual(by_id["core-1"]["deterministic_check"], "D6")
+        self.assertTrue(by_id["core-1"]["blocking"])
+
+    def test_oracle_is_the_only_positive_probe_source(self) -> None:
+        specification = {
+            "output_contract": {
+                "outputs": [{"file": "result.json", "format": "json"}]
+            },
+            "steps": [{"id": "result", "output_file": "result.json", "weight": 1.0}],
+        }
+        plan, reason = dynamic_checker_probe.schema_derived_probe_plan(
+            specification, None
+        )
+        self.assertEqual(plan, [])
+        self.assertIn("isolated Oracle", reason or "")
+
 
 
 if __name__ == "__main__":

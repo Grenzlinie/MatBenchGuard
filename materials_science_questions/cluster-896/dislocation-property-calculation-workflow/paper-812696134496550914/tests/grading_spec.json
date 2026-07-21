@@ -1,0 +1,49 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Cannot recompute the acoustic tensor analysis or FEM simulation from scratch; check internal consistency and that both instability modes are reported.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "alpha_c_stability": "float",
+            "alpha_c_simulation": "float",
+            "stability_modes": "array of objects"
+          },
+          "items": {
+            "zeta_angle_deg": "float",
+            "eta_angle_deg": "float"
+          },
+          "required_columns": [],
+          "units": {
+            "alpha_c_stability": "dimensionless",
+            "alpha_c_simulation": "dimensionless",
+            "zeta_angle_deg": "degrees",
+            "eta_angle_deg": "degrees"
+          }
+        },
+        "description": "Combined critical shear values from linear stability analysis and finite element simulation, and orientations of the two instability modes."
+      }
+    ],
+    "notes": "The checker will verify that |alpha_c_stability - alpha_c_simulation| is within a tolerance and that the instability mode direction vectors align with the deformed lattice vectors (loading and perpendicular directions) within an angular tolerance. Optionally, it may check that the stress drop in stress_strain.csv coincides with alpha_c_simulation."
+  },
+  "steps": [
+    {
+      "id": "results_consistency",
+      "output_file": "results.json",
+      "kind": "rubric",
+      "weight": 1.0,
+      "tolerance_alpha_abs": 0.05
+    }
+  ]
+}

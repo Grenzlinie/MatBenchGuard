@@ -1,0 +1,74 @@
+{
+  "scoring_tier": "result-level-compare",
+  "scoring_justification": "T0 result-level compare: the agent outputs the extracted K_I_norm and T_norm values; recompute from raw FE output is infeasible in the checker sandbox. The checker compares the reported values against the paper’s own published results with relative tolerances.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "/app/outputs/sent_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "columns": [
+            "a_over_w",
+            "K_I_norm",
+            "T_norm"
+          ]
+        },
+        "description": "Normalized mode I stress intensity factor and T-stress for SENT specimen at six crack length ratios."
+      }
+    ],
+    "notes": "Verifier compares the computed values against reference tolerances."
+  },
+  "steps": [
+    {
+      "id": "sent_results",
+      "output_file": "sent_results.csv",
+      "weight": 1.0,
+      "kind": "numeric_compare",
+      "target_policy": "threshold_or_better",
+      "description": "Compare K_I_norm and T_norm for each a/w to hidden gold values using relative error tolerances.",
+      "gold": {
+        "0.2": {
+          "K_I_norm": 1.373,
+          "T_norm": -0.437
+        },
+        "0.3": {
+          "K_I_norm": 1.664,
+          "T_norm": -0.368
+        },
+        "0.4": {
+          "K_I_norm": 2.11,
+          "T_norm": -0.271
+        },
+        "0.5": {
+          "K_I_norm": 2.811,
+          "T_norm": -0.146
+        },
+        "0.6": {
+          "K_I_norm": 3.99,
+          "T_norm": 0.013
+        },
+        "0.7": {
+          "K_I_norm": 6.297,
+          "T_norm": 0.212
+        }
+      },
+      "tolerance": {
+        "K_I_rel": 0.05,
+        "T_rel": 0.1
+      },
+      "scoring": "Per row: compute relative error for K_I_norm and T_norm. Full credit if error ≤ tolerance; linear decay to zero at 2× tolerance. Row score = min(KI_score, T_score). Overall score = average of six row scores."
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for K_I_norm and T_norm per crack length ratio (paper’s three‑level FE results for R=1.0ℓ).",
+      "source_provenance": "Paper Tables 1 and 2, ‘Three‑level FE (present)’ R=1.0ℓ column.",
+      "generation_method": "Direct transcription from the published tables.",
+      "why_not_fabricated": "These are the exact reference values the paper reports; they represent the target the agent’s implementation should reproduce."
+    }
+  ]
+}

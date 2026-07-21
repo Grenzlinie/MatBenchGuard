@@ -468,11 +468,7 @@ class FastE1BatchTests(unittest.TestCase):
             )
             scoring = record["evidence"]["cli_scoring"]
             self.assertEqual(
-                scoring["scoring_version"], "materials-review-scoring/1.1"
-            )
-            self.assertEqual(
-                scoring["legacy_scoring_version"],
-                "materials-review-scoring/1.0",
+                scoring["scoring_version"], "materials-review-scoring/2.0"
             )
             self.assertIsNone(scoring["total_score"])
             self.assertTrue(
@@ -491,7 +487,7 @@ class FastE1BatchTests(unittest.TestCase):
             ]
             self.assertEqual(
                 evidence_snapshot["contract_version"],
-                "materials-evidence-contract/1.0",
+                "materials-evidence-contract/2.0",
             )
             self.assertEqual(
                 evidence_snapshot["checker_tests_path"],

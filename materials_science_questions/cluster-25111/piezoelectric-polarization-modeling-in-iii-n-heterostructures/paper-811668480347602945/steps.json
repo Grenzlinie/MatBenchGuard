@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_strain",
+    "title": "Compute strain under hydrostatic pressure",
+    "role": "process",
+    "action": "Using anisotropic linear elasticity, calculate the strain tensor components in each layer of the wurtzite (on sapphire) and cubic (on SiC) heterostructures for pressures 0–10 GPa, assuming pseudomorphic growth and in-plane strain set by the substrate. For wurtzite GaN/AlGaN, include well widths from 6 to 32 monolayers; for wurtzite InGaN/GaN, include well widths 1–5 nm; for cubic InGaN/GaN, include well widths 0.6–5 nm.",
+    "output_file": "",
+    "evidence": "strain_output.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Strain tensor components for every layer at each pressure, needed for polarization and band‑edge shifts.",
+    "output_schema": "JSON object containing strain tensor arrays per layer per pressure."
+  },
+  {
+    "id": "step_polarization_field",
+    "title": "Calculate piezoelectric polarization and internal electric fields (wurtzite only)",
+    "role": "process",
+    "action": "For the wurtzite GaN/AlGaN and InGaN/GaN structures, use the strain tensors from step_strain together with strain‑dependent piezoelectric constants (Shimada 1998) and spontaneous polarizations (Bernardini 2001) to compute the total polarization and the built‑in electric field in the quantum well and barriers. Compute for each well width and each pressure.",
+    "output_file": "",
+    "evidence": "field_profile.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Polarization values and built‑in electric field profiles needed by the effective‑mass solver.",
+    "output_schema": "JSON object containing polarization and electric field vectors per layer per pressure."
+  },
+  {
+    "id": "step_gaaln_results",
+    "title": "GaN/AlGaN pressure coefficients and fields",
+    "role": "scored",
+    "action": "Solve the one‑dimensional effective‑mass Schrödinger equation for electrons and heavy holes in each GaN quantum well of the wurtzite GaN/AlGaN MQW structure at pressures 0–10 GPa, using the electric field profile from step_polarization_field. Perform a linear fit of the fundamental transition energy vs pressure to extract dE_E/dP for each well width (6–32 ML). Record also the electric field in the 8 nm well at 0 and 10 GPa.",
+    "output_file": "step_01_gaaln_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "List of dicts with pressure coefficients and electric fields for GaN/AlGaN quantum wells.",
+    "output_schema": "List of objects: each object has keys well_width_ML (int), thickness_nm (float), dE_dP_meV_per_GPa (float), field_0_GPa_MV_per_cm (float), field_10_GPa_MV_per_cm (float)."
+  },
+  {
+    "id": "step_ingan_wurtzite_results",
+    "title": "Wurtzite InGaN/GaN pressure coefficients",
+    "role": "scored",
+    "action": "Using the field profile from step_polarization_field for the wurtzite In0.2Ga0.8N/GaN QWs, solve the effective‑mass equations and obtain dE_E/dP (meV/GPa) for each well width (1–5 nm) by linear fitting of transition energy vs pressure.",
+    "output_file": "step_02_ingan_wurtzite_results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Pressure coefficients for wurtzite InGaN/GaN quantum wells.",
+    "output_schema": "List of objects: each object has keys well_width_nm (float), dE_dP_meV_per_GPa (float)."
+  },
+  {
+    "id": "step_ingan_cubic_results",
+    "title": "Cubic InGaN/GaN pressure coefficients",
+    "role": "scored",
+    "action": "For the cubic In0.1Ga0.9N/GaN QWs (zero internal electric field), solve the effective‑mass equations using the strain state from step_strain to adjust the band gap via hydrostatic deformation potentials. Compute dE_E/dP for each well width (0.6–5 nm) by linear fitting.",
+    "output_file": "step_03_ingan_cubic_results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Pressure coefficients for cubic InGaN/GaN quantum wells.",
+    "output_schema": "List of objects: each object has keys well_width_nm (float), dE_dP_meV_per_GPa (float)."
+  }
+]

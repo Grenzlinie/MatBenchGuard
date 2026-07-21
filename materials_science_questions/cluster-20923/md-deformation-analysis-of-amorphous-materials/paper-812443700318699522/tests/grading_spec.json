@@ -1,0 +1,243 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute a/r_c ratio from the agent's reported a and r_c, compute expected required_ratio_for_zero analytically, and compare is_zero against paper‑described extinction pattern.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "step_01_zero_analysis.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected extinction booleans for (200) and (111) under ambient and compressed conditions.",
+      "source_provenance": "Paper Section 5 and Fig. 12: (200) line absent at low pressure, increases under compression; (111) line disappears as pressure increases.",
+      "generation_method": "Extracted from the paper's text describing the pressure‑dependent diffraction line intensities.",
+      "why_not_fabricated": "Taken directly from the paper's qualitative statement, which is the core of the model's prediction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_zero_analysis.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "description": "Contains ambient and compressed conditions with computed zero-condition ratios and extinction booleans.",
+          "properties": {
+            "ambient": {
+              "type": "object",
+              "properties": {
+                "a": {
+                  "type": "number",
+                  "description": "Lattice constant in Angstrom"
+                },
+                "r_c": {
+                  "type": "number",
+                  "description": "Molecular radius in Angstrom"
+                },
+                "reflections": {
+                  "type": "object",
+                  "properties": {
+                    "200": {
+                      "type": "object",
+                      "properties": {
+                        "a_r_c_ratio": {
+                          "type": "number"
+                        },
+                        "required_ratio_for_zero": {
+                          "type": "number"
+                        },
+                        "is_zero": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "a_r_c_ratio",
+                        "required_ratio_for_zero",
+                        "is_zero"
+                      ]
+                    },
+                    "111": {
+                      "type": "object",
+                      "properties": {
+                        "a_r_c_ratio": {
+                          "type": "number"
+                        },
+                        "required_ratio_for_zero": {
+                          "type": "number"
+                        },
+                        "is_zero": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "a_r_c_ratio",
+                        "required_ratio_for_zero",
+                        "is_zero"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "200",
+                    "111"
+                  ]
+                }
+              },
+              "required": [
+                "a",
+                "r_c",
+                "reflections"
+              ]
+            },
+            "compressed": {
+              "type": "object",
+              "properties": {
+                "a": {
+                  "type": "number"
+                },
+                "r_c": {
+                  "type": "number"
+                },
+                "reflections": {
+                  "type": "object",
+                  "properties": {
+                    "200": {
+                      "type": "object",
+                      "properties": {
+                        "a_r_c_ratio": {
+                          "type": "number"
+                        },
+                        "required_ratio_for_zero": {
+                          "type": "number"
+                        },
+                        "is_zero": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "a_r_c_ratio",
+                        "required_ratio_for_zero",
+                        "is_zero"
+                      ]
+                    },
+                    "111": {
+                      "type": "object",
+                      "properties": {
+                        "a_r_c_ratio": {
+                          "type": "number"
+                        },
+                        "required_ratio_for_zero": {
+                          "type": "number"
+                        },
+                        "is_zero": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "a_r_c_ratio",
+                        "required_ratio_for_zero",
+                        "is_zero"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "200",
+                    "111"
+                  ]
+                }
+              },
+              "required": [
+                "a",
+                "r_c",
+                "reflections"
+              ]
+            }
+          },
+          "required": [
+            "ambient",
+            "compressed"
+          ]
+        },
+        "description": "Analysis of diffraction line extinction for (200) and (111) reflections of C60 fullerite under ambient and compressed conditions based on the spherical-shell molecular form factor model."
+      }
+    ],
+    "notes": "The hidden checker recomputes the expected zero conditions using the same equations and verifies that the reported is_zero values match the expected extinction behavior (200 extinct at ambient, appearing under compression; 111 vice versa) with tolerances on ratios."
+  },
+  "steps": [
+    {
+      "id": "step_01_zero_analysis",
+      "output_file": "step_01_zero_analysis.json",
+      "weight": 1.0,
+      "kind": "recompute_structural",
+      "tolerance_ratio_relative": 0.005,
+      "tolerance_required_ratio_relative": 0.005,
+      "sub_checks": [
+        {
+          "type": "a_r_c_ratio",
+          "condition": "ambient",
+          "reflection": "200",
+          "weight": 0.1
+        },
+        {
+          "type": "a_r_c_ratio",
+          "condition": "compressed",
+          "reflection": "200",
+          "weight": 0.1
+        },
+        {
+          "type": "required_ratio",
+          "condition": "ambient",
+          "reflection": "200",
+          "weight": 0.15
+        },
+        {
+          "type": "required_ratio",
+          "condition": "ambient",
+          "reflection": "111",
+          "weight": 0.15
+        },
+        {
+          "type": "required_ratio",
+          "condition": "compressed",
+          "reflection": "200",
+          "weight": 0.15
+        },
+        {
+          "type": "required_ratio",
+          "condition": "compressed",
+          "reflection": "111",
+          "weight": 0.15
+        },
+        {
+          "type": "is_zero",
+          "condition": "ambient",
+          "reflection": "200",
+          "expected": true,
+          "weight": 0.05
+        },
+        {
+          "type": "is_zero",
+          "condition": "ambient",
+          "reflection": "111",
+          "expected": false,
+          "weight": 0.05
+        },
+        {
+          "type": "is_zero",
+          "condition": "compressed",
+          "reflection": "200",
+          "expected": false,
+          "weight": 0.05
+        },
+        {
+          "type": "is_zero",
+          "condition": "compressed",
+          "reflection": "111",
+          "expected": true,
+          "weight": 0.05
+        }
+      ]
+    }
+  ]
+}

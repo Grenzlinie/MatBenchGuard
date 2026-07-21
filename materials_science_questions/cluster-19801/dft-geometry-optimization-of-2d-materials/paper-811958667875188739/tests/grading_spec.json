@@ -1,0 +1,105 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Only the final CSV of extracted structural parameters is submitted; recompute from raw artifacts is infeasible because no raw DFT output or coordinate file is required. Value comparison with tolerances and trend checks is used.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference buckling angles and bond lengths for Si-P heterodimer from Table III",
+      "source_provenance": "Paper Table III, Si-P data (excludes As values). 4x4 surface unit cell.",
+      "generation_method": "Extracted directly from the paper's Table III for the Si-P heterodimer.",
+      "why_not_fabricated": "These are the published reference values from the source paper; the task verifies reproduction of these specific structural parameters."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "structural_parameters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "configuration",
+            "charge_state",
+            "buckling_angle_deg",
+            "bond_length_A"
+          ],
+          "units": {
+            "buckling_angle_deg": "degrees",
+            "bond_length_A": "angstroms"
+          }
+        },
+        "description": "Computed buckling angle and bond length of the Si–P heterodimer for each configuration (HD1/HD2) and charge state (Ne-1, Ne, Ne+1, Ne+2 for HD1; Ne, Ne+1, Ne+2 for HD2). The checker compares these values to hidden reference values within absolute tolerances and verifies that the HD1 angle decreases and bond length increases monotonically, while HD2 values show minimal variation."
+      }
+    ],
+    "notes": "The agent must include all seven rows listed in the schema; missing rows score zero for that entry. The hidden reference values are taken from the source paper's Table III (Si–P data only)."
+  },
+  "steps": [
+    {
+      "id": "value_compare",
+      "output_file": "structural_parameters.csv",
+      "kind": "numeric",
+      "weight": 0.7,
+      "gold_table": [
+        {
+          "configuration": "HD1",
+          "charge_state": "Ne-1",
+          "angle_deg": 15.9,
+          "length_A": 2.25
+        },
+        {
+          "configuration": "HD1",
+          "charge_state": "Ne",
+          "angle_deg": 14.6,
+          "length_A": 2.26
+        },
+        {
+          "configuration": "HD1",
+          "charge_state": "Ne+1",
+          "angle_deg": 3.2,
+          "length_A": 2.33
+        },
+        {
+          "configuration": "HD1",
+          "charge_state": "Ne+2",
+          "angle_deg": -5.7,
+          "length_A": 2.42
+        },
+        {
+          "configuration": "HD2",
+          "charge_state": "Ne",
+          "angle_deg": 15.5,
+          "length_A": 2.3
+        },
+        {
+          "configuration": "HD2",
+          "charge_state": "Ne+1",
+          "angle_deg": 15.7,
+          "length_A": 2.3
+        },
+        {
+          "configuration": "HD2",
+          "charge_state": "Ne+2",
+          "angle_deg": 15.8,
+          "length_A": 2.29
+        }
+      ],
+      "tolerance_angle_deg": 2.0,
+      "tolerance_length_A": 0.05,
+      "max_dev_angle_deg": 10.0,
+      "max_dev_length_A": 0.2
+    },
+    {
+      "id": "trend_validate",
+      "output_file": "structural_parameters.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "hd1_angle_monotonic_decrease": true,
+      "hd1_length_monotonic_increase": true,
+      "hd2_angle_max_variation": 1.0,
+      "hd2_length_max_variation": 0.01
+    }
+  ]
+}

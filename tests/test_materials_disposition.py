@@ -16,10 +16,6 @@ from tests.test_materials_benchmark_review_paper_grounded import (
     no_paper_assessment,
     run_paper_grounded,
 )
-from tests.test_materials_benchmark_review_e1 import (
-    bind_public_fixture,
-    write_public_valid_dispersion,
-)
 
 
 def run_no_paper(package: Path) -> subprocess.CompletedProcess[str]:
@@ -60,15 +56,7 @@ def clear_external_resources(package: Path) -> None:
 
 
 def install_passing_oracle(package: Path) -> None:
-    oracle_output = package / "solution/oracle-output"
-    write_public_valid_dispersion(oracle_output)
-    (package / "solution/solve.sh").write_text(
-        "#!/bin/sh\n"
-        "mkdir -p \"${OUTPUT_DIR}\"\n"
-        "cp \"$(dirname \"$0\")/oracle-output/dispersion_curves.csv\" "
-        "\"${OUTPUT_DIR}/dispersion_curves.csv\"\n",
-        encoding="utf-8",
-    )
+    (package / "solution/solve.sh").chmod(0o755)
     (package / "tests/checker.py").write_text(
         "import csv, json, math\n"
         "from pathlib import Path\n"
@@ -97,6 +85,7 @@ class MaterialsDispositionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             package = Path(temporary) / "paper-fixture"
             copy_source_package(package)
+            (package / "solution/solve.sh").unlink()
 
             completed = run_no_paper(package)
 
@@ -106,25 +95,16 @@ class MaterialsDispositionTests(unittest.TestCase):
                 msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
             )
             report, index = read_bundle(package)
+            dimensions = report["dimensions_v11"]
             self.assertEqual(
-                {
-                    item["dimension"]: item["max_points"]
-                    for item in report["dimension_scores"]
-                },
-                {
-                    "scientific_validity": 35,
-                    "instruction_answerability": 20,
-                    "checker_gold_alignment": 25,
-                    "robustness_discrimination": 15,
-                    "solution_completeness": 5,
-                },
+                {item["dimension"] for item in dimensions},
+                {"C01", "C02", "C03", "C04", "C05", "C06", "C07"},
             )
-            for dimension in report["dimension_scores"]:
+            for dimension in dimensions:
                 self.assertIn("points_earned", dimension)
-                self.assertIn("normalized_score", dimension)
-                self.assertIn("deduction_ids", dimension)
+                self.assertIn("normalized", dimension)
+                self.assertIn("deductions", dimension)
                 self.assertIn("finding_ids", dimension)
-                self.assertIn("evidence", dimension)
             self.assertEqual(
                 {item["code"] for item in report["hard_gates"]},
                 {
@@ -140,11 +120,7 @@ class MaterialsDispositionTests(unittest.TestCase):
                 self.assertIn("affected_locations", gate)
             self.assertEqual(
                 report["summary"]["scoring_version"],
-                "materials-review-scoring/1.1",
-            )
-            self.assertEqual(
-                report["summary"]["legacy_scoring_version"],
-                "materials-review-scoring/1.0",
+                "materials-review-scoring/2.0",
             )
             self.assertEqual(
                 [item["dimension"] for item in report["dimensions_v11"]],
@@ -168,7 +144,7 @@ class MaterialsDispositionTests(unittest.TestCase):
                     gate["dimension"], {"C01", "C03", "C04", "C06"}
                 )
             self.assertEqual(
-                index["dimension_scores"], report["dimension_scores"]
+                index["dimensions_v11"], report["dimensions_v11"]
             )
             self.assertEqual(
                 index["dimensions_v11"], report["dimensions_v11"]
@@ -231,14 +207,11 @@ class MaterialsDispositionTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             report, index = read_bundle(package)
-            dimensions = {
-                item["dimension"]: item for item in report["dimension_scores"]
-            }
-            self.assertEqual(
-                dimensions["solution_completeness"]["points_earned"], 0
-            )
-            self.assertEqual(
-                dimensions["solution_completeness"]["normalized_score"], 0.0
+            self.assertTrue(
+                any(
+                    item["status"] == "NOT_ASSESSABLE"
+                    for item in report["dimensions_v11"]
+                )
             )
             self.assertIsNone(report["summary"]["total_score"])
             self.assertEqual(
@@ -247,23 +220,23 @@ class MaterialsDispositionTests(unittest.TestCase):
             self.assertFalse(report["summary"]["hard_gate_triggered"])
             self.assertEqual(index["route"], "EVIDENCE_PENDING")
             self.assertIn(
-                "SOLUTION_ORACLE_MISSING",
+                "CORE_RUNTIME_ORACLE_REJECTED",
                 {item["title"] for item in report["findings"]},
             )
 
-    def test_pass_routes_to_publish_candidate_with_weighted_index(self) -> None:
+    def test_unresolved_high_routes_to_repair_queue_above_score_gate(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             package = Path(temporary) / "paper-fixture"
             copy_source_package(package)
             clear_external_resources(package)
             install_passing_oracle(package)
-            valid_output = Path(temporary) / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
-            bind_public_fixture(package, valid_output)
             assessment_value = assessment()
             assessment_value["materials_qualification"] = (
                 no_paper_assessment()["materials_qualification"]
             )
+            assessment_value["dimensions"]["data_fidelity"]["status"] = "PASS"
             assessment_value["dimensions"]["checker_fidelity"]["evidence"][0][
                 "package_quote"
             ] = "scientific_contract"
@@ -287,8 +260,6 @@ class MaterialsDispositionTests(unittest.TestCase):
                     "E1",
                     "--agent-assessment",
                     str(assessment_path),
-                    "--known-valid-output",
-                    str(valid_output),
                 ],
                 cwd=REPO_ROOT,
                 capture_output=True,
@@ -304,16 +275,11 @@ class MaterialsDispositionTests(unittest.TestCase):
             )
             report, index = read_bundle(package)
             summary = report["summary"]
-            dimensions = {
-                item["dimension"]: item
-                for item in report["dimension_scores"]
-            }
-            self.assertEqual(summary["final_verdict"], "PASS")
+            self.assertEqual(summary["final_verdict"], "CONDITIONAL")
             self.assertGreaterEqual(summary["total_score"], 80)
-            self.assertEqual(summary["disposition"], "PASS")
-            self.assertTrue(summary["publishable"])
-            self.assertEqual(summary["repair_state"], "NOT_REQUIRED")
-            self.assertEqual(summary["publication_route"], "PUBLISH_CANDIDATE")
+            self.assertEqual(summary["disposition"], "CONDITIONAL")
+            self.assertFalse(summary["publishable"])
+            self.assertEqual(summary["publication_route"], "REPAIR_QUEUE")
             v11 = {item["dimension"]: item for item in report["dimensions_v11"]}
             self.assertTrue(
                 all(
@@ -322,26 +288,14 @@ class MaterialsDispositionTests(unittest.TestCase):
                 )
             )
             self.assertFalse(summary["hard_gate_triggered"])
-            self.assertEqual(
-                {
-                    "scientific_validity",
-                    "instruction_answerability",
-                    "checker_gold_alignment",
-                    "robustness_discrimination",
-                    "solution_completeness",
-                },
-                set(dimensions),
-            )
             self.assertTrue(
                 all(
-                    item["normalized_score"] is None
-                    or not item["critical"]
-                    or item["normalized_score"] >= 0.5
-                    for item in dimensions.values()
+                    item["points_earned"] is not None
+                    for item in report["dimensions_v11"]
                 )
             )
-            self.assertEqual(index["route"], "PUBLISH_CANDIDATE")
-            self.assertTrue(index["publishable"])
+            self.assertEqual(index["route"], "REPAIR_QUEUE")
+            self.assertFalse(index["publishable"])
             self.assertEqual(index["paper_mode"], "paper_grounded")
             self.assertEqual(index["execution_level"], "E1")
             self.assertIn("taxonomy_labels", index)

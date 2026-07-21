@@ -1,0 +1,68 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Mass ratio is recomputed from m_surface and m_bulk columns at n=0.99 and compared to the paper-reported value; surface mode thresholds are compared directly to paper-reported gold values. Tolerance details are defined in the individual steps.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for effective mass ratio and surface mode thresholds extracted from the paper; these values are not exposed to the agent.",
+      "source_provenance": "Paper text and figure (explicit statements: mass ratio at n=0.99, threshold fillings at (0,0) and (π,π)).",
+      "generation_method": "Extracted from the source paper.",
+      "why_not_fabricated": "These are the paper's headline quantitative results, serving as reproduction targets."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "effective_masses.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "n",
+            "m_surface",
+            "m_bulk",
+            "ratio"
+          ]
+        },
+        "description": "CSV with layer-resolved effective masses; checker recomputes mass ratio at n=0.99 from m_surface and m_bulk columns."
+      },
+      {
+        "file": "surface_mode_thresholds.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "k_point",
+            "threshold_n"
+          ]
+        },
+        "description": "Critical filling values at which a surface mode appears at (0,0) and (π,π) points."
+      }
+    ],
+    "notes": "Checker recomputes mass ratio from effective_masses.csv columns and compares threshold_n values in surface_mode_thresholds.csv to the internal reference values."
+  },
+  "steps": [
+    {
+      "id": "check_effective_masses",
+      "output_file": "effective_masses.csv",
+      "weight": 0.6,
+      "kind": "recompute_ratio",
+      "target_policy": "reference_match",
+      "fill_n": 0.99,
+      "tolerance_rel": 0.1
+    },
+    {
+      "id": "check_surface_mode_thresholds",
+      "output_file": "surface_mode_thresholds.csv",
+      "weight": 0.4,
+      "kind": "numeric",
+      "target_policy": "reference_match",
+      "tolerance_abs": 0.02
+    }
+  ]
+}

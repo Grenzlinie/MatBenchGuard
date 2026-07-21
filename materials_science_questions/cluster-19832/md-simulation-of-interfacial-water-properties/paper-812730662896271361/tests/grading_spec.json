@@ -1,0 +1,111 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The paper's main results are relative trends (ordering of D, sign of density deviation, H-bond rank, charge sign alternation) that are robust to force-field choice; exact numeric agreement is not required and would be fragile. Structural scoring checks these trends directly.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "results.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported qualitative trends for water structure and dynamics around O₂",
+      "source_provenance": "Table II and text of paper 'Hydrophobic effects: A computer simulation study of the temperature influence in dilute O₂ aqueous solutions', J. Chem. Phys. 110, 1025 (1999).",
+      "generation_method": "Extracted from the paper: diffusion ordering (shell<bulk<pure), density higher/lower than bulk by temperature range, H-bond correlation decay ranking (shell faster), H-bond counts (shell<bulk), charge oscillation signs (alternating). Verified against Figure 4, Figure 6, Table II, and corresponding textual descriptions.",
+      "why_not_fabricated": "These are the paper's actual qualitative conclusions; they serve as structural comparison criteria for scoring."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "diffusion",
+            "hb_correlation",
+            "density_first_shell",
+            "charge_oscillation",
+            "hb_counts",
+            "coordination_numbers",
+            "rotational_relaxation"
+          ],
+          "properties": {
+            "diffusion": {
+              "type": "object",
+              "description": "Temperature keys (\"291\", \"296\", \"311\", \"321\", \"348\") each with subkeys \"shell\", \"bulk\", \"pure\" (float; pure may be null for non-pure-water temperatures)"
+            },
+            "hb_correlation": {
+              "type": "object",
+              "description": "Temperature keys mapping to {shell_decay_rank: integer (shell decays faster -> negative, e.g., -1), bulk_decay_rank: integer (bulk decays slower -> positive, e.g., 1)}"
+            },
+            "density_first_shell": {
+              "type": "object",
+              "description": "Temperature keys mapping to {higher_than_bulk: boolean (true if density in first hydration shell > bulk)}"
+            },
+            "charge_oscillation": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of signs for successive charge shells around O2 at one representative temperature, e.g., [\"+\", \"-\", \"+\"]"
+            },
+            "hb_counts": {
+              "type": "object",
+              "description": "Temperature keys mapping to {shell: float, bulk: float} giving average number of hydrogen bonds per water"
+            },
+            "coordination_numbers": {
+              "type": "object",
+              "description": "Temperature keys mapping to {OW: float, HW: float} – average number of water oxygens and hydrogens in the first hydration shell. Must decrease with increasing temperature."
+            },
+            "rotational_relaxation": {
+              "type": "object",
+              "description": "Temperature keys mapping to {shell: float, bulk: float} – single-molecule orientational relaxation time τ in ps. Shell τ must be larger than bulk τ at each temperature."
+            }
+          }
+        },
+        "description": "Final consolidated JSON artifact containing all the structural and dynamical properties derived from the MD trajectories. The hidden checker verifies qualitative trends (diffusion ordering, density comparison, charge sign alternation, Hb correlation decay, Hb counts, coordination number decrease, and τ ordering) across temperatures."
+      }
+    ],
+    "notes": "No exact numeric match is required; only the relative structural trends and orderings are checked. Units for diffusion are 10⁻⁹ m²/s; τ is in ps; coordinates are in Å."
+  },
+  "steps": [
+    {
+      "id": "diffusion_ordering",
+      "output_file": "results.json",
+      "kind": "rubric",
+      "weight": 0.25,
+      "description": "Check diffusion ordering shell < bulk < pure at all temperatures where pure water data is provided."
+    },
+    {
+      "id": "density_first_shell",
+      "output_file": "results.json",
+      "kind": "rubric",
+      "weight": 0.2,
+      "description": "Check first-shell density higher-than-bulk for T ≤ 296 K, lower for T ≥ 311 K."
+    },
+    {
+      "id": "charge_oscillation",
+      "output_file": "results.json",
+      "kind": "rubric",
+      "weight": 0.15,
+      "description": "Check that the charge_oscillation array shows at least one sign alternation (+ to - or - to +)."
+    },
+    {
+      "id": "hb_correlation",
+      "output_file": "results.json",
+      "kind": "rubric",
+      "weight": 0.2,
+      "description": "Check that shell_decay_rank = -1 and bulk_decay_rank = 1 for all five temperatures."
+    },
+    {
+      "id": "hb_counts",
+      "output_file": "results.json",
+      "kind": "rubric",
+      "weight": 0.2,
+      "description": "Check that average number of hydrogen bonds in the shell is less than in the bulk for all temperatures."
+    }
+  ]
+}

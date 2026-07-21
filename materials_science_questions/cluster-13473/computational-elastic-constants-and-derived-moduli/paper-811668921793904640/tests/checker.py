@@ -98,6 +98,55 @@ def prepare(outputs_dir, spec):
 
 # === block: score_0 (check id='young_moduli_check') ===
 def score_0(artifact, step, ctx):
+    # ---- strict CSV shape enforcement ----
+    EXPECTED_COLUMNS = {"Model", "Temperature(K)", "YoungsModulus(GPa)"}
+    if not isinstance(artifact, list) or not artifact:
+        return 0.0
+
+    # Check column set (no extra, no missing)
+    header_keys = set(artifact[0].keys())
+    if header_keys != EXPECTED_COLUMNS:
+        return 0.0
+
+    # Check row order and temperature strict ascending per model
+    seen_model_1 = False
+    seen_model_2 = False
+    prev_model = None
+    prev_temp = None
+    for row in artifact:
+        model = row.get("Model", "").strip()
+        temp_str = row.get("Temperature(K)", "").strip()
+        if not model or not temp_str:
+            return 0.0
+        try:
+            temp = int(temp_str)
+        except ValueError:
+            return 0.0
+        if model == "Model-1":
+            if seen_model_2:
+                # Model-1 row arrived after Model-2 rows – wrong order
+                return 0.0
+            seen_model_1 = True
+        elif model == "Model-2":
+            if not seen_model_1:
+                # Model-2 row appeared before any Model-1 row
+                return 0.0
+            seen_model_2 = True
+        else:
+            return 0.0
+
+        if prev_model is not None and prev_model == model:
+            # same model: temperature must strictly increase
+            if temp <= prev_temp:
+                return 0.0
+        # start of a new model
+        prev_model = model
+        prev_temp = temp
+
+    if not (seen_model_1 and seen_model_2):
+        return 0.0   # missing one of the required models
+
+    # ---- standard modulus checks ----
     gold = step["gold"]
     rel_tol = step["tolerance_relative"]
     abs_min = step["tolerance_absolute_min"]
@@ -125,9 +174,7 @@ def score_0(artifact, step, ctx):
         err = abs(modulus - expected)
         if err <= abs_min or (expected != 0 and err / expected <= rel_tol):
             valid += 1
-        if model not in model_values:
-            model_values[model] = []
-        model_values[model].append((temp, modulus))
+        model_values.setdefault(model, []).append((temp, modulus))
 
     if total == 0:
         return 0.0

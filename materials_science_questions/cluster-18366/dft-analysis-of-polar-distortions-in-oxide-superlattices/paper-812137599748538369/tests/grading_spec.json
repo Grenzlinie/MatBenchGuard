@@ -1,0 +1,136 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The agent reports six DFT-derived values; we cannot re-run DFT, so we compare the agent's reported values to the paper's hidden gold with 5% relative tolerance and verify monotonic ordering (T0 result-level comparison).",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for lattice constants and band gaps from the paper",
+      "source_provenance": "Paper text: lattice constants: SrTiO3 3.903 Å, BaTiO3 4.004 Å, BST 3.963 Å; band gaps: SrTiO3 3.56 eV, BaTiO3 3.46 eV, BST 3.54 eV.",
+      "generation_method": "Extracted directly from the published paper.",
+      "why_not_fabricated": "Values are the paper's own reported results and are consistent with the reference solve.sh."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "BaTiO3_lattice_constant_angstrom": "float",
+            "SrTiO3_lattice_constant_angstrom": "float",
+            "BST_lattice_constant_angstrom": "float",
+            "BaTiO3_band_gap_eV": "float",
+            "SrTiO3_band_gap_eV": "float",
+            "BST_band_gap_eV": "float"
+          },
+          "units": {
+            "BaTiO3_lattice_constant_angstrom": "angstrom",
+            "SrTiO3_lattice_constant_angstrom": "angstrom",
+            "BST_lattice_constant_angstrom": "angstrom",
+            "BaTiO3_band_gap_eV": "eV",
+            "SrTiO3_band_gap_eV": "eV",
+            "BST_band_gap_eV": "eV"
+          }
+        },
+        "description": "Contains the optimized lattice constants and Γ‑point direct band gaps for BaTiO₃, SrTiO₃, and the BST heterostructure, all computed with a hybrid DFT functional."
+      }
+    ],
+    "notes": "The target policy is exact_match because the quantities are physically determined by the DFT run; the checker compares the reported values to paper‑reported gold values with an appropriate tolerance and also verifies ordering constraints (BaTiO₃ > BST > SrTiO₃ for lattice constants)."
+  },
+  "steps": [
+    {
+      "id": "shape",
+      "output_file": "results.json",
+      "kind": "json_schema",
+      "weight": 0.0,
+      "description": "Verify results.json exists and contains all required keys",
+      "required_keys": [
+        "BaTiO3_lattice_constant_angstrom",
+        "SrTiO3_lattice_constant_angstrom",
+        "BST_lattice_constant_angstrom",
+        "BaTiO3_band_gap_eV",
+        "SrTiO3_band_gap_eV",
+        "BST_band_gap_eV"
+      ]
+    },
+    {
+      "id": "lattice_accuracy",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.25,
+      "description": "Compare lattice constants to paper gold with 5% relative tolerance",
+      "fields": [
+        "BaTiO3_lattice_constant_angstrom",
+        "SrTiO3_lattice_constant_angstrom",
+        "BST_lattice_constant_angstrom"
+      ],
+      "targets": {
+        "BaTiO3_lattice_constant_angstrom": 4.004,
+        "SrTiO3_lattice_constant_angstrom": 3.903,
+        "BST_lattice_constant_angstrom": 3.963
+      },
+      "tolerance": 0.05
+    },
+    {
+      "id": "lattice_ordering",
+      "output_file": "results.json",
+      "kind": "structural",
+      "weight": 0.25,
+      "description": "Check that lattice constants satisfy BaTiO3 > BST > SrTiO3",
+      "fields": [
+        "BaTiO3_lattice_constant_angstrom",
+        "BST_lattice_constant_angstrom",
+        "SrTiO3_lattice_constant_angstrom"
+      ],
+      "ordering": [
+        [
+          "BaTiO3_lattice_constant_angstrom",
+          "BST_lattice_constant_angstrom",
+          "SrTiO3_lattice_constant_angstrom"
+        ]
+      ]
+    },
+    {
+      "id": "band_accuracy",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.25,
+      "description": "Compare band gaps to paper gold with 5% relative tolerance",
+      "fields": [
+        "BaTiO3_band_gap_eV",
+        "SrTiO3_band_gap_eV",
+        "BST_band_gap_eV"
+      ],
+      "targets": {
+        "BaTiO3_band_gap_eV": 3.46,
+        "SrTiO3_band_gap_eV": 3.56,
+        "BST_band_gap_eV": 3.54
+      },
+      "tolerance": 0.05
+    },
+    {
+      "id": "band_ordering",
+      "output_file": "results.json",
+      "kind": "structural",
+      "weight": 0.25,
+      "description": "Check that band gaps satisfy SrTiO3 > BST > BaTiO3",
+      "fields": [
+        "SrTiO3_band_gap_eV",
+        "BST_band_gap_eV",
+        "BaTiO3_band_gap_eV"
+      ],
+      "ordering": [
+        [
+          "SrTiO3_band_gap_eV",
+          "BST_band_gap_eV",
+          "BaTiO3_band_gap_eV"
+        ]
+      ]
+    }
+  ]
+}

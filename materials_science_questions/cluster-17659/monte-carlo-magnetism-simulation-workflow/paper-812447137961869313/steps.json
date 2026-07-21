@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Generate random anisotropy axes",
+    "role": "process",
+    "action": "Set up a 64×64 square lattice with periodic boundary conditions and assign a random unit easy axis to each site, drawn uniformly on the circle.",
+    "output_file": "",
+    "evidence": "anisotropy_axes.npy",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "This configuration defines the quenched disorder for all subsequent simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Hysteresis loop M(H) at D/J=0.4, T/J=0.1",
+    "role": "scored",
+    "action": "Run single‑spin‑flip Metropolis Monte Carlo field‑cycling simulation with D/J=0.4, T/J=0.1, sweeping the external field from H/J=-2 to H/J=+2 (and back) using at least 10⁵ MC cycles per field point. Extract the magnetisation per spin M at each field and write the complete loop.",
+    "output_file": "hysteresis_loop.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV containing the field H and magnetisation M for the full hysteresis loop. The loop must enclose a non‑zero area.",
+    "output_schema": "Columns: H (float), M (float). At least 100 rows covering both sweep directions."
+  },
+  {
+    "id": "step_03",
+    "title": "Coercive field H_co vs temperature",
+    "role": "scored",
+    "action": "For each temperature T/J in {0.1,0.3,0.5,0.7,0.9,1.0,1.1,1.2} at D/J=0.4, run a field‑cycling simulation as above. From the resulting M(H) loop determine the coercive field H_co (the field at which M changes sign) and output one row per temperature.",
+    "output_file": "coercive_field_vs_temperature.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV reporting the coercive field at each temperature, derived from simulated hysteresis loops.",
+    "output_schema": "Columns: temperature (T/J, float), coercive_field (H_co/J, float). One row per temperature, sorted by increasing T."
+  },
+  {
+    "id": "step_04",
+    "title": "Magnetisation M(T) from quench‑reheating protocol",
+    "role": "scored",
+    "action": "Start from a random spin configuration at high temperature. Quench to T=0, then warm up in steps of ΔT≈0.1 from T=0 to T=1.5. At each temperature, equilibrate using at least 10⁴ MC cycles and measure the average magnetisation M at zero applied field. Write the collected M(T) data.",
+    "output_file": "magnetization_quench.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV containing the temperature and ensemble‑averaged magnetisation from the quench‑reheating procedure.",
+    "output_schema": "Columns: temperature (T/J, float), magnetization (M, float). One row per temperature step from 0 to 1.5."
+  },
+  {
+    "id": "step_05",
+    "title": "Long relaxation from aligned initial state",
+    "role": "process",
+    "action": "Starting from a perfectly aligned spin configuration (all spins pointing in the same direction), run single‑spin‑flip Metropolis Monte Carlo for 10^6 MC cycles at several temperatures in the range 0.1–1.5. Record the time evolution of magnetisation and the final spin configuration to study memory effects.",
+    "output_file": "",
+    "evidence": "relaxation_log.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Long‑time relaxation runs from aligned state to document the four temperature regimes (glassified, intermediate, KT algebraic, disordered).",
+    "output_schema": "Columns: temperature (float), final_magnetization (float), memory_observable (float). Optional evidence log."
+  },
+  {
+    "id": "step_06",
+    "title": "Finite‑size scaling for Kosterlitz–Thouless transition temperature",
+    "role": "process",
+    "action": "Perform finite‑size scaling analysis to determine the Kosterlitz–Thouless transition temperature T_KT. Run Metropolis simulations for system sizes L = 16, 32, 64 at D/J=0.4 and zero field, using the spin‑wave stiffness or Binder cumulant crossing method. Document the extracted T_KT.",
+    "output_file": "",
+    "evidence": "kt_scaling_analysis.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Evidence from finite‑size scaling analysis documenting the Kosterlitz–Thouless transition temperature determination.",
+    "output_schema": "Columns: system_size (int), observable (float), estimated_T_KT (float)."
+  }
+]

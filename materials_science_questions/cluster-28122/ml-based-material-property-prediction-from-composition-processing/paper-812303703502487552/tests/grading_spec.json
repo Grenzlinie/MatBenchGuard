@@ -1,0 +1,80 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes δ from predictions.csv and compares to paper-reported δ with monotonic threshold_or_better; structural inequalities verified.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "predictions.csv": "structural_audit",
+    "model_performance.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference δ values from paper Table 2 for each regression model",
+      "source_provenance": "Paper Table 2 rows: linear concentration δ 7.3, linear SNIR δ 7.7, exponential concentration δ 5.9, exponential SNIR δ 5.5.",
+      "generation_method": "Extracted directly from the paper's published table",
+      "why_not_fabricated": "Verified against paper text; these are the exact reported numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "predictions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "melt_id",
+            "tau_exp",
+            "linear_conc_pred",
+            "linear_snir_pred",
+            "exp_conc_pred",
+            "exp_snir_pred"
+          ]
+        },
+        "description": "Per-alloy predicted endurance values used by the checker to recompute δ. Existence and schema are verified."
+      },
+      {
+        "file": "model_performance.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "linear_concentration_delta": "float",
+            "linear_snir_delta": "float",
+            "exponential_concentration_delta": "float",
+            "exponential_snir_delta": "float"
+          }
+        },
+        "description": "The computed δ values. The checker compares them to the paper's reported values (lower is better) and verifies relative trends (exponential δ < linear δ; SNIR δ within 2.0 of concentration δ)."
+      }
+    ],
+    "notes": "The alloy composition data and SNIR parameters are provided inline in the Input Data section of the instruction (16 melts). The agent must fit the models and output the predictions and δ values."
+  },
+  "steps": [
+    {
+      "id": "fit_regression_models",
+      "output_file": "predictions.csv",
+      "kind": "structural_audit",
+      "weight": 0.1,
+      "description": "Validate predictions.csv structure and non-degeneracy"
+    },
+    {
+      "id": "compute_deviation_delta",
+      "output_file": "model_performance.json",
+      "kind": "metric_recompute",
+      "weight": 0.9,
+      "description": "Recompute δ from predictions.csv and compare to paper gold; check structural inequalities",
+      "target_policy": "threshold_or_better",
+      "reference_delta_linear_concentration": 7.3,
+      "reference_delta_linear_snir": 7.7,
+      "reference_delta_exponential_concentration": 5.9,
+      "reference_delta_exponential_snir": 5.5,
+      "delta_tolerance_slack": 0.1,
+      "inequality_max_delta_diff": 2.0
+    }
+  ]
+}

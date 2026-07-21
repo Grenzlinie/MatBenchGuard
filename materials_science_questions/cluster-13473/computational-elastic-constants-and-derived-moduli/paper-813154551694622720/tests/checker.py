@@ -56,6 +56,7 @@ def _ff_validate_output_contract():
                 name = col.get("name") if isinstance(col, dict) else col
                 if name and name not in cols:
                     violations.append(base + ": missing table column '" + str(name) + "'")
+        # 'other' format files are only checked for existence, no schema validation
     return violations
 
 
@@ -113,8 +114,9 @@ def score_0(artifact, step, ctx):
 
 # === block: score_1 (check id='step_ss_yield') ===
 def score_1(artifact, step, ctx):
-    target = step['target']
-    tol = step['tolerance_abs']
+    # Hidden reference values (paper reported ~195 MPa, tolerance 20% = 39 MPa)
+    target = 195.0
+    tol = 39.0
     stresses = []
     for row in artifact:
         strain = float(row['strain'])
@@ -128,8 +130,8 @@ def score_1(artifact, step, ctx):
 
 # === block: score_2 (check id='step_ss_plateau') ===
 def score_2(artifact, step, ctx):
-    target = step['target']
-    tol = step['tolerance_abs']
+    target = 190.0
+    tol = 38.0
     stresses = []
     for row in artifact:
         strain = float(row['strain'])
@@ -170,8 +172,8 @@ def score_4(artifact, step, ctx):
         val = float(artifact.strip())
     except:
         return 0.0
-    target = step['target']
-    tol = step['tolerance_abs']
+    target = 11.6
+    tol = 2.32
     return 1.0 if abs(val - target) <= tol else 0.0
 
 

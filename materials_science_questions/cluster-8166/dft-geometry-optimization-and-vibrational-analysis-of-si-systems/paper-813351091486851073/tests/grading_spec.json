@@ -1,0 +1,113 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Agent output is only final summary quantities; no raw intermediate data (e.g., arrays of Z0*(theta) or total energy curves) are required, so recompute from richer artifacts is infeasible. Compare reported values to paper gold with tolerances and require the correct ordering trend.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference values for Z0_SiO2, Z0_GeO2, angle minima, and derivative dZ*/dθ from the paper.",
+      "source_provenance": "Taken from Table II (Z0* for SiO2 and GeO2) and Figs. 16/10 plus text in Sec. IXA (angle_min_covalent_only ≈ θ=45°, angle_min_with_repulsion ≈ θ=18°, dZ*/dθ≈-1.33 per radian) of Phys. Rev. B 13, 2667 (1976).",
+      "generation_method": "Directly extracted from paper's reported numbers and statements.",
+      "why_not_fabricated": "These are the exact values the paper reports as its model's results; they are the intended reproduction targets."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Z0_SiO2": "number",
+            "Z0_GeO2": "number",
+            "angle_min_covalent_only": "number",
+            "angle_min_with_repulsion": "number",
+            "dZ_dtheta_SiO2": "number",
+            "alpha_quartz": "number",
+            "beta_cristobalite": "number",
+            "vitreous_silica": "number",
+            "GeO2_quartzlike": "number",
+            "e_x_SiO2": "number",
+            "e_y_SiO2": "number",
+            "e_z_SiO2": "number",
+            "RoverPx_deriv_SiO2": "number",
+            "e_x_GeO2": "number",
+            "e_y_GeO2": "number",
+            "e_z_GeO2": "number",
+            "RoverPx_deriv_GeO2": "number"
+          }
+        },
+        "description": "All reproduced quantities: static charge, angle minima, dielectric constants, dynamic effective charges."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "check_Z0_SiO2",
+      "output_file": "step_01_results.json",
+      "kind": "numeric",
+      "field": "Z0_SiO2",
+      "weight": 0.2,
+      "target": 1.02,
+      "tolerance": 0.02,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "check_Z0_GeO2",
+      "output_file": "step_01_results.json",
+      "kind": "numeric",
+      "field": "Z0_GeO2",
+      "weight": 0.2,
+      "target": 1.05,
+      "tolerance": 0.02,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "check_angle_covalent",
+      "output_file": "step_01_results.json",
+      "kind": "numeric",
+      "field": "angle_min_covalent_only",
+      "weight": 0.2,
+      "target": 45.0,
+      "tolerance": 5.0,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "check_angle_repulsion",
+      "output_file": "step_01_results.json",
+      "kind": "numeric",
+      "field": "angle_min_with_repulsion",
+      "weight": 0.2,
+      "target": 18.0,
+      "tolerance": 5.0,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "check_dZ_dtheta",
+      "output_file": "step_01_results.json",
+      "kind": "numeric",
+      "field": "dZ_dtheta_SiO2",
+      "weight": 0.1,
+      "target": -1.33,
+      "tolerance": 0.1,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "check_trend",
+      "output_file": "step_01_results.json",
+      "kind": "trend",
+      "field_left": "angle_min_covalent_only",
+      "field_right": "angle_min_with_repulsion",
+      "relation": ">",
+      "weight": 0.1,
+      "target_policy": "structural_audit"
+    }
+  ]
+}

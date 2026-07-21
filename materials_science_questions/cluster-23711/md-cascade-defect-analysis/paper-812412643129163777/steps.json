@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Implement the GaN interatomic potential",
+    "role": "process",
+    "action": "Implement the analytic bond-order potential for GaN in LAMMPS (or an equivalent MD code) using the functional forms (Morse-like pair terms, bond-order factor, smooth blending with the ZBL short-range repulsion) and the parameter set (Ga-Ga, Ga-N, N-N) provided in the instruction (see table below). The implementation must correctly handle all element pairs, the cutoff function, and the environmental bond-order term.",
+    "output_file": "",
+    "evidence": "potential_test.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Required setup step: the custom potential must be implemented and functional before any production MD runs.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Determine threshold displacement energies",
+    "role": "scored",
+    "action": "Using the implemented potential, run MD simulations to find the minimum and average displacement energy for Ga and N atoms. Sample at least 1000 random directions. For each direction, increase the initial kinetic energy until a stable Frenkel pair is created; record the minimum energy that creates a defect. Compute the spatial average and standard error. Output the results as threshold_energies.json.",
+    "output_file": "threshold_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact: average and minimum displacement energies for Ga and N.",
+    "output_schema": "{\"Ga_average\": number (eV), \"Ga_error\": number (eV), \"N_average\": number (eV), \"N_error\": number (eV)}"
+  },
+  {
+    "id": "step_03",
+    "title": "Run cascade simulations",
+    "role": "process",
+    "action": "Run MD simulations of collision cascades in bulk wurtzite GaN. For both N and Ga recoil types, simulate cascades at initial recoil energies of 200, 400, 1000, 2000, 5000, and 10000 eV. Use a simulation cell size that avoids self-interaction, Berendsen thermostat at the boundaries, and a variable timestep. Run at least 8 independent cascades per energy/recoil combination to gather statistics.",
+    "output_file": "",
+    "evidence": "cascade_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Required process step: generates the post-cascade atomic configurations for defect analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Defect analysis and reporting",
+    "role": "scored",
+    "action": "For each cascade, identify point defects using the Voronoi polyhedron method (or equivalent Wigner-Seitz analysis). Compute the average numbers of N vacancies (V_N), Ga vacancies (V_Ga), N interstitials (I_N), Ga interstitials (I_Ga), N-on-Ga antisites (N_Ga), and Ga-on-N antisites (Ga_N) per cascade for each recoil type and energy, along with the standard error of the mean. Format the results as defect_counts.csv as specified.",
+    "output_file": "defect_counts.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Main headline scored artifact: average point defect counts per cascade, exactly as reported in the paper. This step is load-bearing because correct counts require the full simulation pipeline to have run.",
+    "output_schema": "columns: recoil_type (string: Ga or N), energy_eV (int), V_N (float), V_Ga (float), I_N (float), I_Ga (float), N_Ga (float), Ga_N (float). Each row is a recoil-type/energy combination; all values are means over cascades."
+  },
+  {
+    "id": "step_05",
+    "title": "Kinchin–Pease comparison",
+    "role": "scored",
+    "action": "Using the average displacement energies obtained in step_02 (Ga_average, N_average), compute the Kinchin–Pease predicted number of displaced atoms for each recoil energy according to E_D being the average displacement energy for the recoil atom type. Compare this prediction with the total number of vacancies (V_N + V_Ga) from step_04 for each recoil type and energy. Write a CSV with the total vacancies, the KP prediction, and the recoil/energy identifiers.",
+    "output_file": "kinchin_pease_comparison.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact: comparison of simulated damage to the Kinchin–Pease analytical model using the agent's own displacement energies.",
+    "output_schema": "columns: recoil_type (string: Ga or N), energy_eV (int), total_vacancies (float), kp_predicted_vacancies (float)"
+  }
+]

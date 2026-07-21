@@ -1,0 +1,135 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The porosity is computed from a full KMC simulation; recomputing it in the verifier would require re-running the expensive simulation, which is infeasible. Structural checks of monotonic trends and magnitude bounds derived from the paper's reported ranges faithfully verify the main claim.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "porosity_nsd.csv": "structural_audit",
+    "porosity_x.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Porosity magnitude thresholds for NSD and composition sweeps",
+      "source_provenance": "Paper reports: porosity ~30% at low NSD (<1 nm⁻²), 3-7% at high NSD (>4 nm⁻²); pure Si porosity <4%, SiO₂ porosity ~15-20% (at NSD 1.74 nm⁻²). Thresholds set to porosity >0.2 at low NSD, <0.1 at high NSD, <0.05 at x=0, >0.1 at x=2.",
+      "generation_method": "Extracted from the qualitative statements in the paper.",
+      "why_not_fabricated": "Derived directly from the paper's own reported ranges, ensuring a correct re-implementation can satisfy them."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "porosity_nsd.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "columns": [
+            "nsd_nm2",
+            "porosity",
+            "surface_volume_ratio"
+          ],
+          "dtypes": {
+            "nsd_nm2": "float",
+            "porosity": "float",
+            "surface_volume_ratio": "float"
+          }
+        },
+        "description": "Porosity and surface-to-volume ratio vs nucleation site density at fixed x=1.8"
+      },
+      {
+        "file": "porosity_x.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "columns": [
+            "x",
+            "porosity",
+            "surface_volume_ratio"
+          ],
+          "dtypes": {
+            "x": "float",
+            "porosity": "float",
+            "surface_volume_ratio": "float"
+          }
+        },
+        "description": "Porosity and surface-to-volume ratio vs oxygen composition at fixed NSD=1.74 nm⁻²"
+      }
+    ],
+    "notes": "Both CSV files are scored by a hidden verifier that checks monotonic trends and absolute magnitude bounds without rerunning the simulation."
+  },
+  "steps": [
+    {
+      "id": "nsd_monotonic",
+      "output_file": "porosity_nsd.csv",
+      "weight": 0.2,
+      "kind": "monotonic_decreasing",
+      "column": "porosity",
+      "sort_column": "nsd_nm2",
+      "description": "Porosity must strictly decrease as nucleation site density (nsd_nm2) increases."
+    },
+    {
+      "id": "nsd_magnitudes",
+      "output_file": "porosity_nsd.csv",
+      "weight": 0.2,
+      "kind": "threshold_check",
+      "conditions": {
+        "low_nsd": {
+          "threshold": 1.0,
+          "operator": "<",
+          "porosity_min": 0.2
+        },
+        "high_nsd": {
+          "threshold": 4.0,
+          "operator": ">",
+          "porosity_max": 0.1
+        }
+      },
+      "description": "At the lowest tested NSD (<1 nm⁻²), porosity must exceed 0.2; at the highest tested NSD (>4 nm⁻²), porosity must be below 0.1."
+    },
+    {
+      "id": "nsd_svr_monotonic",
+      "output_file": "porosity_nsd.csv",
+      "weight": 0.1,
+      "kind": "monotonic_increasing",
+      "column": "surface_volume_ratio",
+      "sort_column": "nsd_nm2",
+      "description": "Surface-to-volume ratio must strictly increase as nucleation site density increases."
+    },
+    {
+      "id": "x_monotonic",
+      "output_file": "porosity_x.csv",
+      "weight": 0.2,
+      "kind": "monotonic_increasing",
+      "column": "porosity",
+      "sort_column": "x",
+      "description": "Porosity must strictly increase as oxygen content x increases."
+    },
+    {
+      "id": "x_magnitudes",
+      "output_file": "porosity_x.csv",
+      "weight": 0.2,
+      "kind": "threshold_check",
+      "conditions": {
+        "x0": {
+          "x": 0.0,
+          "porosity_max": 0.05
+        },
+        "x2": {
+          "x": 2.0,
+          "porosity_min": 0.1
+        }
+      },
+      "description": "At x=0 porosity must be <0.05; at x=2 porosity must be >0.1."
+    },
+    {
+      "id": "x_svr_positive",
+      "output_file": "porosity_x.csv",
+      "weight": 0.1,
+      "kind": "range_check",
+      "column": "surface_volume_ratio",
+      "min": 0.0,
+      "description": "Surface-to-volume ratio must be positive for all x values."
+    }
+  ]
+}

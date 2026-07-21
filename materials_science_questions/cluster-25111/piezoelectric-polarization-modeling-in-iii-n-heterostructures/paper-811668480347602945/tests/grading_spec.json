@@ -1,0 +1,98 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Full recompute of dE_dP from raw Schrödinger solutions is computationally heavy and cannot run in verifier sandbox; result-level compare against paper's digitized model outputs is used, supplemented by structural trend checks.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "step_01_gaaln_results.json": "reference_match",
+    "step_02_ingan_wurtzite_results.json": "reference_match",
+    "step_03_ingan_cubic_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for dE_dP and electric fields extracted from paper figures/text",
+      "source_provenance": "Paper Fig.3b (dE_dP for GaN/AlGaN QWs: 36,33,30,27,24 meV/GPa for 6,10,16,24,32 ML; text: field 0.66 MV/cm at 0 GPa, 0.87 MV/cm at 10 GPa for 8 nm well); Fig.2 (dE_dP for wurtzite InGaN/GaN: 20,10,0,-10,-20,-30 meV/GPa for 1,2,2.5,3.5,4,5 nm); Fig.5 (cubic InGaN/GaN constant ~28.5 meV/GPa).",
+      "generation_method": "Digitized from paper plots, rounded to nearest integer for dE_dP; field values directly transcribed.",
+      "why_not_fabricated": "Values taken directly from the paper's reported model results; the reference solve.sh uses exactly these values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_gaaln_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "well_width_ML",
+              "thickness_nm",
+              "dE_dP_meV_per_GPa",
+              "field_0_GPa_MV_per_cm",
+              "field_10_GPa_MV_per_cm"
+            ]
+          }
+        },
+        "description": "Pressure coefficients dE_E/dP and built-in electric fields for GaN/Al0.17Ga0.83N quantum wells of thicknesses 6–32 monolayers; field values only required for the 8 nm well (others may be null)."
+      },
+      {
+        "file": "step_02_ingan_wurtzite_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "well_width_nm",
+              "dE_dP_meV_per_GPa"
+            ]
+          }
+        },
+        "description": "Pressure coefficients dE_E/dP for wurtzite In0.2Ga0.8N/GaN quantum wells with well widths 1–5 nm."
+      },
+      {
+        "file": "step_03_ingan_cubic_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "well_width_nm",
+              "dE_dP_meV_per_GPa"
+            ]
+          }
+        },
+        "description": "Pressure coefficients dE_E/dP for cubic In0.1Ga0.9N/GaN quantum wells with well widths 0.6–5 nm."
+      }
+    ],
+    "notes": "Reproduces the computational model for strain-induced piezoelectric polarization and resulting pressure coefficients of optical transition energies in wurtzite InGaN/GaN, GaN/AlGaN, and cubic InGaN/GaN quantum wells."
+  },
+  "steps": [
+    {
+      "id": "step_gaaln",
+      "output_file": "step_01_gaaln_results.json",
+      "weight": 0.5,
+      "description": "GaN/AlGaN dE_dP and fields"
+    },
+    {
+      "id": "step_ingan_wurtzite",
+      "output_file": "step_02_ingan_wurtzite_results.json",
+      "weight": 0.3,
+      "description": "Wurtzite InGaN dE_dP"
+    },
+    {
+      "id": "step_ingan_cubic",
+      "output_file": "step_03_ingan_cubic_results.json",
+      "weight": 0.2,
+      "description": "Cubic InGaN dE_dP"
+    }
+  ]
+}

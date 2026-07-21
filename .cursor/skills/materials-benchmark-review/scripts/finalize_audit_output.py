@@ -25,9 +25,26 @@ from deterministic_contract import (
     apply_deterministic_gate,
     deterministic_repair_summary,
     evaluate_deterministic_contract,
+    finding_lane,
     validate_deterministic_contract,
 )
 from d6_core_output_scoring import merge_runtime_evidence
+from artifact_schema import (
+    AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
+    AUDIT_MANIFEST_SCHEMA_VERSION,
+    AUDIT_REPORT_SCHEMA_VERSION,
+    CORPUS_INDEX_SCHEMA_VERSION,
+    DISPOSITION_SCHEMA_VERSION,
+    EVIDENCE_CONTRACT_SCHEMA_VERSION,
+    SCORING_SCHEMA_VERSION,
+    DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION,
+    DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION,
+    QUALITY_PROBE_RESULTS_SCHEMA_VERSION,
+    AGENT_ASSESSMENT_SCHEMA_VERSION,
+    CHECKER_TESTS_SCHEMA_VERSION,
+    RESOURCE_CHECKS_SCHEMA_VERSION,
+    require_schema,
+)
 
 
 VERDICTS = {"PASS", "CONDITIONAL", "REJECT", "NOT_ASSESSABLE"}
@@ -56,8 +73,11 @@ REQUIRED_AUDIT_FILES = {
     "checker_tests.json",
     "audit_manifest.json",
     "logs/audit.log",
+    "deterministic_core/report.json",
+    "deterministic_core/probe_results.json",
+    "agent_quality/assessment.json",
 }
-SCORING_VERSION = "materials-review-scoring/1.0"
+SCORING_VERSION = SCORING_SCHEMA_VERSION
 QA_AXIS_NAMES = (
     "factual_accuracy",
     "answer_leakage",
@@ -142,7 +162,7 @@ SEVERITY_RANK = {"FATAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}
 # ``max_points`` equals its weight so the weighted total reduces to the sum of
 # earned points on a 0-100 scale.
 # ---------------------------------------------------------------------------
-V11_SCORING_VERSION = "materials-review-scoring/1.1"
+V11_SCORING_VERSION = SCORING_SCHEMA_VERSION
 V11_DIMENSIONS = ("C01", "C02", "C03", "C04", "C05", "C06", "C07")
 V11_DIMENSION_WEIGHTS = {
     "C01": 10,
@@ -238,11 +258,12 @@ V11_C04_CODES = {
     "NON_FINITE_WEIGHT",
     "INEFFECTIVE_WEIGHT_SCORING_COMPONENT",
     "INVALID_PASS_THRESHOLD",
-    "CHECKER_CRASH",
     "CHECKER_RESULT_UNUSABLE",
-    "ADVERSARIAL_OUTPUT_PASSES",
-    "ORACLE_POSITIVE_MOCK_REJECTED",
-    "KNOWN_VALID_OUTPUT_REJECTED",
+    "CORE_RUNTIME_CHECKER_CRASH",
+    "CORE_RUNTIME_RESULT_UNUSABLE",
+    "CORE_RUNTIME_ORACLE_REJECTED",
+    "CORE_RUNTIME_MALFORMED_INPUT_PASSES",
+    "CORE_RUNTIME_ORDERING_VIOLATION",
 }
 V11_C05_CODES = {
     "SOLUTION_BOUNDARY_VIOLATION",
@@ -251,10 +272,7 @@ V11_C05_CODES = {
 }
 V11_C06_CODES = {"E2_SMOKE_FAILED"}
 V11_C07_CODES = {
-    "SCIENTIFIC_QUALITY_GRADIENT_VIOLATION",
-    "SCIENTIFIC_INVARIANCE_VIOLATION",
-    "SINGLE_COMPONENT_CAN_PASS",
-    "INDEPENDENT_PUBLIC_FIXTURE_UNAVAILABLE",
+    "ADVERSARIAL_OUTPUT_PASSES",
 }
 V11_FROM_LEGACY_DIMENSION = {
     "scientific_validity": "C03",
@@ -411,18 +429,6 @@ def repair_text(
             "public contract."
         )
         retest = "Run the Review CLI and require every checker probe to complete."
-    elif code == "ORACLE_POSITIVE_MOCK_REJECTED":
-        repair = (
-            "Diagnose and correct the checker/Gold contract that rejects the "
-            "successfully generated isolated Oracle mock. Do not alter the "
-            "Oracle producer unless separate execution evidence shows that it "
-            "failed to generate the contracted files."
-        )
-        retest = (
-            "Run the Review CLI and require positive_oracle to meet the checker "
-            "pass threshold without exposing or using Oracle values as "
-            "scientific evidence."
-        )
     elif code in {
         "SCORER_MISSING_RETURN",
         "SCORER_RETURN_NOT_TOTAL",
@@ -449,25 +455,6 @@ def repair_text(
         retest = (
             "Run the Review CLI and require positive_oracle to meet the checker "
             "pass threshold without exposing Oracle values."
-        )
-    elif code == "INDEPENDENT_PUBLIC_FIXTURE_UNAVAILABLE":
-        repair = (
-            "Construct an independently justified public valid fixture from "
-            "instruction/tests evidence without using Oracle values; if that "
-            "is not possible, retain the scored limitation."
-        )
-        retest = (
-            "Re-run discrimination and equivalence probes only with the "
-            "source-bound non-Oracle fixture and record its hashes."
-        )
-    elif code == "KNOWN_VALID_OUTPUT_REJECTED":
-        repair = (
-            "Align the checker target, tolerance, and public contract so the "
-            f"{test_type or 'known-valid'} probe passes."
-        )
-        retest = (
-            "Re-run the same independently justified known-valid probe and "
-            "require a passing finite reward."
         )
     elif code == "ADVERSARIAL_OUTPUT_PASSES":
         repair = (
@@ -548,9 +535,18 @@ def normalized_finding(
         ) or source["evidence"].get("root_cause")
     if not deduction_group:
         deduction_group = finding_id
+    lane = finding_lane(
+        {
+            "title": source["code"],
+            "code": source["code"],
+            "lane": source.get("lane"),
+            "evidence": source.get("evidence", {}),
+        }
+    )
     return {
         "finding_id": finding_id,
         "severity": source["severity"],
+        "lane": lane,
         "category": category,
         "phase": phase,
         "status": "OPEN",
@@ -570,7 +566,9 @@ def normalized_finding(
         "required_fix": repair,
         "verification_after_fix": retest,
         "confidence": "HIGH",
-        "judgment_type": "FACT",
+        "judgment_type": (
+            "AGENT_JUDGMENT" if lane == "agent_quality" else "CODE_PROVEN"
+        ),
         "deduction_group": deduction_group,
     }
 
@@ -580,8 +578,6 @@ def scored_dimension_for(finding: dict[str, Any]) -> str | None:
     files = finding["affected_files"]
     if code == "SINGLE_COMPONENT_THRESHOLD_REACHABLE":
         return None
-    if code == "ORACLE_POSITIVE_MOCK_REJECTED":
-        return "checker_gold_alignment"
     if code in {
         "SCORER_MISSING_RETURN",
         "SCORER_RETURN_NOT_TOTAL",
@@ -597,7 +593,6 @@ def scored_dimension_for(finding: dict[str, Any]) -> str | None:
         "ADVERSARIAL_OUTPUT_PASSES",
         "CHECKER_CRASH",
         "CHECKER_RESULT_UNUSABLE",
-        "INDEPENDENT_PUBLIC_FIXTURE_UNAVAILABLE",
         "SCIENTIFIC_QUALITY_GRADIENT_VIOLATION",
         "SCIENTIFIC_INVARIANCE_VIOLATION",
         "SINGLE_COMPONENT_CAN_PASS",
@@ -613,9 +608,7 @@ def scored_dimension_for(finding: dict[str, Any]) -> str | None:
         return "scientific_validity"
     if code == "UNRECOVERABLE_TASK_DEFINITION":
         return "instruction_answerability"
-    if code == "KNOWN_VALID_OUTPUT_REJECTED" or any(
-        path.startswith("tests/") for path in files
-    ):
+    if any(path.startswith("tests/") for path in files):
         return "checker_gold_alignment"
     if "instruction.md" in files or code.startswith("MATERIALS_"):
         return "instruction_answerability"
@@ -1722,6 +1715,8 @@ def markdown_summary(report: dict[str, Any]) -> str:
     summary = report["summary"]
     configuration = report["configuration"]
     deterministic = report["deterministic_contract"]
+    deterministic_core = report.get("deterministic_core", {})
+    agent_quality = report.get("agent_quality", {})
     finding_lines = (
         "\n".join(
             f"- {item['finding_id']} [{item['severity']}] {item['title']}: "
@@ -1756,19 +1751,6 @@ def markdown_summary(report: dict[str, Any]) -> str:
             f"{name}={weight}"
             for name, weight in V11_DIMENSION_WEIGHTS.items()
         )
-        + "\n\n### Legacy internal dimensions (compatibility)\n\n"
-        + (
-            "\n".join(
-                f"- {item['dimension']}: {item['status']} "
-                f"({item['points_earned']}/{item['max_points']}, "
-                f"normalized={item['normalized_score']}, "
-                f"deductions={item['deduction_ids']})"
-                for item in report["dimension_scores"]
-            )
-            or "No legacy dimension scores were computed."
-        )
-        + f"\n- Legacy total (0-100, legacy): "
-        f"{report['summary'].get('legacy_total_score')}"
     )
     execution = report["execution_evidence"]
     checker_runtime = report["checker_runtime"]
@@ -2014,6 +1996,22 @@ Reason: This slice checks declared outputs and grading references.
 - Assessable: {d6_trace.get('assessable') if isinstance(d6_trace, dict) else False}
 {d6_lines}
 
+### 7.3 Review Lanes
+
+- Deterministic core finding IDs: {deterministic_core.get('finding_ids', [])}
+- Deterministic core probe origin: {
+    deterministic_core.get('probe_results', {}).get(
+        'probe_origin', 'SCHEMA_DERIVED_DETERMINISTIC'
+    )
+}
+- Agent quality finding IDs: {agent_quality.get('finding_ids', [])}
+- Agent scientific scope: {agent_quality.get('agent_scientific_scope', [])}
+- Agent-authored probe cases: {
+    "NO"
+    if agent_quality.get("probe_cases_are_code_defined") is True
+    else "YES"
+}
+
 ## 8. Resource Reachability
 
 {resource_lines}
@@ -2090,7 +2088,7 @@ def write_disposition_artifacts(
         repair_status=summary.get("repair_status", "NOT_APPLICABLE"),
     )
     disposition = {
-        "schema_version": "1.0",
+        "schema_version": DISPOSITION_SCHEMA_VERSION,
         "audit_id": report["audit_id"],
         **canonical,
         "scoring_version": summary["scoring_version"],
@@ -2098,8 +2096,6 @@ def write_disposition_artifacts(
         "disposition": summary["final_verdict"],
         "repair_state": summary.get("repair_state", "NOT_REQUIRED"),
         "total_score": summary["total_score"],
-        "legacy_total_score": summary.get("legacy_total_score"),
-        "dimension_scores": report["dimension_scores"],
         "dimensions_v11": report.get("dimensions_v11", []),
         "hard_gates": report["hard_gates"],
         "route": route,
@@ -2131,7 +2127,7 @@ def write_disposition_artifacts(
         category = item["category"]
         categories[category] = categories.get(category, 0) + 1
     index_entry = {
-        "schema_version": "1.0",
+        "schema_version": CORPUS_INDEX_SCHEMA_VERSION,
         "audit_id": report["audit_id"],
         **canonical,
         "benchmark": {
@@ -2144,7 +2140,6 @@ def write_disposition_artifacts(
         "disposition": summary["final_verdict"],
         "scoring_version": summary["scoring_version"],
         "total_score": summary["total_score"],
-        "legacy_total_score": summary.get("legacy_total_score"),
         "hard_gate_triggered": summary["hard_gate_triggered"],
         "hard_gates": report["hard_gates"],
         "route": route,
@@ -2158,7 +2153,6 @@ def write_disposition_artifacts(
             "by_category": dict(sorted(categories.items())),
             "codes": [item["title"] for item in report["findings"]],
         },
-        "dimension_scores": report["dimension_scores"],
         "dimensions_v11": report.get("dimensions_v11", []),
         "evidence_gaps": evidence_gaps,
         "deterministic_contract": report["deterministic_contract"],
@@ -2405,20 +2399,6 @@ def synthesize_report(
     ):
         v11_unavailable.add("C06")
     dimensions_v11 = dimensions_v11_scores(findings, v11_unavailable)
-    legacy_gaps = [
-        item["dimension"]
-        for item in dimensions
-        if item["points_earned"] is None
-    ]
-    legacy_total = (
-        None
-        if legacy_gaps
-        else round(
-            sum(float(item["points_earned"]) for item in dimensions), 2
-        )
-    )
-    if legacy_total is not None and float(legacy_total).is_integer():
-        legacy_total = int(legacy_total)
     verdict, score, hard_gate, reason, evidence_gaps = scoring_verdict_v11(
         findings,
         dimensions_v11,
@@ -2462,8 +2442,7 @@ def synthesize_report(
     report["summary"] = {
         "materials_class": materials_class,
         "answer_type": answer_type_for(root),
-        "scoring_version": V11_SCORING_VERSION,
-        "legacy_scoring_version": SCORING_VERSION,
+        "scoring_version": SCORING_VERSION,
         "final_verdict": verdict,
         "disposition": verdict,
         "publishable": verdict == "PASS",
@@ -2475,7 +2454,6 @@ def synthesize_report(
             repair_state == "DETERMINISTIC_REPAIR_REQUIRED"
         ),
         "total_score": score,
-        "legacy_total_score": legacy_total,
         "hard_gate_triggered": hard_gate,
         "route": audit_route,
         "publication_route": route,
@@ -2509,7 +2487,7 @@ def synthesize_report(
         ),
     }
     report["evidence_contract"] = {
-        "version": "materials-evidence-contract/1.0",
+        "version": EVIDENCE_CONTRACT_SCHEMA_VERSION,
         "fail_closed": True,
         "gaps": contract_gaps,
     }
@@ -2518,7 +2496,6 @@ def synthesize_report(
         deterministic_contract
     )
     report["source_bindings"] = external_bindings or {
-        "fixture_hashes": {},
         "assessment_hashes": {},
         "core_contract_digest": None,
     }
@@ -2660,14 +2637,12 @@ def synthesize_report(
         }
         for item in hard_gates
     ]
-    report["dimension_scores"] = dimensions
     report["dimensions_v11"] = dimensions_v11
     report["scoring_model"] = {
         "version": V11_SCORING_VERSION,
         "weights": dict(V11_DIMENSION_WEIGHTS),
         "severity_deduction_fractions": dict(SEVERITY_DEDUCTION_FRACTIONS),
         "weighted_total": score,
-        "legacy_total_score": legacy_total,
         "key_dimensions": sorted(V11_KEY_DIMENSIONS),
         "hard_gate_dimensions": dict(HARD_GATE_CODE_DIMENSION),
     }
@@ -2759,15 +2734,104 @@ def synthesize_report(
             *resource_result["limitations"],
         ],
         "assumptions": [
-            "known-valid output, when supplied, is independently justified"
+            "probe outputs are generated by Review and stored only in the external audit workspace"
         ],
         "solution_oracle_executed": checker_result["solution_oracle"].get(
             "executed", False
         ),
         "solution_content_inspected": False,
     }
+    deterministic_findings = [
+        item
+        for item in findings
+        if item.get("lane") == "deterministic_core"
+    ]
+    quality_findings = [
+        item
+        for item in findings
+        if item.get("lane") in {"agent_quality", "quality_results"}
+    ]
+    def strip_quality_bindings(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {
+                key: strip_quality_bindings(child)
+                for key, child in value.items()
+                if "fixture" not in key.lower()
+                and key not in {"runtime_outputs_dir", "source_role_hashes"}
+            }
+        if isinstance(value, list):
+            return [strip_quality_bindings(child) for child in value]
+        return value
+
+    deterministic_tests = [
+        strip_quality_bindings(test)
+        for test in checker_result.get("tests", [])
+        if test.get("lane") == "deterministic_core"
+    ]
+    deterministic_core = {
+        "schema_version": DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION,
+        "lane": "deterministic_core",
+        "contract": deterministic_contract,
+        "probe_results": {
+            **checker_result.get(
+                "deterministic_core",
+                {
+                    "schema_version": DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION,
+                    "probe_origin": "SCHEMA_DERIVED_DETERMINISTIC",
+                    "agent_authored": False,
+                },
+            ),
+            "tests": deterministic_tests,
+            "finding_ids": [
+                item["finding_id"] for item in deterministic_findings
+            ],
+        },
+        "finding_ids": [item["finding_id"] for item in deterministic_findings],
+        "agent_authored": False,
+    }
+    agent_quality = {
+        "schema_version": AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
+        "lane": "agent_quality",
+        "assessment": agent_assessment or {},
+        "quality_results": checker_result.get(
+            "quality_results",
+            {
+                "schema_version": QUALITY_PROBE_RESULTS_SCHEMA_VERSION,
+                "agent_authored": False,
+            },
+        ),
+        "finding_ids": [item["finding_id"] for item in quality_findings],
+        "probe_cases_are_code_defined": True,
+        "agent_scientific_scope": [
+            "Gold",
+            "target",
+            "unit",
+            "formula",
+            "tolerance",
+            "threshold",
+            "scoring direction",
+        ],
+    }
+    report["deterministic_core"] = deterministic_core
+    report["agent_quality"] = agent_quality
     (temp_dir / "audit_report.json").write_text(
         json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    (temp_dir / "deterministic_core/report.json").write_text(
+        json.dumps(deterministic_core, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (temp_dir / "deterministic_core/probe_results.json").write_text(
+        json.dumps(
+            deterministic_core["probe_results"],
+            indent=2,
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (temp_dir / "agent_quality/assessment.json").write_text(
+        json.dumps(agent_quality, indent=2, ensure_ascii=False),
+        encoding="utf-8",
     )
     audit_manifest = read_json(temp_dir / "audit_manifest.json")
     audit_manifest.update(canonical)
@@ -2930,34 +2994,13 @@ def validate_pass_probe_coverage(coverage: Any) -> None:
     for probe_class in ("discrimination", "equivalence"):
         status = coverage[probe_class].get("status")
         provenance = coverage[probe_class].get("provenance", {})
-        if status == "ASSESSED":
-            if (
-                provenance.get("oracle_used") is not False
-                or provenance.get("source_kind")
-                != "INDEPENDENT_PUBLIC_FIXTURE"
-                or not provenance.get("fixture_hashes")
-                or not provenance.get("source_role_hashes")
-                or not str(
-                    provenance.get("fixture_manifest_hash", "")
-                ).startswith("sha256:")
-            ):
-                raise ValueError(
-                    f"PASS has invalid {probe_class} probe provenance"
-                )
-        elif status == "NOT_ASSESSABLE":
-            if (
-                provenance.get("oracle_used") is not False
-                or provenance.get("source_kind") != "NONE"
-                or provenance.get("fixture_hashes") != {}
-                or provenance.get("source_role_hashes", {}) != {}
-                or provenance.get("fixture_manifest_hash") is not None
-            ):
-                raise ValueError(
-                    f"PASS has dishonest unavailable {probe_class} provenance"
-                )
-        else:
+        if status != "NOT_ASSESSABLE" or (
+            provenance.get("oracle_used") is not False
+            or provenance.get("source_kind") != "NONE"
+            or provenance.get("external_result_directory_accepted") is not False
+        ):
             raise ValueError(
-                f"PASS has invalid {probe_class} probe status"
+                f"PASS has invalid unavailable {probe_class} probe state"
             )
     component_isolation = coverage["component_isolation"]
     component_status = component_isolation.get("status")
@@ -2973,33 +3016,21 @@ def validate_pass_probe_coverage(coverage: Any) -> None:
             "PASS component-isolation provenance must be non-Oracle"
         )
     if component_status not in {
-        "ASSESSED",
-        "NOT_RUN",
+        "NOT_APPLICABLE",
         "NOT_ASSESSABLE",
     }:
         raise ValueError("PASS has invalid component-isolation status")
-    if component_status == "ASSESSED" and (
-        component_provenance.get("source_kind")
-        != "INDEPENDENT_PUBLIC_FIXTURE"
-        or component_provenance.get("oracle_used") is not False
-        or component_provenance.get("source_bindings_verified") is not True
-        or component_provenance.get("runtime_bindings_verified") is not True
-        or not component_provenance.get("cases_executed")
-    ):
-        raise ValueError("PASS has invalid component-isolation provenance")
-    if (
-        component_status in {"NOT_RUN", "NOT_ASSESSABLE"}
-        and not component_isolation.get("reason")
-    ):
+    if not component_isolation.get("reason"):
         raise ValueError(
             f"PASS component-isolation {component_status} lacks a reason"
         )
-    if component_status == "NOT_RUN" and (
+    if (
         component_provenance.get("source_kind") != "NONE"
         or component_provenance.get("oracle_used") is not False
-        or component_provenance.get("cases_executed") != 0
+        or component_provenance.get("external_result_directory_accepted")
+        is not False
     ):
-        raise ValueError("PASS component-isolation NOT_RUN has invalid provenance")
+        raise ValueError("PASS component-isolation has invalid provenance")
     task_attacks = (
         coverage["negative"].get("subcoverage", {}).get(
             "task_family_attacks"
@@ -3080,11 +3111,10 @@ def validate_contract_probe_consistency(
     allowed_statuses = {
         "positive": {"ASSESSED", "NOT_ASSESSABLE"},
         "negative": {"ASSESSED", "NOT_ASSESSABLE"},
-        "discrimination": {"ASSESSED", "NOT_ASSESSABLE"},
-        "equivalence": {"ASSESSED", "NOT_ASSESSABLE"},
+        "discrimination": {"NOT_ASSESSABLE"},
+        "equivalence": {"NOT_ASSESSABLE"},
         "component_isolation": {
-            "ASSESSED",
-            "NOT_RUN",
+            "NOT_APPLICABLE",
             "NOT_ASSESSABLE",
         },
     }
@@ -3118,7 +3148,10 @@ def validate_contract_probe_consistency(
             )
         ):
             raise ValueError(f"ASSESSED {name} probe lacks usable tests")
-        if entry["status"] in {"NOT_RUN", "NOT_APPLICABLE"} and class_tests:
+        if entry["status"] == "NOT_APPLICABLE" and any(
+            test.get("observed_status") == "COMPLETED"
+            for test in class_tests
+        ):
             raise ValueError(f"{name} probe status contradicts executed tests")
     task_attacks = (
         coverage["negative"].get("subcoverage", {}).get(
@@ -3165,23 +3198,10 @@ def validate_contract_probe_consistency(
     for name in ("discrimination", "equivalence"):
         entry = coverage[name]
         provenance = entry.get("provenance", {})
-        if entry["status"] == "ASSESSED" and (
-            provenance.get("oracle_used") is not False
-            or provenance.get("source_kind")
-            != "INDEPENDENT_PUBLIC_FIXTURE"
-            or not provenance.get("fixture_hashes")
-            or not provenance.get("source_role_hashes")
-            or not str(
-                provenance.get("fixture_manifest_hash", "")
-            ).startswith("sha256:")
-        ):
-            raise ValueError(f"invalid assessed {name} provenance")
-        if entry["status"] == "NOT_ASSESSABLE" and (
+        if entry["status"] != "NOT_ASSESSABLE" or (
             provenance.get("oracle_used") is not False
             or provenance.get("source_kind") != "NONE"
-            or provenance.get("fixture_hashes", {}) != {}
-            or provenance.get("source_role_hashes", {}) != {}
-            or provenance.get("fixture_manifest_hash") is not None
+            or provenance.get("external_result_directory_accepted") is not False
         ):
             raise ValueError(f"invalid unavailable {name} provenance")
     component_provenance = coverage["component_isolation"].get(
@@ -3189,6 +3209,9 @@ def validate_contract_probe_consistency(
     )
     if (
         component_provenance.get("oracle_used") is not False
+        or component_provenance.get("source_kind") != "NONE"
+        or component_provenance.get("external_result_directory_accepted")
+        is not False
         or any(
             "ORACLE" in value.upper()
             for value in _provenance_strings(component_provenance)
@@ -3335,12 +3358,59 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
     missing = sorted(REQUIRED_AUDIT_FILES - present)
     if missing:
         raise ValueError(f"missing required audit files: {missing}")
-    report = read_json(temp_dir / "audit_report.json")
-    checker = read_json(temp_dir / "checker_tests.json")
-    read_json(temp_dir / "resource_checks.json")
-    manifest = read_json(temp_dir / "audit_manifest.json")
+    report = require_schema(
+        read_json(temp_dir / "audit_report.json"),
+        AUDIT_REPORT_SCHEMA_VERSION,
+        "audit_report.json",
+    )
+    checker = require_schema(
+        read_json(temp_dir / "checker_tests.json"),
+        CHECKER_TESTS_SCHEMA_VERSION,
+        "checker_tests.json",
+    )
+    resource_checks = require_schema(
+        read_json(temp_dir / "resource_checks.json"),
+        RESOURCE_CHECKS_SCHEMA_VERSION,
+        "resource_checks.json",
+    )
+    manifest = require_schema(
+        read_json(temp_dir / "audit_manifest.json"),
+        AUDIT_MANIFEST_SCHEMA_VERSION,
+        "audit_manifest.json",
+    )
     disposition = read_json(temp_dir / "disposition.json")
     index_entry = read_json(temp_dir / "corpus_index_entry.json")
+    disposition = require_schema(
+        disposition,
+        DISPOSITION_SCHEMA_VERSION,
+        "disposition.json",
+    )
+    index_entry = require_schema(
+        index_entry,
+        CORPUS_INDEX_SCHEMA_VERSION,
+        "corpus_index_entry.json",
+    )
+    core_artifact = require_schema(
+        read_json(temp_dir / "deterministic_core/report.json"),
+        DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION,
+        "deterministic_core/report.json",
+    )
+    probe_artifact = require_schema(
+        read_json(temp_dir / "deterministic_core/probe_results.json"),
+        DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION,
+        "deterministic_core/probe_results.json",
+    )
+    quality_artifact = require_schema(
+        read_json(temp_dir / "agent_quality/assessment.json"),
+        AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
+        "agent_quality/assessment.json",
+    )
+    if report.get("deterministic_core") != core_artifact:
+        raise ValueError("deterministic core artifact differs from report")
+    if core_artifact.get("probe_results") != probe_artifact:
+        raise ValueError("deterministic probe artifact differs from report")
+    if report.get("agent_quality") != quality_artifact:
+        raise ValueError("agent quality artifact differs from report")
     markdown = (temp_dir / "audit_report.md").read_text(encoding="utf-8")
     findings = [
         json.loads(line)
@@ -3357,12 +3427,12 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
     if not isinstance(source_bindings, dict):
         raise ValueError("audit lacks source evidence bindings")
     if (
-        source_bindings.get("fixture_hashes")
-        != manifest.get("fixture_hashes", {})
-        or source_bindings.get("assessment_hashes")
+        source_bindings.get("assessment_hashes")
         != manifest.get("assessment_hashes", {})
         or source_bindings.get("core_contract_digest")
         != manifest.get("core_contract_digest")
+        or "fixture_hashes" in source_bindings
+        or "fixture_hashes" in manifest
     ):
         raise ValueError("audit source bindings differ from its manifest")
     binding = report.get("audit_binding")
@@ -3460,8 +3530,7 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
     evidence_contract = report.get("evidence_contract")
     if (
         not isinstance(evidence_contract, dict)
-        or evidence_contract.get("version")
-        != "materials-evidence-contract/1.0"
+        or evidence_contract.get("version") != EVIDENCE_CONTRACT_SCHEMA_VERSION
         or evidence_contract.get("fail_closed") is not True
         or not isinstance(evidence_contract.get("gaps"), list)
     ):
@@ -3522,47 +3591,8 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         or not isinstance(gold.get("provenance", {}), dict)
     ):
         raise ValueError("invalid Gold provenance")
-    if summary.get("scoring_version") != V11_SCORING_VERSION:
+    if summary.get("scoring_version") != SCORING_VERSION:
         raise ValueError("invalid scoring version")
-    if summary.get("legacy_scoring_version") != SCORING_VERSION:
-        raise ValueError("invalid legacy scoring version")
-    dimensions = report.get("dimension_scores")
-    if not isinstance(dimensions, list) or [
-        item.get("dimension") for item in dimensions
-    ] != list(DIMENSION_MAX_POINTS):
-        raise ValueError("dimension score order or membership is invalid")
-    for item in dimensions:
-        name = item["dimension"]
-        maximum = DIMENSION_MAX_POINTS[name]
-        if item.get("max_points") != maximum:
-            raise ValueError(f"invalid max points for {name}")
-        earned = item.get("points_earned")
-        normalized = item.get("normalized_score")
-        if earned is None:
-            if normalized is not None or item.get("status") != "NOT_ASSESSABLE":
-                raise ValueError(f"inconsistent unavailable score for {name}")
-        elif (
-            not isinstance(earned, (int, float))
-            or isinstance(earned, bool)
-            or not 0 <= earned <= maximum
-            or normalized != round(float(earned) / maximum, 6)
-        ):
-            raise ValueError(f"invalid earned or normalized score for {name}")
-        if earned is not None:
-            expected_status = (
-                "FAIL"
-                if normalized < 0.5
-                else "WARNING"
-                if normalized < 0.8
-                else "PASS"
-            )
-            if item.get("status") != expected_status:
-                raise ValueError(f"inconsistent dimension status for {name}")
-        if summary["final_verdict"] == "PASS" and (
-            not isinstance(item.get("evidence"), list)
-            or not item["evidence"]
-        ):
-            raise ValueError(f"PASS dimension lacks evidence: {name}")
     hard_gates = report.get("hard_gates")
     if not isinstance(hard_gates, list) or [
         item.get("code") for item in hard_gates
@@ -3584,22 +3614,6 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         for item in hard_gates
     ):
         raise ValueError("invalid Hard Gate evidence schema")
-    legacy_gaps = [
-        item["dimension"]
-        for item in dimensions
-        if item["points_earned"] is None
-    ]
-    expected_legacy_total = (
-        None
-        if legacy_gaps
-        else round(sum(item["points_earned"] for item in dimensions), 2)
-    )
-    if expected_legacy_total is not None and float(
-        expected_legacy_total
-    ).is_integer():
-        expected_legacy_total = int(expected_legacy_total)
-    if summary.get("legacy_total_score") != expected_legacy_total:
-        raise ValueError("legacy total score does not equal dimension points")
     dimensions_v11 = report.get("dimensions_v11")
     if not isinstance(dimensions_v11, list) or [
         item.get("dimension") for item in dimensions_v11
@@ -3689,7 +3703,7 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
             raise ValueError(f"{name} scoring version differs from report")
         if artifact.get("total_score") != summary["total_score"]:
             raise ValueError(f"{name} total differs from report")
-        if artifact.get("dimension_scores") != dimensions:
+        if artifact.get("dimensions_v11") != dimensions_v11:
             raise ValueError(f"{name} dimensions differ from report")
         if artifact.get("hard_gates") != hard_gates:
             raise ValueError(f"{name} Hard Gates differ from report")

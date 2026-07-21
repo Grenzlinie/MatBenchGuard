@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Recomputing DFT total energies in the verifier is infeasible; compare reported energy curve and spin values to paper gold with tolerances.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_potential.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Δd (Å)",
+            "ΔE_MEC (meV/UC)"
+          ]
+        },
+        "description": "Comma-separated table with header containing Δd (displacement in Å) and ΔE_MEC (magnetoelectric coupling energy change in meV per unit cell) for the five target displacements."
+      },
+      {
+        "file": "charge_analysis.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text"
+        },
+        "description": "Plain text file with two lines giving the net majority spin (in electrons per S atom) on bridging sulfur atoms at Δd=0 and Δd=0.44 Å."
+      }
+    ],
+    "notes": "The DFT protocol uses the PBE+U functional with van der Waals correction (DFT-D3) and spin polarization. The reference values for ΔE_MEC and spin polarization are compared against paper-reported quantities; tolerances accommodate method-dependent variations across equivalent DFT codes (e.g., Quantum ESPRESSO)."
+  },
+  "steps": [
+    {
+      "id": "emec_monotonic",
+      "output_file": "energy_potential.csv",
+      "weight": 0.3,
+      "kind": "structural",
+      "description": "Check that ΔE_MEC values are non-increasing as Δd increases."
+    },
+    {
+      "id": "emec_points",
+      "output_file": "energy_potential.csv",
+      "weight": 0.5,
+      "kind": "reference_match",
+      "description": "Compare ΔE_MEC at five specified displacements to paper gold within ±0.05 meV.",
+      "gold": {
+        "0": 0,
+        "0.29": -0.15,
+        "0.44": -0.2,
+        "1.0": -0.32,
+        "1.69": -0.37
+      },
+      "tolerance_abs": 0.05
+    },
+    {
+      "id": "charge_spin",
+      "output_file": "charge_analysis.txt",
+      "weight": 0.2,
+      "kind": "reference_match",
+      "description": "Compare spin polarization values to paper gold within ±0.01 e-/S.",
+      "gold_d0": 0.135,
+      "gold_d044": 0.092,
+      "tolerance_abs": 0.01
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference ΔE_MEC values and spin polarization from the paper",
+      "source_provenance": "Paper Fig. 4 and text: ΔE_MEC values: 0, -0.15, -0.20, -0.32, -0.37 meV at Δd = 0, 0.29, 0.44, 1.0, 1.69 Å. Spin polarization: 0.135 e-/S for Δd=0, 0.092 e-/S for Δd=0.44 Å.",
+      "generation_method": "Extracted from paper description and Figure 4b.",
+      "why_not_fabricated": "Values are directly reported in the paper; they are the target the reproduction must match."
+    }
+  ]
+}

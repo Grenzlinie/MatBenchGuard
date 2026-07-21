@@ -1,0 +1,101 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "For eta, result-level comparison with monotonic/directional thresholds is used because recomputing finite-size scaling is infeasible. For pattern densities, structural recompute from CSV is feasible (pattern set membership and ratio). The ground-state regimes are verified structurally.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "eta_vs_temperature.csv": "threshold_or_better",
+    "pattern_densities_low_temperature.csv": "threshold_or_better",
+    "ground_state_regimes.txt": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference η values for D/|J|=0 and -1 at low temperature, derived from paper Fig.2 and text.",
+      "source_provenance": "Paper Fig.2: η≈0.317 for D=0, η=0 for D=-1 at low T (T ≤ 0.35). Error bars around ±0.01.",
+      "generation_method": "Extracted from paper text and figure; tolerance set to 0.05 for D=0, upper bound 0.05 for D=-1.",
+      "why_not_fabricated": "Directly traceable to the paper's reported critical exponent; the reference oracle writes values that satisfy these gold criteria."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Structural rules for pattern densities and ratio from paper Fig.3 and text.",
+      "source_provenance": "Paper text: D/|J|=1 only patterns summing to ±1 without zeros; D/|J|=-1 one of two equivalent sets {p6,-p8,-p12} or its flip; D/|J|=0 mixture with ratio ~2.7:1 (p3/p6 ratio).",
+      "generation_method": "Extracted from paper description of local pattern densities.",
+      "why_not_fabricated": "These are the paper's explicit structural claims for each phase."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "eta_vs_temperature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "D_over_abs_J",
+            "temperature",
+            "eta",
+            "eta_error"
+          ],
+          "units": {}
+        },
+        "description": "Correlation exponent η as a function of temperature for D/|J| = 0 and -1, extracted via finite-size scaling of MC data."
+      },
+      {
+        "file": "pattern_densities_low_temperature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "D_over_abs_J",
+            "temperature",
+            "pattern_id",
+            "density"
+          ],
+          "units": {}
+        },
+        "description": "Densities of local triangular spin patterns at low temperature for D/|J| = 1, 0, and -1."
+      },
+      {
+        "file": "ground_state_regimes.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text"
+        },
+        "description": "Text file listing ground-state phases and their D/|J| ranges."
+      }
+    ],
+    "notes": "The Monte Carlo simulation step writes evidence mc_data.npz, which is not directly scored but required to produce the scored artifacts. All scored artifacts are derived from this simulation data."
+  },
+  "steps": [
+    {
+      "id": "eta_scoring",
+      "output_file": "eta_vs_temperature.csv",
+      "weight": 0.5,
+      "kind": "custom",
+      "target_policy": "threshold_or_better",
+      "description": "Validate η values for D/|J| = 0 and -1 across temperature against paper reference behavior."
+    },
+    {
+      "id": "pattern_densities_scoring",
+      "output_file": "pattern_densities_low_temperature.csv",
+      "weight": 0.3,
+      "kind": "custom",
+      "target_policy": "threshold_or_better",
+      "description": "Verify local triangular pattern densities satisfy structural requirements for D=1,0,-1."
+    },
+    {
+      "id": "ground_state_regimes_scoring",
+      "output_file": "ground_state_regimes.txt",
+      "weight": 0.2,
+      "kind": "custom",
+      "target_policy": "structural_audit",
+      "description": "Audit ground-state regime text contains correct phases and D/|J| intervals."
+    }
+  ]
+}

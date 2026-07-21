@@ -1311,6 +1311,11 @@ def _runtime_component_observations(
         return []
     observations: list[dict[str, Any]] = []
     for result in tests:
+        case_name = result.get("test_type") or result.get("case")
+        if result.get("lane") is not None and result.get(
+            "lane"
+        ) != "deterministic_core":
+            continue
         if not usable_runtime_result(result):
             continue
         payload = _runtime_payload(result)
@@ -1370,7 +1375,7 @@ def _runtime_content_sensitive(
         (
             result
             for result in usable
-            if result.get("case") in {"known_valid_public", "positive_oracle"}
+            if result.get("case") == "positive_oracle"
         ),
         None,
     )
@@ -1382,7 +1387,6 @@ def _runtime_content_sensitive(
     )
     for result in usable:
         if result.get("case") in {
-            "known_valid_public",
             "positive_oracle",
             "component_isolation__" + str(step_id),
         }:

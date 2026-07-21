@@ -1,0 +1,71 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Agent must compute dielectric quantities from the thermodynamic model. We verify a critical tunability threshold and relative ordering of dielectric constants between substrates and annealing temperatures.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "provide gold thresholds for scoring checks",
+      "source_provenance": "computed from thermodynamic model using provided equations and material parameters",
+      "generation_method": "gold values obtained by numerical solution of the model described in the instruction",
+      "why_not_fabricated": "these are derived from the physical model and are reproducible by any correct implementation"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "condition_type",
+            "substrate_TEC",
+            "substrate_name",
+            "annealing_temperature_C",
+            "applied_field_kV_per_cm",
+            "quantity",
+            "value"
+          ]
+        },
+        "description": "CSV containing computed average polarization, zero-field dielectric constant, and tunability for the specified conditions. The columns are: condition_type, substrate_TEC (optional), substrate_name (optional), annealing_temperature_C, applied_field_kV_per_cm, quantity (one of 'avg_polarization_C_per_m2', 'dielectric_constant', 'tunability_percent'), value."
+      }
+    ],
+    "notes": ""
+  },
+  "checks": [
+    {
+      "id": "check_peak_tunability",
+      "output_file": "results.csv",
+      "kind": "numeric",
+      "weight": 0.6,
+      "params": {
+        "conditions": [
+          {
+            "condition_type": "TEC_sweep",
+            "substrate_TEC": 1.02e-05,
+            "substrate_name": "",
+            "annealing_temperature_C": 650,
+            "applied_field_kV_per_cm": 400,
+            "quantity": "tunability_percent"
+          }
+        ],
+        "tolerance_type": "threshold_or_better"
+      }
+    },
+    {
+      "id": "check_ordering",
+      "output_file": "results.csv",
+      "kind": "ordering",
+      "weight": 0.4,
+      "params": {
+        "groups": []
+      }
+    }
+  ]
+}

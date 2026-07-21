@@ -1,0 +1,67 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "True saddle points of the analytic potential are derived analytically; the checker compares agent-reported transition states to these gold saddles using distance and energy tolerances.",
+  "pass_threshold": 0.9,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference set of true saddle points for the synthetic potential used by the Bubble algorithm.",
+      "source_provenance": "Derived analytically from the given synthetic potential function f(x,y,z) = -cos(2πx/Lx) - cos(2πy/Ly) - cos(2πz/Lz), with Lx=5 Å, Ly=10 Å, Lz=5 Å.",
+      "generation_method": "Saddle points are located at the halfway points between periodic images of the global minimum along each Cartesian direction; coordinates and energies computed directly from the function.",
+      "why_not_fabricated": "These are exact solutions to ∇f=0 for the periodic potential, providing an authoritative reference for the approximate transition states found by the Bubble algorithm."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "transition_states.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "index",
+              "energy",
+              "coordinates"
+            ],
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "energy": {
+                "type": "number",
+                "units": "eV"
+              },
+              "coordinates": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "units": "Å"
+                },
+                "minItems": 3,
+                "maxItems": 3
+              }
+            }
+          }
+        },
+        "description": "List of distinct approximate transition states found by the Bubble flooding algorithm on the synthetic periodic potential. The checker matches each reported state to a precomputed set of true saddle points within coordinate and energy tolerances."
+      }
+    ],
+    "notes": "The synthetic analytic potential function is supplied in the instruction. The Bubble algorithm must be implemented by the agent; no external Bubble code or precomputed grid is provided. The output must contain all distinct diffusion directions (at least three for a 3D unit cell)."
+  },
+  "steps": [
+    {
+      "id": "step_bubble",
+      "output_file": "transition_states.json",
+      "weight": 1.0,
+      "kind": "recompute_metric",
+      "params": {
+        "coordinate_tolerance": 0.25,
+        "energy_tolerance": 0.1
+      }
+    }
+  ]
+}

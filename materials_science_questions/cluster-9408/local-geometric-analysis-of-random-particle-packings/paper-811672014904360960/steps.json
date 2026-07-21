@@ -1,0 +1,54 @@
+[
+  {
+    "id": "1",
+    "title": "Run base tapping simulations",
+    "role": "process",
+    "action": "Implement an event-driven molecular dynamics simulation for N=1000 monodisperse frictional hard disks (diameter d=0.01784 in units where container width L=1, mass m=1, gravity g=1) using the Walton collision model. Set normal restitution coefficient epsilon0=0.6, friction mu=0.4, roughness beta0=0.5, and critical velocity v0=0.02 (type A disks). Run constant-intensity tapping sequences for expansion factors xi = 0.7%, 3%, and 0.5%. A shake cycle consists of a vertical expansion by factor xi followed by dynamical recompression under gravity with random initial velocities. Save the disk centre coordinates at every tap for each sequence.",
+    "output_file": "",
+    "evidence": "simulation_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "2",
+    "title": "Compute Voronoi shape factors for xi=0.7% runs",
+    "role": "scored",
+    "action": "For the xi=0.7% simulation, load the disk positions at taps t = 2, 8, 15, 30, 50, 70. For each tap, compute the Voronoi tessellation using Quickhull (e.g., scipy.spatial.Voronoi). For every interior (non-boundary) cell, compute the shape factor zeta = C^2 / (4 pi S), where C is the cell perimeter and S is its area. Write a JSON object mapping each tap number (as a string) to the list of zeta values for all interior cells at that tap.",
+    "output_file": "shape_factor_cells.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Shape factor zeta for interior Voronoi cells at selected compaction stages.",
+    "output_schema": "A JSON object with keys \"2\", \"8\", \"15\", \"30\", \"50\", \"70\" (tap numbers as strings), each mapping to an array of float numbers representing zeta values for all interior Voronoi cells at that tap."
+  },
+  {
+    "id": "3",
+    "title": "Run memory-effect simulations",
+    "role": "process",
+    "action": "From the states saved at t=30 of the xi=3% and xi=0.5% base runs, continue tapping with the switched intensities: scenario 0 — change from xi=3% to xi=0.5% at t=30; scenario 1 — change from xi=0.5% to xi=3% at t=30. Continue each simulation for at least 20 additional taps, saving the disk positions at each tap.",
+    "output_file": "",
+    "evidence": "memory_simulation_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "4",
+    "title": "Output memory-effect packing fractions",
+    "role": "scored",
+    "action": "From the memory-effect simulation states, compute the packing fraction rho(t) = (N * pi * (d/2)^2) / (L^2) for both scenarios. For each scenario, include a row for tap=30 (the density at the moment of the switch, taken from the base run before the intensity change) and a row for each subsequent tap (31, 32, ...) up to at least tap=50. Write the CSV with columns: scenario (integer 0 or 1), tap (integer), density (float).",
+    "output_file": "memory_effect.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Packing fraction per tap for the two memory-effect scenarios.",
+    "output_schema": "CSV with columns: scenario (integer, 0 for 3%→0.5%, 1 for 0.5%→3%), tap (integer), density (float). For each scenario, include a row for tap=30 and a row for each subsequent tap 31, 32, ... up to at least tap=50. The tap numbers correspond to the absolute tap count from the beginning of the base run."
+  }
+]

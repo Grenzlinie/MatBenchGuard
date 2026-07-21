@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute from agent's raw artifacts infeasible because the full MEFM iteration kernel and Z matrix are not re-derivable inside the lightweight checker; result-level compare with tolerated paper values is appropriate (T0 fallback).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Effective shear modulus gold values",
+      "source_provenance": "Paper Figure 1, MEFM curve with g₂(r) (solid line) at c = 0.15, 0.30, 0.45, 0.60. Digitised by authors.",
+      "generation_method": "Visual reading from published figure, confirmed against reference solution output.",
+      "why_not_fabricated": "Values are the paper's reported results for the same inputs and method the agent must reproduce."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Stress concentration gold values (x₁=0 and maximum) for f₂ loading at c=0.6",
+      "source_provenance": "Paper Table 1: max⟨σ₁₁⟩ᵢ₍₀₎ = 1.2439, ⟨σ₁₁⟩ᵢ₍₇₎(0) = -0.4295, max⟨σ₁₁⟩ᵢ₍₇₎ = 1.5664. Normalised by zero-order max yields -0.3453 and 1.2593.",
+      "generation_method": "Direct computation from paper-reported numbers.",
+      "why_not_fabricated": "These are the paper's own values, normalised per the task's definition."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "effective_modulus.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "concentration",
+            "shear_modulus_GPa"
+          ],
+          "units": {
+            "concentration": "dimensionless",
+            "shear_modulus_GPa": "GPa"
+          }
+        },
+        "description": "Effective shear modulus computed via MEFM for fiber volume fractions c=0.15, 0.30, 0.45, 0.60."
+      },
+      {
+        "file": "stress_concentration_f2.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x1",
+            "stress_concentration_11"
+          ],
+          "notes": "The column x1 contains numeric values and one row with the string 'max'."
+        },
+        "description": "Stress concentration factor ⟨σ₁₁⟩ᵢ(x₁) for loading f₂(x₁) at c=0.6, computed via MEFM iteration method, with a 'max' row indicating the overall maximum."
+      }
+    ],
+    "notes": "The task requires reproducing the effective shear modulus and stress concentration factor using the multiparticle effective field method (MEFM) for a glass-fiber/epoxy composite. All necessary material parameters and loading function are given. The hidden gold values are extracted from the paper's Figure 1 and Table 1."
+  },
+  "steps": [
+    {
+      "id": "step_effective_modulus",
+      "output_file": "effective_modulus.csv",
+      "kind": "scalar_comparison",
+      "weight": 0.3,
+      "parameters": {
+        "gold": [
+          {
+            "concentration": 0.15,
+            "shear_modulus_GPa": 2.03
+          },
+          {
+            "concentration": 0.3,
+            "shear_modulus_GPa": 2.83
+          },
+          {
+            "concentration": 0.45,
+            "shear_modulus_GPa": 3.78
+          },
+          {
+            "concentration": 0.6,
+            "shear_modulus_GPa": 4.82
+          }
+        ],
+        "relative_tolerance": 0.05
+      }
+    },
+    {
+      "id": "step_stress_concentration",
+      "output_file": "stress_concentration_f2.csv",
+      "kind": "vector_comparison_plus_structure",
+      "weight": 0.7,
+      "parameters": {
+        "gold_value_at_zero": -0.3453,
+        "gold_max": 1.2593,
+        "abs_tolerance": 0.02,
+        "min_points": 50,
+        "symmetry_tolerance": 0.01,
+        "max_row_consistency_tolerance": 0.001
+      }
+    }
+  ]
+}

@@ -8,11 +8,14 @@ The computation follows standard HEA empirical formulas using the alloy's atomic
 
 - ΔH_mix = Σ_{i<j} c_i c_j · Ω_ij, where Ω_ij (kJ mol⁻¹) is the binary mixing enthalpy parameter for the i–j pair.
 - ΔS_mix = –R Σ c_i ln c_i, with the gas constant R = 8.314 J K⁻¹ mol⁻¹.
-- Ω = (T · ΔS_mix) / |ΔH_mix| evaluated at T = 298 K.
+- Ω = (T · ΔS_mix) / |ΔH_mix|, where T is the composition-averaged melting temperature T_m = Σ c_i T_{m,i}. The elemental melting points T_{m,i} are given in the Assets.
 - δ = 100 · √( Σ c_i (1 – r_i / ⟨r⟩)² ), where ⟨r⟩ = Σ c_i r_i is the average atomic radius.
 - VEC = Σ c_i · (VEC)_i.
 
-The alloy compositions are (CuFeMnNi)₁₋ₓCrₓ with x = 0, 0.05, 0.10, 0.15, 0.20, 0.25. The atomic fractions are: Cr = x, and Cu = Fe = Mn = Ni = (1 – x) / 4. All required elemental data (Ω_ij, atomic radii, VEC numbers) are provided in the Assets section.
+The alloy compositions are (CuFeMnNi)₁₋ₓCrₓ with x = 0, 0.05, 0.10, 0.15, 0.20, 0.25. The atomic fractions are: Cr = x, and Cu = Fe = Mn = Ni = (1 – x) / 4. All required elemental data (Ω_ij, atomic radii, VEC numbers, melting points) are provided in the Assets section.
+
+## Important: your final output must be a CSV file, not JSON
+You must save one CSV file: `/app/outputs/thermodynamic_parameters.csv`. Do **not** output any JSON files. Do **not** confuse the shape‑check contract below with a requirement to write JSON. The contract is for automated validation of the CSV’s column names; you only need to produce the CSV.
 
 ## Reproduction target
 Produce a CSV file containing the five thermodynamic parameters for all six alloy compositions, ordered by increasing Cr content. The output must follow the exact format described in the workflow step: columns Alloy, Cr_content, Delta_H_mix_kJ_mol, Delta_S_mix_J_K_mol, Omega, delta_percent, VEC. Your computed values will be compared to independently obtained reference values using a relative error metric.
@@ -32,73 +35,36 @@ Cu: 128, Fe: 124, Mn: 135, Ni: 125, Cr: 128
 **Valence electron counts**  
 Cu: 11, Fe: 8, Mn: 7, Ni: 10, Cr: 6
 
+**Elemental melting points (K)**  
+Cu: 1358, Fe: 1811, Mn: 1519, Ni: 1728, Cr: 2180
+
 **Gas constant**  
-R = 8.314 J K⁻¹ mol⁻¹; use T = 298 K for the Ω parameter.
+R = 8.314 J K⁻¹ mol⁻¹.
 
 ## Workflow steps
 
 ### Step 1: Compute thermodynamic parameters
 - Role: scored (load-bearing)
-- Action: Given the alloy compositions (atomic fractions: for (CuFeMnNi)₁₋ₓCrₓ, Cu=Fe=Mn=Ni=(1-x)/4, Cr=x, with x=0, 0.05, 0.1, 0.15, 0.2, 0.25) and the elemental data (binary mixing enthalpies, atomic radii, valence electron counts, and gas constant R=8.314 J/K/mol) provided in the instruction, compute for each alloy: mixing enthalpy ΔH_mix as sum over all i,j of c_i*c_j*ΔH_ij_mix (with ΔH_ij_mix for the Cu-Fe-Mn-Ni-Cr system given), configurational entropy ΔS_mix = -R Σ c_i ln c_i, stability parameter Ω = T ΔS_mix / |ΔH_mix| with T=298 K, atomic-size difference δ = 100 * sqrt( Σ c_i (1 - r_i / ⟨r⟩)² ), and valence electron concentration VEC = Σ c_i VEC_i. Write the results to CSV.
+- Action: Given the alloy compositions (atomic fractions: for (CuFeMnNi)₁₋ₓCrₓ, Cu=Fe=Mn=Ni=(1-x)/4, Cr=x, with x=0, 0.05, 0.1, 0.15, 0.2, 0.25) and the elemental data (binary mixing enthalpies, atomic radii, valence electron counts, melting points, and gas constant R=8.314 J/K/mol) provided in the instruction, compute for each alloy: mixing enthalpy ΔH_mix as sum over all i,j of c_i*c_j*ΔH_ij_mix (with ΔH_ij_mix for the Cu-Fe-Mn-Ni-Cr system given), configurational entropy ΔS_mix = -R Σ c_i ln c_i, stability parameter Ω = T_m ΔS_mix / |ΔH_mix| where T_m = Σ c_i T_{m,i} using the elemental melting points in the Assets, atomic-size difference δ = 100 * sqrt( Σ c_i (1 - r_i / ⟨r⟩)² ), and valence electron concentration VEC = Σ c_i VEC_i. Write the results to a CSV file.
 - Output file: `/app/outputs/thermodynamic_parameters.csv`
-- Format: csv
-- Contract: Header: Alloy,Cr_content,Delta_H_mix_kJ_mol,Delta_S_mix_J_K_mol,Omega,delta_percent,VEC. Alloy values as strings like '0%Cr','5%Cr', etc. Cr_content as float. All numeric fields as floats. One row per alloy, ordered by increasing Cr content.
+- Format: csv (not JSON)
+- Contract: The CSV must have exactly the following header row:
+  `Alloy,Cr_content,Delta_H_mix_kJ_mol,Delta_S_mix_J_K_mol,Omega,delta_percent,VEC`
+
+  Each of the six rows corresponds to one alloy, ordered by increasing Cr content.
+  - `Alloy`: string, one of `'0%Cr'`, `'5%Cr'`, `'10%Cr'`, `'15%Cr'`, `'20%Cr'`, `'25%Cr'`.
+  - `Cr_content`: the x value as a float.
+  - All other columns: numeric values as floats, written with sufficient precision (e.g. 6 decimal places) so that the scoring check can read them.
+
+  Example of one row (the actual numbers are computed by you, shown here only to illustrate the required shape):
+  `0%Cr,0.0,2.750000,11.530000,6.720000,3.400000,9.000000`
+
+  **Never** write the file as JSON or any other format; it must be plain CSV.
 - Scoring: scored by hidden verifier
 
 ## Output files
 Write all artifacts under `/app/outputs`:
 - `/app/outputs/thermodynamic_parameters.csv`
 
-## Output contract
-
-Every file the hidden verifier reads is described below. Write each file under `/app/outputs` and follow its schema exactly.
-
-### thermodynamic_parameters.csv
-- path: `/app/outputs/thermodynamic_parameters.csv`
-- format: csv
-- purpose: scored
-- target_policy: metric_recompute
-- description: Scored artifact: the computed thermodynamic descriptors for the six HEA compositions. The hidden checker recomputes the mean absolute relative error (MAPE) against the paper-reported values and awards partial credit based on MAPE.
-- schema:
-  - `type`: table
-  - `required_columns`: `Alloy`, `Cr_content`, `Delta_H_mix_kJ_mol`, `Delta_S_mix_J_K_mol`, `Omega`, `delta_percent`, `VEC`
-  - `description`: Columns: Alloy (string), Cr_content (float), Delta_H_mix_kJ_mol (float), Delta_S_mix_J_K_mol (float), Omega (float), delta_percent (float), VEC (float).
-
-Notes: Scoring compares the agent's computed values to hidden paper reference values using mean absolute relative error (MAPE). Higher error reduces credit; the exact tolerance band is defined in the hidden grading specification.
-
-## Self-check before finishing (optional, not scored)
-
-A machine-readable copy of the output contract is below. Before you finish, write and run a small script that checks every file under `/app/outputs` against it: each declared file exists, JSON objects contain the required keys, and CSV/TSV files contain the required columns. Fix any mismatch before finishing.
-
-This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific correctness, and passing it does not mean your answer is correct.
-
-```json
-{
-  "outputs": [
-    {
-      "file": "thermodynamic_parameters.csv",
-      "format": "csv",
-      "purpose": "scored",
-      "target_policy": "metric_recompute",
-      "schema": {
-        "type": "table",
-        "required_columns": [
-          "Alloy",
-          "Cr_content",
-          "Delta_H_mix_kJ_mol",
-          "Delta_S_mix_J_K_mol",
-          "Omega",
-          "delta_percent",
-          "VEC"
-        ],
-        "description": "Columns: Alloy (string), Cr_content (float), Delta_H_mix_kJ_mol (float), Delta_S_mix_J_K_mol (float), Omega (float), delta_percent (float), VEC (float)."
-      },
-      "description": "Scored artifact: the computed thermodynamic descriptors for the six HEA compositions. The hidden checker recomputes the mean absolute relative error (MAPE) against the paper-reported values and awards partial credit based on MAPE."
-    }
-  ],
-  "notes": "Scoring compares the agent's computed values to hidden paper reference values using mean absolute relative error (MAPE). Higher error reduces credit; the exact tolerance band is defined in the hidden grading specification."
-}
-```
-
 ## How you are scored
-A hidden verifier will read your thermodynamic_parameters.csv and compare each entry to a hidden reference (derived from the original research). It will compute a relative error metric across all alloys and all five parameters, then convert the overall deviation into a reward between 0 and 1. Smaller errors yield higher rewards; simply reporting the reference values without performing the correct composition-weighted computation will not be sufficient, as the verifier may also employ consistency checks. The result of this scored stage dominates the final reward.
+A hidden verifier will read your thermodynamic_parameters.csv and compare each entry to a hidden reference (derived from the original research). It will compute a relative error metric across all alloys and all five parameters, then convert the overall deviation into a reward between 0 and 1. Smaller errors yield higher rewards.

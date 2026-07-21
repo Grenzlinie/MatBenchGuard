@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01_eos",
+    "title": "Equation‑of‑state fitting and transition pressure determination",
+    "role": "process",
+    "action": "For both B3LYP and LDA functionals, compute total energies of zinc blende (B3) and rocksalt (B1) ZnS over a range of volumes, fit to an equation of state, and evaluate the enthalpy difference ΔH_t(p) = H(rocksalt) − H(zinc blende) at the pressures specified by the paper. Fit ΔH_t(p) to a parabola and solve for the equilibrium transition pressure p_t for each functional.",
+    "output_file": "",
+    "evidence": "eos_calc.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Reference calculation that provides the equilibrium transition pressures used in later pathway simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_transition_pressures",
+    "title": "Report transition pressures",
+    "role": "scored",
+    "action": "Write the computed equilibrium transition pressures p_t (in GPa) for the B3LYP and LDA functionals to a JSON file.",
+    "output_file": "transition_pressures.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing the transition pressures obtained from the equation‑of‑state fits.",
+    "output_schema": "{\"B3LYP\": <float (GPa)>, \"LDA\": <float (GPa)>}"
+  },
+  {
+    "id": "step_03_pathway_calc",
+    "title": "Compute enthalpy profiles along Pmm2 and R3m pathways",
+    "role": "process",
+    "action": "For both B3LYP and LDA functionals, at their respective equilibrium pressure p_t, construct Pmm2 and R3m intermediate structures by varying the Zn fractional coordinate z(Zn) from 0.25 to 0.5 in steps of 0.025. At each z, minimize the enthalpy with respect to the lattice parameters while keeping z fixed, and record the enthalpy difference relative to the zinc blende end‑member.",
+    "output_file": "",
+    "evidence": "pathway_calc.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generates the enthalpy vs. reaction coordinate data from which activation enthalpies are extracted.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_activation_b3lyp",
+    "title": "Report activation enthalpies (B3LYP)",
+    "role": "scored",
+    "action": "Write a CSV file containing the enthalpy differences (relative to the zinc blende structure) along the Pmm2 and R3m pathways at the B3LYP equilibrium pressure. Each row corresponds to one z(Zn) value.",
+    "output_file": "activation_enthalpy_B3LYP.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact containing the enthalpy profiles for B3LYP. The activation enthalpy is the maximum value on each curve. The hidden checker will verify that the Pmm2 maximum is lower than the R3m maximum and that the activation enthalpies match the paper’s values within a tolerance.",
+    "output_schema": "columns: pathway (string: 'Pmm2' or 'R3m'), z (float), enthalpy_diff (eV). Data at the B3LYP equilibrium pressure."
+  },
+  {
+    "id": "step_05_activation_lda",
+    "title": "Report activation enthalpies (LDA)",
+    "role": "scored",
+    "action": "Write a CSV file containing the enthalpy differences along the Pmm2 and R3m pathways at the LDA equilibrium pressure. Each row corresponds to one z(Zn) value.",
+    "output_file": "activation_enthalpy_LDA.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact containing the enthalpy profiles for LDA. The activation enthalpy is the maximum value on each curve. The hidden checker will verify that the Pmm2 maximum is lower than the R3m maximum and that the activation enthalpies match the paper’s values within a tolerance.",
+    "output_schema": "columns: pathway (string: 'Pmm2' or 'R3m'), z (float), enthalpy_diff (eV). Data at the LDA equilibrium pressure."
+  },
+  {
+    "id": "step_06_band_gap_calc",
+    "title": "Compute band gaps for key structures",
+    "role": "process",
+    "action": "Using the B3LYP functional at its equilibrium pressure, perform self‑consistent‑field calculations for the optimized structures of zinc blende (z=0.25), the intermediate Pmm2 structure at z=0.35, and rocksalt (z=0.5). Compute the Kohn‑Sham band gap (energy difference between the highest occupied and lowest unoccupied eigenvalues).",
+    "output_file": "",
+    "evidence": "band_gap_calc.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Computes the electronic band gaps from the optimized geometries along the Pmm2 pathway.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_07_band_gaps",
+    "title": "Report band gaps (B3LYP)",
+    "role": "scored",
+    "action": "Write the computed band gaps (in eV) for the three characteristic structures to a JSON file.",
+    "output_file": "band_gaps_B3LYP.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing the band gaps at the B3LYP equilibrium pressure.",
+    "output_schema": "{\"B3\": <float (eV)>, \"Pmm2_z0.35\": <float (eV)>, \"B1\": <float (eV)>}"
+  }
+]

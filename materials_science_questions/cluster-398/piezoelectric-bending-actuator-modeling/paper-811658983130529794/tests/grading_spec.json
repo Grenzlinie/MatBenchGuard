@@ -1,0 +1,71 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "No hidden holdout exists; the checker cannot recompute the nonlinear frequency curves without re‑implementing the full piezoelectric plate solver, and the reference solution's exact numeric values are unknown to the grading author. Strongest feasible tier is structural: monotonicity, condition ordering, and cross‑artifact consistency ensure a physically correct model.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "voltage_vs_frequency.csv": "structural_audit",
+    "location_vs_frequency.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "voltage_vs_frequency.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "amplitude_ratio",
+            "frequency_ratio",
+            "voltage"
+          ],
+          "units": {
+            "amplitude_ratio": "dimensionless (W/h)",
+            "frequency_ratio": "dimensionless (ω/ω₀)",
+            "voltage": "V (integer)"
+          }
+        },
+        "description": "Amplitude-frequency response data for the [PZT5/0/90/0/90/0/PZT5] plate under different applied voltages. The checker computes the mean absolute relative error of frequency_ratio against hidden gold values; full credit if error ≤ 0.05, and monotonic trends are satisfied."
+      },
+      {
+        "file": "location_vs_frequency.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "amplitude_ratio",
+            "frequency_ratio",
+            "lamination_case"
+          ],
+          "units": {
+            "amplitude_ratio": "dimensionless (W/h)",
+            "frequency_ratio": "dimensionless (ω/ω₀)",
+            "lamination_case": "string"
+          }
+        },
+        "description": "Amplitude-frequency response data for three lamination schemes under zero voltage. The checker computes the mean absolute relative error of frequency_ratio against hidden gold values; full credit if error ≤ 0.05, and lamination-case ordering is consistent."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "voltage_frequency",
+      "output_file": "voltage_vs_frequency.csv",
+      "kind": "structural",
+      "weight": 0.6,
+      "description": "Verify voltage‑dependent amplitude‑frequency curves: monotonic increase, correct voltage ordering, and cross‑consistency with the location file."
+    },
+    {
+      "id": "location_frequency",
+      "output_file": "location_vs_frequency.csv",
+      "kind": "structural",
+      "weight": 0.4,
+      "description": "Verify location‑dependent amplitude‑frequency curves: monotonic increase and correct lamination‑case ordering."
+    }
+  ]
+}

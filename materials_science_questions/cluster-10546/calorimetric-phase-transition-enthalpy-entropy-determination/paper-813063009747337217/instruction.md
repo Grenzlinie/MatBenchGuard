@@ -4,7 +4,9 @@
 The alkali fulleride RbC60 can adopt several crystalline modifications: a freely rotating face-centred cubic (fcc) phase, a polymer phase with covalently bonded chains, a dimer phase, and a hindered-rotation fcc (fccl) phase. The relative thermodynamic stability of these phases is not directly measured but can be estimated from the temperatures and enthalpies of the phase transformations, together with a reasonable assumption about the rotational heat capacity of the freely rotating fcc phase. This estimation yields a Gibbs free energy diagram that predicts which phase is the most stable at a given temperature.
 
 ## Approach
-The relative Gibbs free energy of a phase with respect to the freely rotating fcc reference is expressed as ΔG = ΔH − T ΔS. The enthalpy and entropy differences at temperature T are obtained from the measured equilibrium temperature Teq and transformation enthalpy Q of the transition from that phase to the fcc phase, corrected for any specific-heat difference between the two phases. The specific heat of all phases is assumed to be identical except for a rotational contribution of Crot = (3/2)R for the freely rotating fcc phase and zero for the dimer, polymer, and fccl phases. Thus, the specific heat difference when comparing to the fcc phase is ΔCp = (3/2)R. The enthalpy and entropy differences are computed by integrating ΔCp from T to Teq:
+The relative Gibbs free energy of a phase with respect to the freely rotating fcc reference is expressed as ΔG = ΔH − T ΔS. The enthalpy and entropy differences at temperature T are obtained from the measured equilibrium temperature Teq and transformation enthalpy Q of the transition from that phase to the fcc phase, corrected for any specific-heat difference between the two phases.
+The universal gas constant is **R = 8.314e‑3 kJ/(mol·K)** (equivalently 8.314 J/(mol·K)). The specific heat of all phases is assumed to be identical except for a rotational contribution of Crot = (3/2)R for the freely rotating fcc phase and zero for the dimer, polymer, and fccl phases. Thus, the specific heat difference when comparing to the fcc phase is **ΔCp = (3/2)R**.
+The enthalpy and entropy differences are computed by integrating ΔCp from T to Teq:
   ΔH(T) = Q − ∫_T^Teq ΔCp dT
   ΔS(T) = Q/Teq − ∫_T^Teq (ΔCp / T) dT
 With these, ΔG of each phase relative to fcc is evaluated over the temperature range of interest. The resulting curves are then compared to determine the temperature-dependent stability ordering.
@@ -16,7 +18,7 @@ Using the following transformation data:
   • polymer → fcc: Teq = 370 K, Q = 25.8 kJ/mol
 and the heat-capacity assumption stated above, compute the relative Gibbs free energy differences ΔG of the fccl, dimer, and polymer phases with respect to the freely rotating fcc phase for temperatures T from 200 K to 500 K. Save the results as a CSV file with columns: T (temperature in K), G_fccl (kJ/mol), G_dimer (kJ/mol), G_polymer (kJ/mol). 
 
-From these computed curves, deduce which phase has the lowest ΔG (i.e., is thermodynamically most stable) as a function of temperature. Write a concise plain-text summary indicating the stable phase(s) below roughly 370 K and above 370 K, and stating whether the dimer phase ever becomes more stable than the polymer.
+From these computed curves, deduce which phase has the lowest ΔG (i.e., is thermodynamically most stable) as a function of temperature. Write a concise plain-text summary indicating the stable phase(s) as temperature varies, and stating whether the dimer phase ever becomes more stable than the polymer.
 
 ## Assets
 
@@ -36,10 +38,10 @@ From these computed curves, deduce which phase has the lowest ΔG (i.e., is ther
 
 ### Step 2: State phase stability ordering
 - Role: scored
-- Action: Analyze the computed Gibbs free energy curves to determine which phase has the lowest ΔG (i.e., is most stable) as a function of temperature. Write a concise text summary describing the temperature regimes of stability: which phase is stable below ~370 K, which above, and whether the dimer is ever the most stable phase relative to the polymer. Save this summary to stability_summary.txt.
+- Action: Analyze the computed Gibbs free energy curves to determine which phase has the lowest ΔG (i.e., is most stable) as a function of temperature. Write a concise text summary describing the temperature regimes of stability: which phase is stable at low temperatures, which phase is stable at high temperatures, and whether the dimer is ever the most stable phase relative to the polymer. Save this summary to stability_summary.txt.
 - Output file: `/app/outputs/stability_summary.txt`
 - Format: txt
-- Contract: One or more sentences of plain text, such as 'Polymer is the most stable phase below 370 K; the freely rotating fcc is the most stable phase above 370 K; the dimer is unstable with respect to the polymer.'
+- Contract: One or more sentences of plain text that reflect the temperature‑dependent stability ordering deduced from the computed ΔG curves.
 - Scoring: scored by hidden verifier
 
 ## Output files
@@ -71,13 +73,13 @@ Every file the hidden verifier reads is described below. Write each file under `
 - format: txt
 - purpose: scored
 - target_policy: structural_audit
-- description: A plain text summary of the phase stability ordering. The checker will verify that the statements are logically consistent with the submitted Gibbs free energy curves and correctly capture the polymer as the most stable phase below ~370 K, the fcc above, and the dimer unstable relative to the polymer.
+- description: A plain text summary of the phase stability ordering. The checker will verify that the statements are logically consistent with the submitted Gibbs free energy curves.
 - schema:
   - `type`: text
   - `required`: object
   - `items`: object
 
-Notes: All necessary numerical inputs (Q, Teq, heat capacity assumption) are provided directly in the instruction. The agent must implement the thermodynamic integrals analytically or numerically. The checker will recompute ΔG at characteristic temperatures (e.g., 280, 290, 370, 400 K) using the same formulas and compare within a tolerance. The stability summary is checked for consistency with the CSV and the required qualitative ordering.
+Notes: All necessary numerical inputs (Q, Teq, heat capacity assumption, and R) are provided directly in the instruction. The agent must implement the thermodynamic integrals analytically or numerically. The checker will recompute ΔG at characteristic temperatures (e.g., 280, 290, 370, 400 K) using the same formulas and compare within a tolerance. The stability summary is checked for consistency with the CSV and the required qualitative ordering.
 
 ## Self-check before finishing (optional, not scored)
 
@@ -120,10 +122,10 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
         "required": {},
         "items": {}
       },
-      "description": "A plain text summary of the phase stability ordering. The checker will verify that the statements are logically consistent with the submitted Gibbs free energy curves and correctly capture the polymer as the most stable phase below ~370 K, the fcc above, and the dimer unstable relative to the polymer."
+      "description": "A plain text summary of the phase stability ordering. The checker will verify that the statements are logically consistent with the submitted Gibbs free energy curves."
     }
   ],
-  "notes": "All necessary numerical inputs (Q, Teq, heat capacity assumption) are provided directly in the instruction. The agent must implement the thermodynamic integrals analytically or numerically. The checker will recompute ΔG at characteristic temperatures (e.g., 280, 290, 370, 400 K) using the same formulas and compare within a tolerance. The stability summary is checked for consistency with the CSV and the required qualitative ordering."
+  "notes": "All necessary numerical inputs (Q, Teq, heat capacity assumption, and R) are provided directly in the instruction. The agent must implement the thermodynamic integrals analytically or numerically. The checker will recompute ΔG at characteristic temperatures (e.g., 280, 290, 370, 400 K) using the same formulas and compare within a tolerance. The stability summary is checked for consistency with the CSV and the required qualitative ordering."
 }
 ```
 

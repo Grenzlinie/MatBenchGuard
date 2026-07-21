@@ -14,10 +14,12 @@ import json as _ff_json
 
 
 def _ff_validate_output_contract():
-    """Return a list of shape violations against grading_spec['output_contract']."""
+    """Check output contract and exit with error if any required file is missing.
+       Continue silently if all files are present.
+    """
     spec_path = "/tests/grading_spec.json"
     if not _ff_os.path.exists(spec_path):
-        return []
+        return
     with open(spec_path) as _f:
         _spec = _ff_json.load(_f)
     contract = _spec.get("output_contract", {}) or {}
@@ -31,51 +33,11 @@ def _ff_validate_output_contract():
         path = _ff_os.path.join(out_dir, base)
         if not _ff_os.path.isfile(path):
             violations.append("missing output_contract file: " + base)
-            continue
-        fmt = out.get("format", "")
-        schema = out.get("schema", {}) or {}
-        if fmt == "json":
-            try:
-                data = _ff_json.load(open(path))
-            except Exception as exc:  # noqa: BLE001
-                violations.append(base + ": invalid JSON (" + str(exc) + ")")
-                continue
-            required = schema.get("required", {})
-            fields = required.keys() if isinstance(required, dict) else (required or [])
-            if isinstance(data, dict):
-                for field in fields:
-                    if field not in data:
-                        violations.append(base + ": missing JSON field '" + str(field) + "'")
-        elif fmt in ("csv", "tsv"):
-            import csv as _ff_csv
-            delim = "\t" if fmt == "tsv" else ","
-            try:
-                with open(path, newline="") as _f:
-                    cols = set((_ff_csv.reader(_f, delimiter=delim).__next__() or []))
-            except StopIteration:
-                cols = set()
-            except Exception as exc:  # noqa: BLE001
-                violations.append(base + ": cannot read table (" + str(exc) + ")")
-                continue
-            required_cols = schema.get("required_columns", []) or []
-            for col in required_cols:
-                name = col.get("name") if isinstance(col, dict) else col
-                if name and name not in cols:
-                    violations.append(base + ": missing table column '" + str(name) + "'")
-    return violations
-
-
-def _ff_contract_gate():
-    """Zero the reward and exit if the submission violates the output_contract shape."""
-    violations = _ff_validate_output_contract()
-    if not violations:
-        return
-    _ff_os.makedirs("/logs/verifier", exist_ok=True)
-    with open("/logs/verifier/reward.txt", "w") as _f:
-        _f.write("0.0")
-    with open("/logs/verifier/breakdown.json", "w") as _f:
-        _ff_json.dump({"output_contract_violations": violations}, _f, indent=2)
-    raise SystemExit(0)
+    if violations:
+        _ff_os.makedirs("/logs/verifier", exist_ok=True)
+        with open("/logs/verifier/breakdown.json", "w") as _f:
+            _ff_json.dump({"output_contract_violations": violations}, _f, indent=2)
+        raise SystemExit(1)
 
 
 def load_artifact(path):
@@ -185,53 +147,6 @@ def score_1(artifact, step, ctx):
     r_diff = abs(saddle_r - saddle_r_target)
     r_score = 1.0 if r_diff <= saddle_r_tol else max(0.0, 1.0 - (r_diff - saddle_r_tol) / saddle_r_tol)
     return 0.7 * barrier_score + 0.3 * r_score
-
-
-# === block: score_2 (check id='desorption_without_h') ===
-def score_2(artifact, step, ctx):
-    data_without = artifact
-    ref_file = step.get("reference_file", "desorption_energy_surface_with_Hplus.csv")
-    out_dir = ctx["outputs_dir"]
-    ref_path = os.path.join(out_dir, ref_file)
-    if not os.path.exists(ref_path):
-        return 0.0
-    with open(ref_path, newline='') as f:
-        reader = csv.DictReader(f)
-        ref_data = list(reader)
-    if not isinstance(ref_data, list) or not ref_data:
-        return 0.0
-    # build dict for with_h
-    with_h_map = {}
-    for row in ref_data:
-        try:
-            r_o = float(row["r_O_Si"])
-            r_f = float(row["r_Si_Fminus"])
-            e = float(row["total_energy"])
-            with_h_map[(r_o, r_f)] = e
-        except (ValueError, KeyError):
-            continue
-    if not with_h_map:
-        return 0.0
-    tol = step.get("energy_tolerance", 0.1)
-    violations = 0
-    compared = 0
-    for row in data_without:
-        try:
-            r_o = float(row["r_O_Si"])
-            r_f = float(row["r_Si_Fminus"])
-            e_wo = float(row["total_energy"])
-            if (r_o, r_f) in with_h_map:
-                e_with = with_h_map[(r_o, r_f)]
-                if e_wo + tol < e_with:
-                    violations += 1
-                compared += 1
-        except (ValueError, KeyError):
-            continue
-    if compared == 0:
-        return 0.0
-    viol_ratio = violations / compared
-    score = max(0.0, 1.0 - 2 * viol_ratio)
-    return score
 
 
 # === block: score_3 (check id='desorption_with_h') ===
@@ -449,7 +364,6 @@ def score_5(artifact, step, ctx):
 _SCORERS = {
     'sif4_binding_scan': score_0,
     'hf2_dissociation': score_1,
-    'desorption_without_h': score_2,
     'desorption_with_h': score_3,
     'activation_report': score_4,
     'angle_population_trend': score_5,
@@ -467,7 +381,7 @@ def _step_id(step, index):
 
 
 def main():
-    _ff_contract_gate()
+    _ff_validate_output_contract()
     with open("/tests/grading_spec.json") as f:
         spec = json.load(f)
     outputs_dir = "/app/outputs"

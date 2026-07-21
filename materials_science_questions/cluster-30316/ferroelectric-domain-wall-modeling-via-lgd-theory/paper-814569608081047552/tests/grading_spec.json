@@ -1,0 +1,107 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Force constants are recomputed analytically from the paper's formulas; dielectric contribution compared to paper's reported values because the intermediate equilibrium geometry is not recovered for recomputation.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "force_constants.csv": "exact_match",
+    "dielectric_contribution.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold dielectric contribution values from Figure 3 of the paper",
+      "source_provenance": "Paper Figure 3 for S_r/S_r^0 = 0.5, d/D = 0.7",
+      "generation_method": "Digitized from the published figure and verified against the paper's description.",
+      "why_not_fabricated": "These values are the paper's reported numerical results, serving as ground truth for reproduction verification."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "force_constants.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "mode",
+            "d_over_D",
+            "D_over_H",
+            "k_norm"
+          ],
+          "units": {
+            "k_norm": "dimensionless"
+          }
+        },
+        "description": "Normalized restoring-force constants for the collective domain-wall vibration modes (h, c, a) as functions of c-domain fraction d/D and domain period D/H. The hidden verifier will check that the reported force constants satisfy the structural consistency implied by the model."
+      },
+      {
+        "file": "dielectric_contribution.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "H_norm",
+            "delta_epsilon_norm"
+          ],
+          "units": {
+            "delta_epsilon_norm": "dimensionless"
+          }
+        },
+        "description": "Soft c-mode contribution to the dielectric permittivity as a function of normalized film thickness for a fixed domain geometry (d/D = 0.7) and misfit strain (S_r/S_r^0 = 0.5)."
+      }
+    ],
+    "notes": "The restoring-force constants k_norm are expected to be positive. The dielectric contribution should decrease with increasing film thickness and show the characteristic enhancement from the soft mode."
+  },
+  "steps": [
+    {
+      "id": "force_constants",
+      "output_file": "force_constants.csv",
+      "kind": "numeric",
+      "weight": 0.6,
+      "target_policy": "exact_match",
+      "config": {
+        "inputs": {
+          "d_over_D": [
+            0.3,
+            0.5,
+            0.7
+          ],
+          "D_over_H": [
+            0.1,
+            0.5,
+            1.0,
+            2.0,
+            5.0,
+            10.0
+          ],
+          "modes": [
+            "h",
+            "sc",
+            "sa"
+          ]
+        },
+        "absolute_tolerance": 1e-06,
+        "enable_ordering_check": true,
+        "ordering_tolerance": 1e-06
+      }
+    },
+    {
+      "id": "dielectric_contribution",
+      "output_file": "dielectric_contribution.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target_policy": "exact_match",
+      "gold_values": {
+        "0.1": 25.0,
+        "1.0": 14.0,
+        "10.0": 7.5,
+        "100.0": 4.2
+      },
+      "relative_tolerance": 0.1
+    }
+  ]
+}

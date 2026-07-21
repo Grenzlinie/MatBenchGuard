@@ -111,7 +111,8 @@ def score_2(artifact, step, ctx):
     if not eps:
         return 0.0
     mn, mx = min(eps), max(eps)
-    return 1.0 if mn <= -0.003 and mx >= 0.003 else 0.0
+    # instruction requires strain range at least -0.005 to +0.005
+    return 1.0 if mn <= -0.005 and mx >= 0.005 else 0.0
 
 
 # === block: score_3 (check id='tc_monotonic') ===

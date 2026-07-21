@@ -25,9 +25,6 @@ DETERMINISTIC_REGISTRY_VERSION = "materials-deterministic-check-registry/1.0"
 DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION = (
     "materials-deterministic-repair-plan/1.0"
 )
-# ``0.2`` was used by an early integration draft.  It is accepted as an
-# equivalent wire spelling, while every emitted plan uses the named version
-# above.  Historical, unbound repair plans remain the separate ``0.1`` mode.
 DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES = frozenset(
     {DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION, "0.2"}
 )
@@ -36,6 +33,26 @@ CHECK_STATUSES = frozenset({"PASS", "FAIL", "BLOCKED", "NOT_ASSESSABLE"})
 REPAIR_SUMMARY_STATES = frozenset({"CLEAN", "REQUIRED", "NOT_APPLICABLE"})
 CHECK_IDS = ("D1", "D2", "D3", "D4", "D5", "D6")
 UNAVAILABLE_CHECK_STATUSES = frozenset({"BLOCKED", "NOT_ASSESSABLE"})
+QUALITY_RESULT_CODES = frozenset(
+    {
+        "ADVERSARIAL_OUTPUT_PASSES",
+        "KNOWN_VALID_OUTPUT_REJECTED",
+        "SCIENTIFIC_QUALITY_GRADIENT_VIOLATION",
+        "SCIENTIFIC_INVARIANCE_VIOLATION",
+        "SINGLE_COMPONENT_CAN_PASS",
+        "INDEPENDENT_PUBLIC_FIXTURE_UNAVAILABLE",
+    }
+)
+CORE_RUNTIME_CODES = frozenset(
+    {
+        "CHECKER_RESULT_UNUSABLE",
+        "CORE_RUNTIME_CHECKER_CRASH",
+        "CORE_RUNTIME_RESULT_UNUSABLE",
+        "CORE_RUNTIME_ORACLE_REJECTED",
+        "CORE_RUNTIME_MALFORMED_INPUT_PASSES",
+        "CORE_RUNTIME_ORDERING_VIOLATION",
+    }
+)
 
 
 # Finding ownership is centralized here so Review and Repair never need to
@@ -90,7 +107,6 @@ _CHECK_REGISTRY: tuple[dict[str, Any], ...] = (
             "ALWAYS_PASS_SCORER",
             "DIVISION_BY_ZERO_LITERAL",
             "SCORER_WIRING_MISSING",
-            "CHECKER_CRASH",
         ),
         "repair_class": "ASSISTED_FIX",
         "repair_classes": ("AUTO_FIX", "ASSISTED_FIX"),
@@ -112,7 +128,6 @@ _CHECK_REGISTRY: tuple[dict[str, Any], ...] = (
             "INVALID_PASS_THRESHOLD",
             # This is a reachability warning until isolation proves a bypass.
             "SINGLE_COMPONENT_THRESHOLD_REACHABLE",
-            "SINGLE_COMPONENT_CAN_PASS",
         ),
         "advisory_codes": ("SINGLE_COMPONENT_THRESHOLD_REACHABLE",),
         "repair_class": "ASSISTED_FIX",
@@ -154,7 +169,7 @@ _CHECK_REGISTRY: tuple[dict[str, Any], ...] = (
             "ZERO_WEIGHT_SCORING_COMPONENT",
             "SCORER_RETURN_NOT_TOTAL",
             "CHECKER_RESULT_UNUSABLE",
-            "ADVERSARIAL_OUTPUT_PASSES",
+            *sorted(CORE_RUNTIME_CODES),
         ),
         "repair_class": "ASSISTED_FIX",
         "required_inputs": (
@@ -185,6 +200,51 @@ def check_for_finding_code(code: Any) -> str | None:
     """Return the authoritative D check owner for a finding code."""
 
     return _OWNERSHIP.get(code) if isinstance(code, str) else None
+
+
+def finding_lane(finding: dict[str, Any]) -> str:
+    """Classify a finding without allowing quality evidence into D1-D6."""
+    explicit = finding.get("lane")
+    if explicit in {
+        "deterministic_core",
+        "agent_quality",
+        "quality_results",
+        "unclassified",
+    }:
+        return explicit
+    code = finding.get("title", finding.get("code"))
+    evidence = finding.get("evidence")
+    if isinstance(evidence, dict) and (
+        evidence.get("fixture_source_kind") is not None
+        or evidence.get("fixture_provenance") is not None
+        or evidence.get("source_kind") == "INDEPENDENT_PUBLIC_FIXTURE"
+    ):
+        return "quality_results"
+    if code in QUALITY_RESULT_CODES:
+        return "quality_results"
+    if isinstance(code, str) and code.startswith("PAPER_"):
+        return "agent_quality"
+    return "deterministic_core" if check_for_finding_code(code) else "unclassified"
+
+
+def deterministic_check_for_finding(
+    finding: dict[str, Any],
+) -> str | None:
+    """Return D1-D6 ownership only for deterministic-core evidence."""
+    code = finding.get("title", finding.get("code"))
+    check_id = check_for_finding_code(code)
+    if check_id is None or finding_lane(finding) != "deterministic_core":
+        return None
+    evidence = finding.get("evidence")
+    if code in CORE_RUNTIME_CODES and not (
+        isinstance(evidence, dict)
+        and (
+            evidence.get("deterministic_core") is True
+            or evidence.get("d6_core_output") is True
+        )
+    ):
+        return None
+    return check_id
 
 
 def repair_class_for_check(check_id: str) -> str:
@@ -237,7 +297,8 @@ def annotate_findings(
     for raw in findings:
         item = dict(raw)
         code = item.get("title", item.get("code"))
-        check_id = check_for_finding_code(code)
+        lane = finding_lane(item)
+        check_id = deterministic_check_for_finding(item)
         advisory = check_id is not None and _is_advisory(
             code, item.get("evidence")
         )
@@ -258,6 +319,7 @@ def annotate_findings(
         )
         item.update(
             {
+                "lane": lane,
                 "deterministic_check": check_id,
                 "proven_defect": proven,
                 "advisory": advisory,
@@ -782,8 +844,6 @@ def validate_deterministic_plan_binding(
 
     binding = plan.get("deterministic_contract")
     if binding is None:
-        # Historical 0.1 plans remain readable as evidence archives.  They do
-        # not opt into the current deterministic publication protocol.
         return
     contract = validate_deterministic_contract(report.get("deterministic_contract"))
     if not isinstance(binding, dict):

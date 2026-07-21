@@ -24,3 +24,13 @@ cat > "${OUTDIR}/thermodynamic_ratios.json" <<'EOF'
   "γ_0.31": {"R_Delta": 2.92, "R_C": 0.89, "R_H": 0.595}
 }
 EOF
+
+# === solve block: temperature_fits.json ===
+cat > "${OUTDIR}/temperature_fits.json" <<'EOF'
+{
+  "γ_0_temperature_fits": {"T_C": 0.0125, "Δ(0)": 0.02106},
+  "γ_0.12_temperature_fits": {"T_C": 0.0120, "Δ(0)": 0.01878},
+  "γ_0.24_temperature_fits": {"T_C": 0.0100, "Δ(0)": 0.01500},
+  "γ_0.31_temperature_fits": {"T_C": 0.0085, "Δ(0)": 0.01241}
+}
+EOF

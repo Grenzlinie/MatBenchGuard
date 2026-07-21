@@ -1,0 +1,149 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Pore diameter recomputed from submitted coordinates; scalar energies compared to paper-reported gold with tolerances.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "step_01_monolayer_coordinates.xyz": "structural_audit",
+    "step_02_water_adsorption_energy.txt": "reference_match",
+    "step_03_permeation_barrier.txt": "reference_match",
+    "step_04_cluster_adsorption_energies.json": "reference_match",
+    "step_05_permeance.txt": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for steps 02-05",
+      "source_provenance": "paper text: adsorption energy 0.617 eV, barrier 26.58 kcal/mol, cluster energies 0.883 and 0.907 eV, permeance >750 L·m⁻²·h⁻¹·bar⁻¹",
+      "generation_method": "extracted from the paper",
+      "why_not_fabricated": "paper-reported values for the same DFT/analytical quantities"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_monolayer_coordinates.xyz",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "XYZ file with first line = number of atoms, second line = comment containing lattice vectors (e.g., 'Lattice=\"ax ay az bx by bz cx cy cz\"'), followed by element x y z per atom."
+        },
+        "description": "Optimized atomic coordinates of the monolayer T-C3N unit cell; will be checked for pore size (center-to-center distance of opposite C atoms) against a reference of ~5.50 Å."
+      },
+      {
+        "file": "step_02_water_adsorption_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "pattern": "number + ' eV'"
+        },
+        "description": "Absolute adsorption energy of a single H2O on the pore centre, in eV (exothermic)."
+      },
+      {
+        "file": "step_03_permeation_barrier.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "pattern": "number + ' kcal/mol'"
+        },
+        "description": "Energy barrier for single water permeation through the pore, in kcal/mol."
+      },
+      {
+        "file": "step_04_cluster_adsorption_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "(H2O)2",
+            "(H2O)3"
+          ],
+          "properties": {
+            "(H2O)2": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "(H2O)3": {
+              "type": "number",
+              "unit": "eV"
+            }
+          }
+        },
+        "description": "Adsorption energies of water dimer and trimer on the monolayer, in eV."
+      },
+      {
+        "file": "step_05_permeance.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "pattern": "number + ' L·m⁻²·h⁻¹·bar⁻¹'"
+        },
+        "description": "Estimated water permeance using the Hagen-Poiseuille relation; meeting or exceeding a high-performance threshold earns full credit."
+      }
+    ],
+    "notes": "The ASMD/PMF simulations for water and ions are excluded from this task because the force field parameterization for T-C3N is not specified in the paper at a level that permits unambiguous reproduction. The task focuses on the fully specified DFT calculations and the analytical permeance estimation."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_monolayer_coordinates.xyz",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "target": {
+        "pore_diameter_angstrom": 5.5,
+        "tolerance_abs": 0.1
+      },
+      "target_policy": "structural_audit"
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_water_adsorption_energy.txt",
+      "kind": "numeric",
+      "weight": 0.25,
+      "target": 0.617,
+      "tolerance_pct": 10.0,
+      "unit": "eV",
+      "target_policy": "reference_match"
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_permeation_barrier.txt",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target": 26.58,
+      "tolerance_pct": 20.0,
+      "unit": "kcal/mol",
+      "target_policy": "reference_match"
+    },
+    {
+      "id": "step_04",
+      "output_file": "step_04_cluster_adsorption_energies.json",
+      "kind": "numeric",
+      "weight": 0.15,
+      "targets": {
+        "(H2O)2": 0.883,
+        "(H2O)3": 0.907
+      },
+      "tolerance_pct": 10.0,
+      "unit": "eV",
+      "target_policy": "reference_match"
+    },
+    {
+      "id": "step_05",
+      "output_file": "step_05_permeance.txt",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target": 750.0,
+      "target_policy": "threshold_or_better",
+      "unit": "L·m⁻²·h⁻¹·bar⁻¹"
+    }
+  ]
+}

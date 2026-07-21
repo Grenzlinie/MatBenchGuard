@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Full phase diagram enumeration and band diagonalisation is heavy; the verifier cannot re-run the pipeline, so we compare the agent's reported critical density and phase sequence against paper‑reported gold with appropriate tolerances.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference values for critical rho_d ferromagnetic and diagonal sequence order",
+      "source_provenance": "paper (Fig.1, text: critical rho_d <= 0.131; Fig.1b and description of diagonal line phases)",
+      "generation_method": "extracted from the paper and the analytic relation ρ_f+ρ_d/2=1 for the diagonal line",
+      "why_not_fabricated": "values come directly from the paper's results and the invariant line condition; no made‑up data"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "critical_rho_d_ferromagnetic": "float",
+            "diagonal_sequence": "array"
+          },
+          "items": {
+            "rho_d": "float",
+            "configuration": "string"
+          }
+        },
+        "description": "Critical itinerant-electron density for ferromagnetic stability at ρ_f=1 and the ordered list of ground-state configurations with their ρ_d values along the line ρ_f+ρ_d/2=1."
+      }
+    ],
+    "notes": "The expected configuration sequence for the diagonal line, from low ρ_d to high, is: D1, D2, D3, D4, D5 (appearing between the ferromagnetic F and the empty E phases). The critical ferromagnetic density is approximately 0.131 at U=8, J=0.5. The hidden checker will verify the reported list and the critical value against the paper's results."
+  },
+  "steps": [
+    {
+      "id": "critical_rho",
+      "output_file": "results.json",
+      "kind": "reference_match",
+      "weight": 0.4,
+      "target": 0.131,
+      "tolerance": 0.005,
+      "description": "critical_rho_d_ferromagnetic must match paper value 0.131 within ±0.005"
+    },
+    {
+      "id": "diagonal_sequence",
+      "output_file": "results.json",
+      "kind": "vector",
+      "weight": 0.6,
+      "gold_sequence": [
+        {
+          "rho_d": 0.0,
+          "configuration": "F"
+        },
+        {
+          "rho_d": 0.5,
+          "configuration": "D1"
+        },
+        {
+          "rho_d": 0.6667,
+          "configuration": "D2"
+        },
+        {
+          "rho_d": 1.0,
+          "configuration": "D3"
+        },
+        {
+          "rho_d": 1.3333,
+          "configuration": "D4"
+        },
+        {
+          "rho_d": 1.5,
+          "configuration": "D5"
+        },
+        {
+          "rho_d": 2.0,
+          "configuration": "E"
+        }
+      ],
+      "tolerance_rho": 0.02,
+      "description": "diagonal sequence: names must match exactly in order; rho_d values within tolerance"
+    }
+  ]
+}

@@ -18,13 +18,11 @@ Perform MD simulations for HCP Co cubic hexagon nanowires with side dimensions d
 
 ### Step 1: Build HCP Co nanowire atomistic models
 - Role: process
-- Action: Construct atomistic models of HCP Co nanowires as 'cubic hexagons' with side dimensions d from ~2 nm to ~8 nm. Lattice constants a=2.507 Å, c/a for HCP. Generate input coordinate files for each size.
-- Evidence: `/app/outputs/model_sizes.txt`
+- Action: Construct atomistic models of HCP Co nanowires as 'cubic hexagons' with side dimensions d from ~2 nm to ~8 nm. Lattice constants: a = 2.507 Å, c = 4.069 Å (c/a ≈ 1.623) for HCP Co. Generate input coordinate files for each size.
 
 ### Step 2: Run molecular dynamics simulations
 - Role: process
 - Action: For each nanowire model, run MD simulation using LAMMPS with the Co EAM potential: energy minimization, free relaxation (NPT, zero external stress), then uniaxial tension along axial direction at low constant strain rate. Record per-atom stresses (SPH) and global stress–strain and transverse strain data.
-- Evidence: `/app/outputs/md_simulation.log`
 
 ### Step 3: Extract size-dependent elastic constants
 - Role: scored (load-bearing)

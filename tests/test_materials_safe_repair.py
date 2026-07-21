@@ -25,6 +25,19 @@ REPAIR_RUNNER = (
 REVIEW_SKILL_ROOT = (
     REPO_ROOT / ".cursor" / "skills" / "materials-benchmark-review"
 )
+sys.path.insert(0, str(REVIEW_SKILL_ROOT / "scripts"))
+from artifact_schema import (  # noqa: E402
+    AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
+    AUDIT_ATTESTATION_SCHEMA_VERSION,
+    AUDIT_BUNDLE_SCHEMA_VERSION,
+    AUDIT_MANIFEST_SCHEMA_VERSION,
+    AUDIT_REPORT_SCHEMA_VERSION,
+    DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION,
+    DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION,
+    DISPOSITION_SCHEMA_VERSION,
+    SCORING_SCHEMA_VERSION,
+)
+import deterministic_contract  # noqa: E402
 AUDIT_ID = "audit-source-001"
 FINDING_ID = "finding-missing-solve"
 
@@ -45,19 +58,45 @@ def write_audit_attestation(package: Path) -> Path:
     manifest = json.loads(
         (audit / "audit_manifest.json").read_text(encoding="utf-8")
     )
+    report = json.loads((audit / "audit_report.json").read_text(encoding="utf-8"))
+    artifact_paths = {
+        "audit_report.json": audit / "audit_report.json",
+        "deterministic_core/report.json": audit
+        / "deterministic_core/report.json",
+        "deterministic_core/probe_results.json": audit
+        / "deterministic_core/probe_results.json",
+        "agent_quality/assessment.json": audit
+        / "agent_quality/assessment.json",
+    }
+    artifact_hashes = {
+        relative: sha256_file(path) for relative, path in artifact_paths.items()
+    }
     payload = {
         "audit_id": manifest["audit_id"],
         "manifest_hash": sha256_file(audit / "audit_manifest.json"),
         "report_hash": sha256_file(audit / "audit_report.json"),
         "disposition_hash": sha256_file(audit / "disposition.json"),
-        "fixture_hashes": manifest.get("fixture_hashes", {}),
         "assessment_hashes": manifest.get("assessment_hashes", {}),
+        "artifact_hashes": artifact_hashes,
+        "output_hashes": manifest.get("output_hashes", {}),
+        "artifact_schema_versions": {
+            "audit_manifest": manifest.get("schema_version"),
+            "audit_bundle": manifest.get("bundle_schema_version"),
+            "audit_report": report.get("schema_version"),
+            "deterministic_core": report["deterministic_core"]["schema_version"],
+            "deterministic_probe_results": report["deterministic_core"][
+                "probe_results"
+            ]["schema_version"],
+            "agent_quality": report["agent_quality"]["schema_version"],
+            "scoring": report["summary"]["scoring_version"],
+        },
+        "scoring_schema_version": SCORING_SCHEMA_VERSION,
     }
     encoded = json.dumps(
         payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
     attestation = {
-        "schema_version": "materials-audit-attestation/1.0",
+        "schema_version": AUDIT_ATTESTATION_SCHEMA_VERSION,
         **payload,
         "bundle_digest": "sha256:" + hashlib.sha256(encoded).hexdigest(),
     }
@@ -100,7 +139,6 @@ def bind_plan_to_package(package: Path, value: dict[str, Any]) -> None:
             "paper_mode": report["configuration"]["paper_mode"],
             "execution_level": "E1",
             "core_contract_digest": digest,
-            "fixture_hashes": {},
             "assessment_hashes": {},
         },
     )
@@ -143,6 +181,16 @@ def install_repair_harness(workspace: Path) -> Path:
 
             sys.path.insert(0, str(Path(__file__).resolve().parent))
             from deterministic_contract import evaluate_deterministic_contract
+            from artifact_schema import (
+                AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
+                AUDIT_BUNDLE_SCHEMA_VERSION,
+                AUDIT_MANIFEST_SCHEMA_VERSION,
+                AUDIT_REPORT_SCHEMA_VERSION,
+                DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION,
+                DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION,
+                DISPOSITION_SCHEMA_VERSION,
+                SCORING_SCHEMA_VERSION,
+            )
 
             def file_hash(path):
                 return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
@@ -192,7 +240,6 @@ def install_repair_harness(workspace: Path) -> Path:
             parser.add_argument("root")
             parser.add_argument("--paper-mode", required=True)
             parser.add_argument("--execution-level", required=True)
-            parser.add_argument("--known-valid-output")
             parser.add_argument("--agent-assessment")
             parser.add_argument("--e2-smoke-plan")
             args = parser.parse_args()
@@ -209,13 +256,48 @@ def install_repair_harness(workspace: Path) -> Path:
                   "title": "SOLUTION_ENTRYPOINT_MISSING", "severity": "LOW"}]
                 if residual_target else []
             )
+            deterministic_contract = evaluate_deterministic_contract(
+                normalized_instruction_contract={},
+                grading_contract={},
+                checker_analysis={
+                    "d6_core_output_scoring": {"status": "PROVEN"}
+                },
+                package_roles={
+                    "instruction.md": "ok",
+                    "tests/grading_spec.json": "ok",
+                    "tests/checker.py": "ok",
+                    "tests/test.sh": "ok",
+                    "oracle_entrypoint": "ok",
+                },
+                findings=[],
+            )
+            probe_results = {
+                "schema_version": DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION,
+                "probe_origin": "SCHEMA_DERIVED_DETERMINISTIC",
+                "cases": [],
+                "status": "ASSESSED",
+            }
+            deterministic_core = {
+                "schema_version": DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION,
+                "contract": deterministic_contract,
+                "probe_results": probe_results,
+            }
+            agent_quality = {
+                "schema_version": AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
+                "finding_ids": [],
+                "probe_cases_are_code_defined": True,
+            }
             report = {
+                "schema_version": AUDIT_REPORT_SCHEMA_VERSION,
+                "bundle_schema_version": AUDIT_BUNDLE_SCHEMA_VERSION,
                 "audit_id": "audit-reaudit-001",
                 "configuration": {
                     "paper_mode": args.paper_mode,
                     "execution_level": args.execution_level,
                 },
                 "findings": findings,
+                "deterministic_core": deterministic_core,
+                "agent_quality": agent_quality,
                 # v11 layout: ``disposition`` holds the VERDICT; the publish
                 # route lives in ``publication_route`` / ``publishability`` and
                 # disposition.json ``route``.
@@ -224,7 +306,7 @@ def install_repair_harness(workspace: Path) -> Path:
                     "disposition": "PASS",
                     "publication_route": "PUBLISH_CANDIDATE",
                     "publishability": "PUBLISH_CANDIDATE",
-                    "scoring_version": "materials-review-scoring/1.1",
+                    "scoring_version": SCORING_SCHEMA_VERSION,
                     "total_score": 90,
                     "hard_gate_triggered": False,
                 },
@@ -237,7 +319,7 @@ def install_repair_harness(workspace: Path) -> Path:
                     {
                         "code": code,
                         "status": "PASS",
-                        "evidence": [{"fact": "source-bound fixture evidence"}],
+                        "evidence": [{"fact": "source-bound audit evidence"}],
                     }
                     for code in (
                         "NON_MATERIALS_TASK",
@@ -246,23 +328,46 @@ def install_repair_harness(workspace: Path) -> Path:
                         "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE",
                     )
                 ],
-                "deterministic_contract": evaluate_deterministic_contract(
-                    normalized_instruction_contract={},
-                    grading_contract={},
-                    checker_analysis={
-                        "d6_core_output_scoring": {"status": "PROVEN"}
-                    },
-                    package_roles={},
-                    findings=[],
-                ),
+                "deterministic_contract": deterministic_contract,
             }
             report_path = audit / "audit_report.json"
             report_path.write_text(json.dumps(report))
             disposition_path = audit / "disposition.json"
             disposition_path.write_text(json.dumps({
+                "schema_version": DISPOSITION_SCHEMA_VERSION,
+                "audit_id": report["audit_id"],
                 "route": "PUBLISH_CANDIDATE",
                 "verdict": "PASS",
             }))
+            artifact_paths = {
+                "deterministic_core/report.json": audit
+                / "deterministic_core/report.json",
+                "deterministic_core/probe_results.json": audit
+                / "deterministic_core/probe_results.json",
+                "agent_quality/assessment.json": audit
+                / "agent_quality/assessment.json",
+            }
+            artifact_paths["deterministic_core/report.json"].parent.mkdir(
+                parents=True, exist_ok=True
+            )
+            artifact_paths["deterministic_core/report.json"].write_text(
+                json.dumps(deterministic_core)
+            )
+            artifact_paths["deterministic_core/probe_results.json"].write_text(
+                json.dumps(probe_results)
+            )
+            artifact_paths["agent_quality/assessment.json"].parent.mkdir(
+                parents=True, exist_ok=True
+            )
+            artifact_paths["agent_quality/assessment.json"].write_text(
+                json.dumps(agent_quality)
+            )
+            for relative in (
+                "corpus_index_entry.json",
+                "checker_tests.json",
+                "resource_checks.json",
+            ):
+                (audit / relative).write_text("{}")
             hashes = {}
             for relative in (
                 "instruction.md",
@@ -277,15 +382,13 @@ def install_repair_harness(workspace: Path) -> Path:
                         path.read_bytes()
                     ).hexdigest()
             (audit / "audit_manifest.json").write_text(json.dumps({
+                "schema_version": AUDIT_MANIFEST_SCHEMA_VERSION,
+                "bundle_schema_version": AUDIT_BUNDLE_SCHEMA_VERSION,
                 "audit_id": report["audit_id"],
                 "benchmark_root": str(root),
                 "input_hashes": hashes,
                 "review_implementation": review_implementation(),
                 "core_contract_digest": core_digest(root),
-                "fixture_hashes": (
-                    {"known_valid_output": file_hash(Path(args.known_valid_output))}
-                    if args.known_valid_output else {}
-                ),
                 "assessment_hashes": (
                     {"agent_assessment": file_hash(Path(args.agent_assessment))}
                     if args.agent_assessment else {}
@@ -293,6 +396,18 @@ def install_repair_harness(workspace: Path) -> Path:
                 "output_hashes": {
                     "audit_report.json": file_hash(report_path),
                     "disposition.json": file_hash(disposition_path),
+                    **{
+                        relative: file_hash(path)
+                        for relative, path in artifact_paths.items()
+                    },
+                    **{
+                        relative: file_hash(audit / relative)
+                        for relative in (
+                            "corpus_index_entry.json",
+                            "checker_tests.json",
+                            "resource_checks.json",
+                        )
+                    },
                 },
             }))
             print(json.dumps(report))
@@ -321,6 +436,10 @@ def initial_repair_context(
     (package / "tests/checker.py").write_text(
         "raise SystemExit(0)\n", encoding="utf-8"
     )
+    (package / "tests/test.sh").write_text(
+        "#!/bin/sh\nexit 0\n", encoding="utf-8"
+    )
+    (package / "tests/test.sh").chmod(0o755)
     write_json(package / "tests/grading_spec.json", {"pass_threshold": 0.8})
     (package / "paper/paper.md").write_text(
         "The published method computes the evidence-backed quantity.\n"
@@ -328,7 +447,38 @@ def initial_repair_context(
         encoding="utf-8",
     )
     write_json(package / "manifest.json", {"id": "paper-fixture"})
+    contract = deterministic_contract.evaluate_deterministic_contract(
+        normalized_instruction_contract={},
+        grading_contract={},
+        checker_analysis={"d6_core_output_scoring": {"status": "PROVEN"}},
+        package_roles={
+            "instruction.md": "ok",
+            "tests/grading_spec.json": "ok",
+            "tests/checker.py": "ok",
+            "tests/test.sh": "ok",
+            "oracle_entrypoint": "ok",
+        },
+        findings=[],
+    )
+    probe_results = {
+        "schema_version": DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION,
+        "probe_origin": "SCHEMA_DERIVED_DETERMINISTIC",
+        "cases": [],
+        "status": "ASSESSED",
+    }
+    deterministic_core = {
+        "schema_version": DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION,
+        "contract": contract,
+        "probe_results": probe_results,
+    }
+    agent_quality = {
+        "schema_version": AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
+        "finding_ids": [],
+        "probe_cases_are_code_defined": True,
+    }
     report = {
+        "schema_version": AUDIT_REPORT_SCHEMA_VERSION,
+        "bundle_schema_version": AUDIT_BUNDLE_SCHEMA_VERSION,
         "audit_id": AUDIT_ID,
         "configuration": {"paper_mode": paper_mode, "execution_level": "E1"},
         "findings": [
@@ -342,13 +492,44 @@ def initial_repair_context(
         "summary": {
             "final_verdict": "CONDITIONAL",
             "disposition": "REPAIR_QUEUE",
+            "total_score": 70,
+            "hard_gate_triggered": False,
+            "scoring_version": SCORING_SCHEMA_VERSION,
         },
+        "deterministic_core": deterministic_core,
+        "agent_quality": agent_quality,
+        "deterministic_contract": contract,
+        "evidence_contract": {"fail_closed": True, "gaps": []},
+        "hard_gates": [],
     }
     write_json(package / "benchmark_audit/audit_report.json", report)
     write_json(
         package / "benchmark_audit/disposition.json",
-        {"route": "REPAIR_QUEUE", "verdict": "CONDITIONAL"},
+        {
+            "schema_version": DISPOSITION_SCHEMA_VERSION,
+            "audit_id": AUDIT_ID,
+            "route": "REPAIR_QUEUE",
+            "verdict": "CONDITIONAL",
+        },
     )
+    write_json(
+        package / "benchmark_audit/deterministic_core/report.json",
+        deterministic_core,
+    )
+    write_json(
+        package / "benchmark_audit/deterministic_core/probe_results.json",
+        probe_results,
+    )
+    write_json(
+        package / "benchmark_audit/agent_quality/assessment.json",
+        agent_quality,
+    )
+    for relative in (
+        "corpus_index_entry.json",
+        "checker_tests.json",
+        "resource_checks.json",
+    ):
+        write_json(package / f"benchmark_audit/{relative}", {})
     input_hashes = {
         relative: sha256_file(package / relative)
         for relative in (
@@ -357,6 +538,7 @@ def initial_repair_context(
             "tests/grading_spec.json",
             "paper/paper.md",
             "manifest.json",
+            "tests/test.sh",
         )
     }
     module_spec = importlib.util.spec_from_file_location("harness_repair", runner)
@@ -366,12 +548,13 @@ def initial_repair_context(
     write_json(
         package / "benchmark_audit/audit_manifest.json",
         {
+            "schema_version": AUDIT_MANIFEST_SCHEMA_VERSION,
+            "bundle_schema_version": AUDIT_BUNDLE_SCHEMA_VERSION,
             "audit_id": AUDIT_ID,
             "benchmark_root": str(package),
             "input_hashes": input_hashes,
             "review_implementation": module.collect_review_implementation_hashes(),
             "core_contract_digest": module.core_contract_digest(package),
-            "fixture_hashes": {},
             "assessment_hashes": {},
             "output_hashes": {
                 "audit_report.json": sha256_file(
@@ -379,6 +562,25 @@ def initial_repair_context(
                 ),
                 "disposition.json": sha256_file(
                     package / "benchmark_audit/disposition.json"
+                ),
+                "corpus_index_entry.json": sha256_file(
+                    package / "benchmark_audit/corpus_index_entry.json"
+                ),
+                "checker_tests.json": sha256_file(
+                    package / "benchmark_audit/checker_tests.json"
+                ),
+                "resource_checks.json": sha256_file(
+                    package / "benchmark_audit/resource_checks.json"
+                ),
+                "deterministic_core/report.json": sha256_file(
+                    package / "benchmark_audit/deterministic_core/report.json"
+                ),
+                "deterministic_core/probe_results.json": sha256_file(
+                    package
+                    / "benchmark_audit/deterministic_core/probe_results.json"
+                ),
+                "agent_quality/assessment.json": sha256_file(
+                    package / "benchmark_audit/agent_quality/assessment.json"
                 ),
             },
         },

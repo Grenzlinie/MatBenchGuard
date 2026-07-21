@@ -1,0 +1,168 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker reimplements the engineering model (self-consistent for hydrate foam, Mori-Tanaka for paste) and compares agent's CSV values against recomputed expected ones using directional error tolerances; full credit if error ≤5% (Young's) or ≤10% (diffusivity).",
+  "pass_threshold": 0.75,
+  "target_policies": {
+    "youngs_modulus_vs_hydration.csv": "threshold_or_better",
+    "diffusivity_vs_wc_mature.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference model parameters to recompute expected values for Young's modulus and normalized diffusivity.",
+      "source_provenance": "Paper Table 1, Sections 3.2, 4.1, 4.2, 4.3, 4.4 (engineering model parameters).",
+      "generation_method": "Reimplement engineering homogenization model as described in the paper using these parameters and the analytical equations.",
+      "why_not_fabricated": "All parameters are taken directly from the paper and the equations are the paper's engineering model; the checker produces the expected answer deterministically."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "youngs_modulus_vs_hydration.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "hydration_degree",
+            "young_modulus_GPa"
+          ],
+          "units": {
+            "hydration_degree": "dimensionless",
+            "young_modulus_GPa": "GPa"
+          }
+        },
+        "description": "Young's modulus curve for w/c=0.4"
+      },
+      {
+        "file": "diffusivity_vs_wc_mature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "wc_ratio",
+            "normalized_diffusivity"
+          ],
+          "units": {
+            "wc_ratio": "dimensionless",
+            "normalized_diffusivity": "dimensionless (D/D_bulk)"
+          }
+        },
+        "description": "Diffusivity vs. water-to-cement ratio for mature pastes"
+      }
+    ],
+    "notes": "All outputs are scored using metric_recompute: the verifier independently computes reference values for the same conditions and assesses the agent’s output values. Young’s modulus is scored by directional percentage error (meeting or beating 5% error earns full credit), diffusivity by directional relative error (meeting or beating 10% error earns full credit)."
+  },
+  "steps": [
+    {
+      "id": "youngs_modulus_curve",
+      "output_file": "youngs_modulus_vs_hydration.csv",
+      "weight": 0.6,
+      "kind": "curve_compare",
+      "target_policy": "threshold_or_better",
+      "params": {
+        "x_column": "hydration_degree",
+        "y_column": "young_modulus_GPa",
+        "x_sample_points": [
+          0.0,
+          0.05,
+          0.1,
+          0.15,
+          0.2,
+          0.25,
+          0.3,
+          0.35,
+          0.4,
+          0.45,
+          0.5,
+          0.55,
+          0.6,
+          0.65,
+          0.7,
+          0.75,
+          0.8,
+          0.85,
+          0.9,
+          0.95,
+          1.0
+        ],
+        "tolerance": 0.05,
+        "max_acceptable_error": 0.5,
+        "model": {
+          "name": "engineering_homogenization",
+          "wc": 0.4,
+          "external_water": true,
+          "constants": {
+            "rho_a": 3.13,
+            "kappa_w": 1.31,
+            "kappa_h": 2.13
+          },
+          "hydrate": {
+            "E": 25.3,
+            "nu": 0.29,
+            "omega": 0.013
+          },
+          "capillary_pore": {
+            "E": 0.0,
+            "nu": null,
+            "omega": 6
+          },
+          "clinker": {
+            "E": 135.0,
+            "nu": 0.3
+          }
+        }
+      }
+    },
+    {
+      "id": "diffusivity_curve",
+      "output_file": "diffusivity_vs_wc_mature.csv",
+      "weight": 0.4,
+      "kind": "curve_compare",
+      "target_policy": "threshold_or_better",
+      "params": {
+        "x_column": "wc_ratio",
+        "y_column": "normalized_diffusivity",
+        "x_sample_points": [
+          0.23,
+          0.3,
+          0.35,
+          0.4,
+          0.45,
+          0.5,
+          0.55,
+          0.6,
+          0.65,
+          0.7,
+          0.75,
+          0.8
+        ],
+        "tolerance": 0.1,
+        "max_acceptable_error": 0.5,
+        "model": {
+          "name": "engineering_homogenization",
+          "external_water": true,
+          "constants": {
+            "rho_a": 3.13,
+            "kappa_w": 1.31,
+            "kappa_h": 2.13
+          },
+          "hydrate": {
+            "D_ratio": 0.000504,
+            "omega": 0.013
+          },
+          "capillary_pore": {
+            "D_ratio": 1.0,
+            "omega": 6
+          },
+          "clinker": {
+            "D_ratio": 0.0
+          }
+        }
+      }
+    }
+  ]
+}

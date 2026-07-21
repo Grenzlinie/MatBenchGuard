@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_mapping",
+    "title": "Map RSOS-Ising model to vertex model",
+    "role": "process",
+    "action": "Construct the transfer matrix of the RSOS-Ising coupled model with ε=1, α=0.5, J=0.15 by mapping to a decorated 6-state vertex model (304 nonzero weights). Produce the matrix elements and structure for the PWFRG iteration.",
+    "output_file": "",
+    "evidence": "vertex_model_description.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Define the vertex weights and transfer matrix structure used throughout the computation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_pwfrg",
+    "title": "Run PWFRG to obtain fixed-point wavefunctions",
+    "role": "process",
+    "action": "Implement the product-wavefunction renormalization group (PWFRG) algorithm to iterate the transfer matrix to the thermodynamic fixed point. For the five temperatures k_B T/ε = 0.3, 0.35, 0.4, 0.45, 0.5 and a range of Andreev fields η, compute the dominant eigenvector (fixed-point wavefunction). Retain enough states for convergence.",
+    "output_file": "",
+    "evidence": "pwfrg_fixedpoint_info.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Record the fixed-point wavefunction information for each (T, η) so that downstream steps can compute observables.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_p_eta",
+    "title": "Compute p(η) curves",
+    "role": "process",
+    "action": "For each temperature and η value, calculate the thermal average surface gradient p as the expectation of the vertical edge variable from the fixed-point wavefunction. Store the resulting (η, p) data points for every temperature.",
+    "output_file": "",
+    "evidence": "p_eta_curves.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Intermediate data for the p–η relation, used for subsequent fitting.",
+    "output_schema": "Columns: temperature (float), eta (float), p (float)."
+  },
+  {
+    "id": "step_04_fit",
+    "title": "Fit η(p) and extract step properties",
+    "role": "scored",
+    "action": "For each temperature, fit the p(η) data to the polynomial η = A0 + A2 p^2 + A3 p^3 + A4 p^4 via least squares. Set step tension γ = A0 and compute step stiffness γ̃(0) = π² (k_B T)² / (2 A2). Write the extracted coefficients and derived properties to step_properties.csv.",
+    "output_file": "step_properties.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the fitted step tension γ, coefficient A2, and step stiffness γ̃ at the five studied temperatures.",
+    "output_schema": "Header: temperature,gamma,A2,gamma_tilde. temperature: float (units k_B T/ε); gamma: float (units ε); A2: float (coefficient in η(p) polynomial); gamma_tilde: float (units ε). Rows for temperatures 0.3, 0.35, 0.4, 0.45, 0.5."
+  }
+]

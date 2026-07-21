@@ -1,0 +1,87 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The agent directly reports the calibrated elastic constants and the error estimates; there is no raw artifact from which the checker can recompute these aggregate results without re-running the full simulation pipeline, which is not feasible in the verifier sandbox.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "calibrated_constants.json": "exact_match",
+    "error_sequence.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference values for calibrated constants and relative error sequence from the paper",
+      "source_provenance": "paper-reported values: E=13.65, G=4.14, ν=0.32 from the paper text; error sequence [13.1, 10.4, 10.2, 8.6, 5.2, 3.8, 2.1] from the paper's adaptive example section.",
+      "generation_method": "direct transcription from the published paper",
+      "why_not_fabricated": "These are the exact values reported in the source paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "calibrated_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "E": "float",
+            "G": "float",
+            "ν": "float"
+          }
+        },
+        "description": "Calibrated Young's modulus E, shear modulus G, Poisson ratio ν for the harmonic square lattice. Compared to hidden reference values with a tolerance."
+      },
+      {
+        "file": "error_sequence.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "iteration",
+            "relative_error"
+          ],
+          "units": {
+            "relative_error": "percent"
+          }
+        },
+        "description": "Estimated relative modeling error (percent) in the vertical displacement at the loaded particle after the initial surrogate (iteration 0) and after each of the six adaptive iterations. Lower error is better; scoring uses a threshold with a tolerance window."
+      }
+    ],
+    "notes": "No gold values are revealed. Scoring is based on comparing the calibrated constants to hidden reference values with a tolerance, and on comparing the error sequence entries to reference values (with tolerance) and checking monotonic decreasing trend."
+  },
+  "steps": [
+    {
+      "id": "calibrated_constants",
+      "output_file": "calibrated_constants.json",
+      "weight": 0.3,
+      "kind": "calibration_constants_check",
+      "target": {
+        "E": 13.65,
+        "G": 4.14,
+        "ν": 0.32
+      },
+      "tolerance": 0.5,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "error_sequence",
+      "output_file": "error_sequence.csv",
+      "weight": 0.7,
+      "kind": "error_sequence_check",
+      "target_sequence": [
+        13.1,
+        10.4,
+        10.2,
+        8.6,
+        5.2,
+        3.8,
+        2.1
+      ],
+      "tolerance": 1.0,
+      "target_policy": "threshold_or_better"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step0",
+    "title": "Determine ferromagnetic ground state and relax Ti2N monolayer",
+    "role": "process",
+    "action": "Perform periodic DFT geometry optimisation for a pristine 3×3×1 Ti2N monolayer with ferromagnetic spin ordering (GGA-PBE, Grimme D2 dispersion). Confirm that ferromagnetic is the lowest-energy magnetic state by also computing an antiferromagnetic trial. Obtain the relaxed atomic coordinates and total energy of the ferromagnetic substrate.",
+    "output_file": "",
+    "evidence": "ti2n_fm.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Base calculation for the clean Ti2N monolayer; provides the substrate total energy and relaxed structure needed for all subsequent adsorption energies.",
+    "output_schema": ""
+  },
+  {
+    "id": "step1",
+    "title": "Optimize isolated gas molecules",
+    "role": "process",
+    "action": "Perform geometry optimisation and total energy calculation for isolated H2, CH4, and C2H2 molecules in a large periodic cell using the same DFT settings (GGA-PBE, D2 dispersion). Store the optimised structures and total energies for each molecule.",
+    "output_file": "",
+    "evidence": "gas_energies.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Provides the reference gas-phase energies E(gas) required for the adsorption energy formula.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Adsorption geometry optimisation and property extraction",
+    "role": "process",
+    "action": "For each gas (H2, CH4, C2H2), build an adsorption system by placing the molecule on the pristine Ti2N surface at the most stable adsorption site reported: H atoms centred above three top‑layer Ti atoms for H2; C atoms near Ti atoms for C2H2; CH4 at the centre of three Ti atoms. Run DFT geometry optimisation (GGA-PBE, D2 dispersion) and from the final configuration extract the total energy, Hirshfeld charge transfer, H–H distance after H2 adsorption, and C–C distance for C2H2. Save all raw numbers in a structured file.",
+    "output_file": "",
+    "evidence": "adsorption_raw.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Main simulation runs; produces all raw numeric data required for the final scored artifact.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Compile final reproduction results",
+    "role": "scored",
+    "action": "Collect the total energies from the previous steps, compute adsorption energies as E_ad = E(gas/Ti2N) − E(gas) − E(Ti2N) for each molecule, and assemble all quantities into a JSON file reproduction_results.json with the required schema: total_energies (dict with keys ti2n, h2, ch4, c2h2, h2_ti2n, ch4_ti2n, c2h2_ti2n in eV), adsorption_energies (dict with H2, CH4, C2H2 in eV), charge_transfers (dict with H2, CH4, C2H2 in e), bond_lengths (dict with H2_HH, C2H2_CC, C2H2_CH in Å).",
+    "output_file": "reproduction_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final scored artifact containing the raw total energies and derived properties; the checker will recompute E_ad from the supplied total energies and compare to hidden paper-reported adsorption energies and structural requirements.",
+    "output_schema": "JSON object with top-level keys: 'total_energies' (object with numeric values in eV), 'adsorption_energies' (object with numeric values in eV), 'charge_transfers' (object with numeric values in e), 'bond_lengths' (object with numeric values in Å). See output_contract for full schema."
+  }
+]

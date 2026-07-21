@@ -1,0 +1,88 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The model is approximate and its exact output depends on implementation details; only structural trends (ordering, saturation, threshold shift, derivative peak) are robust and independently verifiable.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "simulation_dE_E_dp.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold saturation value, tolerance, threshold fraction, and derivative threshold for structural checks.",
+      "source_provenance": "Paper text: dE_E/dp for fully screened InGaN QWs is 34 meV/GPa (Fig.3). Saturation tolerance ±2 meV/GPa accounts for model approximations. Threshold fraction 0.9 is a high fraction to detect screening onset. Minimum derivative 5 meV/GPa per log decade is a low threshold to confirm a step, chosen empirically.",
+      "generation_method": "Derived from paper's stated fully screened value and reasonable numerical margins.",
+      "why_not_fabricated": "Values are taken directly from the paper or set to a conservative bound that any correct implementation should exceed; they are not synthetic guesses."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "simulation_dE_E_dp.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "N_D",
+            "current_density",
+            "dE_E_dp"
+          ],
+          "units": {
+            "N_D": "cm⁻³",
+            "current_density": "A/cm²",
+            "dE_E_dp": "meV/GPa"
+          }
+        },
+        "description": "Simulation results from the constant-field screening model; used to verify structural trends of dE_E/dp with current density and background doping."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "check_low_current_monotonic",
+      "output_file": "simulation_dE_E_dp.csv",
+      "weight": 0.25,
+      "kind": "structural_property",
+      "description": "At the lowest current, dE_E/dp increases strictly with N_D.",
+      "target_policy": "structural_audit",
+      "conditions": {}
+    },
+    {
+      "id": "check_saturation",
+      "output_file": "simulation_dE_E_dp.csv",
+      "weight": 0.25,
+      "kind": "structural_property",
+      "description": "At the highest current, all curves approach 34±2 meV/GPa.",
+      "target_policy": "structural_audit",
+      "conditions": {
+        "saturation_target": 34.0,
+        "saturation_tolerance": 2.0
+      }
+    },
+    {
+      "id": "check_saturation_current_threshold",
+      "output_file": "simulation_dE_E_dp.csv",
+      "weight": 0.25,
+      "kind": "structural_property",
+      "description": "The current at which dE_E/dp reaches 90% of saturation (30.6 meV/GPa) decreases strictly with increasing N_D.",
+      "target_policy": "structural_audit",
+      "conditions": {
+        "threshold_fraction": 0.9,
+        "saturation_target": 34.0
+      }
+    },
+    {
+      "id": "check_steplike_derivative",
+      "output_file": "simulation_dE_E_dp.csv",
+      "weight": 0.25,
+      "kind": "structural_property",
+      "description": "Each dE_E/dp vs log(current) curve shows a distinct steplike feature (first derivative peak ≥5 meV/GPa per log decade).",
+      "target_policy": "structural_audit",
+      "conditions": {
+        "min_derivative": 5.0
+      }
+    }
+  ]
+}

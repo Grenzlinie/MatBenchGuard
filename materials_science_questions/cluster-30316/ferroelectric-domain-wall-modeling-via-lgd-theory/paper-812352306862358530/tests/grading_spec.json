@@ -1,0 +1,149 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes far-field averages, wall-center values, and peak features from the agent's spatial profiles and compares them against the paper's reported bulk constants and expected shapes; no hidden test labels needed.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_polarization_profile.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "rc",
+            "P3"
+          ],
+          "units": {
+            "x": "Å",
+            "rc": "Å",
+            "P3": "C/m²"
+          }
+        },
+        "description": "Unit-cell resolved spontaneous polarization component P3 across the 180° domain wall in tetragonal KNbO3 at 270°C for four domain wall thicknesses. The checker verifies far-field magnitude and profile shape against reference values."
+      },
+      {
+        "file": "step_02_refractive_index_profile.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "rc",
+            "n1",
+            "n2",
+            "n3"
+          ],
+          "units": {
+            "x": "Å",
+            "rc": "Å",
+            "n1": "dimensionless",
+            "n2": "dimensionless",
+            "n3": "dimensionless"
+          }
+        },
+        "description": "Unit-cell resolved principal refractive indices n1, n2, n3 across the 180° domain wall for four domain wall thicknesses. The checker verifies far-field values and profile shape against reference values derived from the literature."
+      }
+    ],
+    "notes": "The profiles should be computed with the domain wall centered at the Nb-O2 (100) plane. The checker verifies far-field magnitude and profile shape against reference values derived from the literature."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for domain wall profiles: bulk polarization 0.34 C/m2, ordinary refractive index 2.32, extraordinary index 2.15; shape expectations (center zero polarization, peaks for n2,n3).",
+      "source_provenance": "Paper Fig.1 and text for polarization; Fig.2 and text for refractive indices.",
+      "generation_method": "Extracted from the paper's reported bulk values and shape descriptions.",
+      "why_not_fabricated": "These are the paper's own claimed physical constants, used to verify a correct reproduction."
+    }
+  ],
+  "steps": [
+    {
+      "id": "polarization_profile",
+      "output_file": "step_01_polarization_profile.csv",
+      "kind": "recompute_metric",
+      "weight": 0.5,
+      "checks": [
+        {
+          "id": "p3_far_field",
+          "weight": 0.4,
+          "description": "Average absolute P3 in far-field (|x|>=20 Å) must equal 0.34 within ±0.05 C/m2 for each rc.",
+          "params": {
+            "x_thresh": 20,
+            "target": 0.34,
+            "tolerance": 0.05,
+            "rc_list": [
+              5,
+              10,
+              15,
+              20
+            ]
+          }
+        },
+        {
+          "id": "p3_center_zero",
+          "weight": 0.1,
+          "description": "P3 at the wall center (x≈0) must be close to zero: |P3| ≤ 0.01 C/m2 for each rc.",
+          "params": {
+            "max_abs": 0.01,
+            "rc_list": [
+              5,
+              10,
+              15,
+              20
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "refractive_index_profile",
+      "output_file": "step_02_refractive_index_profile.csv",
+      "kind": "recompute_metric",
+      "weight": 0.5,
+      "checks": [
+        {
+          "id": "n_far_field",
+          "weight": 0.4,
+          "description": "Far-field averages of n1,n2 must be 2.32±0.05 and n3 must be 2.15±0.05 for each rc.",
+          "params": {
+            "x_thresh": 20,
+            "targets": {
+              "n1": 2.32,
+              "n2": 2.32,
+              "n3": 2.15
+            },
+            "tolerance": 0.05,
+            "rc_list": [
+              5,
+              10,
+              15,
+              20
+            ]
+          }
+        },
+        {
+          "id": "n_peak",
+          "weight": 0.1,
+          "description": "n2 and n3 must show a distinct peak at the wall center: center value exceeds far-field average by at least 0.01 for each rc.",
+          "params": {
+            "min_excess": 0.01,
+            "far_field_avg": {
+              "n2": 2.32,
+              "n3": 2.15
+            },
+            "rc_list": [
+              5,
+              10,
+              15,
+              20
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,128 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The semi-analytic model involves solving transcendental equations and Airy functions; recomputing the energies from scratch in the lightweight verifier is not feasible. Therefore we compare the agent's reported energies at key field points to paper-derived gold values with appropriate tolerances, and audit trends structurally.",
+  "pass_threshold": 0.8,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for lateral energy at 150 kV/cm, vertical energy shift at 300 kV/cm, and fitted parameters",
+      "source_provenance": "Paper text: Figure 1 caption ('E_T is about 3.69 eV, shift about 20 meV'), Figure 2 caption ('shift about 30 meV at 300 kV/cm'), and explicitly stated values for dipole (1.26±0.11 eÅ), polarizability (95.28±3.56 meV/(MV/cm)^2), and internal field (~0.7 MV/cm).",
+      "generation_method": "Extracted directly from the paper; no modification.",
+      "why_not_fabricated": "Values are the paper's own reported quantitative results for the same quantities, conditions, and units."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lateral_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "field_lateral_kV_per_cm",
+            "energy_eV",
+            "electron_shift_meV",
+            "hole_shift_meV"
+          ],
+          "units": {
+            "field_lateral_kV_per_cm": "kV/cm",
+            "energy_eV": "eV",
+            "electron_shift_meV": "meV",
+            "hole_shift_meV": "meV"
+          }
+        },
+        "description": "CSV containing optical transition energy and carrier energy shifts at five lateral field values (0, 50, 100, 150, 200 kV/cm) with zero vertical field. The hidden checker compares each value to the paper's reported numbers within a tolerance based on the expected precision of the semi-analytic method."
+      },
+      {
+        "file": "vertical_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "field_vertical_kV_per_cm",
+            "energy_eV"
+          ],
+          "units": {
+            "field_vertical_kV_per_cm": "kV/cm",
+            "energy_eV": "eV"
+          }
+        },
+        "description": "CSV containing optical transition energy at seven vertical field values (0 to 300 kV/cm) with zero lateral field. The hidden checker compares the energies to the paper's reported values to verify the predicted blueshift and its magnitude."
+      },
+      {
+        "file": "angle_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "total_field_kV_per_cm",
+            "angle_rad",
+            "energy_eV"
+          ],
+          "units": {
+            "total_field_kV_per_cm": "kV/cm",
+            "angle_rad": "rad",
+            "energy_eV": "eV"
+          }
+        },
+        "description": "CSV containing optical transition energy for two total field magnitudes (100 and 200 kV/cm) at six angles (0 to 0.5 rad). The checker audits the structural trend: energy should be lower (redshift) at small angles and increase (blueshift) as angle grows, with the larger total field producing a larger net shift."
+      },
+      {
+        "file": "fit_params.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "permanent_dipole_eA": "number",
+            "polarizability_meV_per_MVcm2": "number",
+            "internal_piezoelectric_field_MV_per_cm": "number"
+          }
+        },
+        "description": "JSON file containing the fitted permanent dipole moment (eÅ), polarizability (meV/(MV/cm)^2), and estimated internal piezoelectric field (MV/cm) extracted from the vertical-field energy shift. The hidden checker compares these values to the paper's reported quantities within tolerances derived from the paper's stated uncertainties."
+      }
+    ],
+    "notes": "All outputs must be placed under /app/outputs. The model_definition process step is required to build the computational model; it may write a log file but its output is not scored. The lateral_sweep step is load-bearing to ensure the model is actually executed."
+  },
+  "steps": [
+    {
+      "id": "lateral_check",
+      "output_file": "lateral_energies.csv",
+      "weight": 0.4,
+      "gold_lateral_150_energy_eV": 3.69,
+      "tol_energy_eV": 0.03,
+      "gold_lateral_150_total_shift_meV": 20.0,
+      "tol_shift_meV": 5.0
+    },
+    {
+      "id": "vertical_check",
+      "output_file": "vertical_energies.csv",
+      "weight": 0.3,
+      "gold_vertical_300_shift_meV": 30.0,
+      "tol_shift_meV": 5.0
+    },
+    {
+      "id": "angle_check",
+      "output_file": "angle_energies.csv",
+      "weight": 0.15
+    },
+    {
+      "id": "fit_check",
+      "output_file": "fit_params.json",
+      "weight": 0.15,
+      "gold_dipole_eA": 1.26,
+      "tol_dipole_eA": 0.2,
+      "gold_pol": 95.28,
+      "tol_pol": 5.0,
+      "gold_int_field_MVcm": 0.7,
+      "tol_int_field_MVcm": 0.1
+    }
+  ]
+}

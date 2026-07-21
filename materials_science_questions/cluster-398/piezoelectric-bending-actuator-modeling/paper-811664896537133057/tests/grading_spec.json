@@ -1,0 +1,116 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1/T2 infeasible: paper values are only curves; the main claim is trends (monotonicity, ordering) which can be verified structurally without hidden reference numbers.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "damage_vs_parameters.csv": "structural_audit",
+    "piezo_coefficients.csv": "structural_audit"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "damage_vs_parameters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "f",
+            "S",
+            "D11_M",
+            "D33_M",
+            "D11_E",
+            "D33_E"
+          ],
+          "units": {
+            "f": "1 (volume fraction)",
+            "S": "1 (aspect ratio)",
+            "D11_M": "1 (damage)",
+            "D33_M": "1 (damage)",
+            "D11_E": "1 (damage)",
+            "D33_E": "1 (damage)"
+          }
+        },
+        "description": "Mechanical and electrical damage components as functions of void volume fraction f and aspect ratio S. Each row corresponds to one simulation case. For spherical void scan, S=1.0; for aspect ratio scan, f=0.0654."
+      },
+      {
+        "file": "piezo_coefficients.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "f",
+            "S",
+            "e31",
+            "e33",
+            "e15"
+          ],
+          "units": {
+            "f": "1 (volume fraction)",
+            "S": "1 (aspect ratio)",
+            "e31": "C/m²",
+            "e33": "C/m²",
+            "e15": "C/m²"
+          }
+        },
+        "description": "Directly extracted effective piezoelectric coefficients e31, e33, e15 for the same (f,S) parameter grid as the damage CSV. Used to verify transversely isotropic damage hypothesis and trends."
+      }
+    ],
+    "notes": "Verification is structural (T3): monotonicity of D11_M, D33_M with f; decrease of D33_M with increasing S; near-constancy of D11_E, D33_E with S; decreasing trends in e31, e33, e15 with f. Additional loose tolerance (±30%) against digitized reference curves ensures approximate quantitative agreement."
+  },
+  "steps": [
+    {
+      "id": "damage_existence",
+      "output_file": "damage_vs_parameters.csv",
+      "kind": "file_shape",
+      "weight": 0.03,
+      "description": "File exists and contains required columns."
+    },
+    {
+      "id": "damage_monotonic_f",
+      "output_file": "damage_vs_parameters.csv",
+      "kind": "rubric",
+      "weight": 0.35,
+      "description": "For spherical voids (S=1), D11_M and D33_M increase monotonically with volume fraction f."
+    },
+    {
+      "id": "damage_trend_S",
+      "output_file": "damage_vs_parameters.csv",
+      "kind": "rubric",
+      "weight": 0.15,
+      "description": "For fixed f=0.0654, D33_M decreases with increasing S, D11_M increases slowly, D11_E and D33_E remain nearly constant."
+    },
+    {
+      "id": "damage_isotropy",
+      "output_file": "damage_vs_parameters.csv",
+      "kind": "rubric",
+      "weight": 0.07,
+      "description": "For spherical voids (S=1), D11_M ≈ D33_M (mechanical damage is isotropic)."
+    },
+    {
+      "id": "piezo_existence",
+      "output_file": "piezo_coefficients.csv",
+      "kind": "file_shape",
+      "weight": 0.03,
+      "description": "File exists and contains required columns."
+    },
+    {
+      "id": "piezo_trend_f",
+      "output_file": "piezo_coefficients.csv",
+      "kind": "rubric",
+      "weight": 0.25,
+      "description": "Effective piezoelectric coefficients e31, e33, e15 decrease (in magnitude) with increasing f for S=1."
+    },
+    {
+      "id": "piezo_trend_S",
+      "output_file": "piezo_coefficients.csv",
+      "kind": "rubric",
+      "weight": 0.12,
+      "description": "Piezoelectric coefficients show consistent trends with S (e33 and e15 decreasing, e31 nearly constant)."
+    }
+  ],
+  "hidden_assets": []
+}

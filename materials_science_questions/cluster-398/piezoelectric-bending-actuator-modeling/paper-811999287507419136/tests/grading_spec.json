@@ -1,0 +1,122 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes c and max displacement directly from the published equations and geometry; a full recalc in the verifier is lightweight and avoids any need for pre‑computed hidden gold.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "c_values.json": "exact_match",
+    "max_displacements.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference c values and max displacements computed from the HYBAS model using the paper's geometry and material parameters",
+      "source_provenance": "Equations (1)-(8) and Tables 1 & 3 of the source paper",
+      "generation_method": "Recomputed in the checker via identical iterative left‑hand Riemann sum (1000 subdivisions) solver, binary‑search convergence to <0.001% arc‑length error",
+      "why_not_fabricated": "Derived solely from the publicly stated model and parameters; no external dataset or fabricated labels are used."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "c_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "voltage": {
+                "type": "number",
+                "unit": "V"
+              },
+              "active_elements": {
+                "type": "string",
+                "enum": [
+                  "EAP",
+                  "ESC",
+                  "HYBAS"
+                ]
+              },
+              "c": {
+                "type": "number",
+                "unit": "10^6/m^3"
+              },
+              "percent_error": {
+                "type": "number",
+                "unit": "%"
+              }
+            },
+            "required": [
+              "voltage",
+              "active_elements",
+              "c",
+              "percent_error"
+            ]
+          }
+        },
+        "description": "Parameter c and solver accuracy for original HYBAS configuration under different voltages and activation modes."
+      },
+      {
+        "file": "max_displacements.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "negative_strain_material": {
+                "type": "string",
+                "enum": [
+                  "Hard PZT (TRS100HD)",
+                  "Soft PZT (TRSHK1HD)",
+                  "PZN-4.5%PT single crystal"
+                ]
+              },
+              "positive_strain_material": {
+                "type": "string",
+                "enum": [
+                  "Uni-axial PVDF",
+                  "Bi-axial PVDF"
+                ]
+              },
+              "voltage": {
+                "type": "number",
+                "unit": "V"
+              },
+              "max_displacement": {
+                "type": "number",
+                "unit": "micrometers"
+              }
+            },
+            "required": [
+              "negative_strain_material",
+              "positive_strain_material",
+              "voltage",
+              "max_displacement"
+            ]
+          }
+        },
+        "description": "Maximum displacement for all six material combinations at two voltages with both components active."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "step_01_compute_c_values",
+      "output_file": "c_values.json",
+      "weight": 0.4,
+      "kind": "recompute"
+    },
+    {
+      "id": "step_02_compute_max_displacements",
+      "output_file": "max_displacements.json",
+      "weight": 0.6,
+      "kind": "recompute"
+    }
+  ]
+}

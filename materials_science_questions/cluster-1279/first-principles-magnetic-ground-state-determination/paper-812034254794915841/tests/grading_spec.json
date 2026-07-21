@@ -1,0 +1,107 @@
+{
+  "scoring_tier": "result-level-compare",
+  "scoring_justification": "Magnetic moment and energy thresholds derived from paper's reported values to verify magnetic (Mn) vs nearly non-magnetic (Fe) character; recomputing from raw DFT output in the verifier is infeasible.",
+  "pass_threshold": 0.75,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Thresholds for magnetic character derived from paper reported values: Mn moment 1.84 μB, Fe moment 0.04 μB, Mn energy 5.319 mRy, Fe energy 0.001 mRy.",
+      "source_provenance": "Paper reports Mn magnetic moment 1.84 μB/atom, Fe 0.04 μB/atom; magnetic energies 5.319 mRy and 0.001 mRy.",
+      "generation_method": "Set thresholds capturing magnetic (Mn moment >1.0, Mn energy >1.0) vs non-magnetic (Fe moment <0.5, Fe energy <0.1).",
+      "why_not_fabricated": "Thresholds directly based on paper's numeric results, preserving the qualitative conclusion."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "Mn_magnetic_moment_mub",
+            "Fe_magnetic_moment_mub",
+            "Mn_magnetic_energy_mRy",
+            "Fe_magnetic_energy_mRy"
+          ],
+          "properties": {
+            "Mn_magnetic_moment_mub": {
+              "type": "number"
+            },
+            "Fe_magnetic_moment_mub": {
+              "type": "number"
+            },
+            "Mn_magnetic_energy_mRy": {
+              "type": "number"
+            },
+            "Fe_magnetic_energy_mRy": {
+              "type": "number"
+            }
+          },
+          "units": {
+            "Mn_magnetic_moment_mub": "μB",
+            "Fe_magnetic_moment_mub": "μB",
+            "Mn_magnetic_energy_mRy": "mRy",
+            "Fe_magnetic_energy_mRy": "mRy"
+          }
+        },
+        "description": "The checker compares the computed magnetic moments and stabilization energies against predetermined thresholds to determine the magnetic character (magnetic vs. non-magnetic) of each impurity. The thresholds are set to capture the qualitative behavior and accommodate differences in methodology."
+      },
+      {
+        "file": "relaxation.log",
+        "format": "text",
+        "purpose": "evidence",
+        "target_policy": "none",
+        "description": "Ionic relaxation log for impurity supercells"
+      },
+      {
+        "file": "supercell_inputs.log",
+        "format": "text",
+        "purpose": "evidence",
+        "target_policy": "none",
+        "description": "Input structures for impurity supercells"
+      }
+    ],
+    "notes": "The task uses a supercell approach and open-source DFT to reproduce the paper's qualitative magnetic character. Tolerances are set to absorb differences from code/functional choices; exact numerical match is not required. The agent must perform the DFT calculations, not merely look up reported values."
+  },
+  "steps": [
+    {
+      "id": "check_mn_moment",
+      "output_file": "results.json",
+      "kind": "threshold_check",
+      "weight": 0.25,
+      "field": "Mn_magnetic_moment_mub",
+      "threshold": 1.0,
+      "comparison": "gt"
+    },
+    {
+      "id": "check_fe_moment",
+      "output_file": "results.json",
+      "kind": "threshold_check",
+      "weight": 0.25,
+      "field": "Fe_magnetic_moment_mub",
+      "threshold": 0.5,
+      "comparison": "lt"
+    },
+    {
+      "id": "check_mn_energy",
+      "output_file": "results.json",
+      "kind": "threshold_check",
+      "weight": 0.25,
+      "field": "Mn_magnetic_energy_mRy",
+      "threshold": 1.0,
+      "comparison": "gt"
+    },
+    {
+      "id": "check_fe_energy",
+      "output_file": "results.json",
+      "kind": "threshold_check",
+      "weight": 0.25,
+      "field": "Fe_magnetic_energy_mRy",
+      "threshold": 0.1,
+      "comparison": "lt"
+    }
+  ]
+}

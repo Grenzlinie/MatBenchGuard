@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_00",
+    "title": "Parameter grid preparation",
+    "role": "process",
+    "action": "Define a parameter grid of coupling ratios (α1 = J⊥/J, α2 = J×/J) covering the region 0 ≤ α1 ≤ 2, 0 ≤ α2 ≤ 2 with a step of 0.1. Also include the two specific points (α1=0.6, α2=0.5) and (α1=1.25, α2=2.0) for the finite-temperature transition. Output the full list of (α1, α2) pairs to a CSV file.",
+    "output_file": "",
+    "evidence": "parameter_grid.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with columns alpha1, alpha2 containing all points to be evaluated. This step makes the parameter specification explicit.",
+    "output_schema": "columns: alpha1 (float), alpha2 (float). One row per point."
+  },
+  {
+    "id": "step_01",
+    "title": "BMFT self-consistent solver",
+    "role": "process",
+    "action": "Implement the bond-mean-field theory for the frustrated spin-1/2 two-leg Heisenberg ladder. For each target (α1, α2) and temperature T, use the eigenenergy formulas for the three competing short-range-ordered states (N, F, R) and the self-consistent equations for bond parameters Q, P, P' to numerically determine the bond parameters and the free energy per site F for each state. Store the converged free energies.",
+    "output_file": "",
+    "evidence": "free_energies.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with columns alpha1, alpha2, T, state (N/F/R), F. Contains the converged free energy per site for every parameter point and temperature used in later steps.",
+    "output_schema": "columns: alpha1 (float), alpha2 (float), T (float), state (string: N/F/R), F (float). One row per (point, temperature, state) combination where the self-consistent solution was obtained."
+  },
+  {
+    "id": "step_02",
+    "title": "Zero-temperature phase classification",
+    "role": "scored",
+    "action": "Using the free energies at T=0 for all (α1, α2) points prepared in step_00, identify the state with the lowest free energy. Write the stable phase string (N, F, or R) for each point as the ground-state phase.",
+    "output_file": "zero_T_phases.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with columns alpha1, alpha2, stable_phase. Each row gives the ground-state phase for one coupling ratio pair from the grid.",
+    "output_schema": "columns: alpha1 (float), alpha2 (float), stable_phase (string: N/R/F). One row per prescribed point."
+  },
+  {
+    "id": "step_03",
+    "title": "Finite-temperature R–N transition temperature",
+    "role": "scored",
+    "action": "For the two coupling sets (α1=0.6, α2=0.5) and (α1=1.25, α2=2.0), perform a temperature sweep solving the self-consistent equations at each T. Locate the temperature T_c where the free energy of the R-type state crosses that of the N-type state (first-order thermal transition). Report the transition temperature.",
+    "output_file": "transition_temperatures.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with columns alpha1, alpha2, T_c. T_c is in units of k_B T / J. Contains exactly two rows for the two specified coupling sets.",
+    "output_schema": "columns: alpha1 (float), alpha2 (float), T_c (float). Two rows: (0.6, 0.5) and (1.25, 2.0)."
+  },
+  {
+    "id": "step_04",
+    "title": "Susceptibility trend check",
+    "role": "scored",
+    "action": "For the coupling set α1=0.6, α2=0.5, compute the uniform static magnetic susceptibility χ at temperatures T=0.2 and T=0.6 (in units of k_B T/J). Use the self-consistent solution at each temperature and the appropriate formula (derived from the Zeeman coupling) to compute χ. Output the values.",
+    "output_file": "susceptibility_trend.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with columns alpha1, alpha2, T, chi. Contains two rows for the two temperatures.",
+    "output_schema": "columns: alpha1 (float), alpha2 (float), T (float), chi (float). For α1=0.6, α2=0.5 with T=0.2 and 0.6."
+  }
+]

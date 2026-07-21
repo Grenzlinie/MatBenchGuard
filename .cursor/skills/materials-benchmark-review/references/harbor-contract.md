@@ -82,10 +82,9 @@ persists only sanitized status, runtime provenance, and non-value diagnostics:
 raw reward/breakdown, stdout/stderr, file contents, and Oracle values never
 enter `checker_tests.json` or the final report.
 
-An independent known-valid fixture must be outside every package/audit role and
-carry `fixture_manifest.json`. The manifest explicitly marks it public,
-non-Oracle, and independent; binds immutable fixture hashes to the current
-instruction/tests hashes; and is itself hashed into probe provenance.
+Review accepts no independent known-valid fixture or external result directory.
+Malformed, partial, full, and all-wrong cases are generated from the declared
+schema and grading steps and stored only in the external audit workspace.
 
 Oracle lifecycle evidence distinguishes attempt, setup attempt, prepared
 environment, producer start, and execution. Only producer start/run sets

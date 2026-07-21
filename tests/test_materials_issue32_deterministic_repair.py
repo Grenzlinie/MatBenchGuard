@@ -64,10 +64,10 @@ def clean_contract() -> dict[str, Any]:
 def authoritative_pass_fields(contract: dict[str, Any]) -> dict[str, Any]:
     return {
         "summary": {
-            "scoring_version": "materials-review-scoring/1.1",
+            "scoring_version": "materials-review-scoring/2.0",
             "final_verdict": "PASS",
             "publication_route": "PUBLISH_CANDIDATE",
-            "scoring_version": "materials-review-scoring/1.1",
+            "scoring_version": "materials-review-scoring/2.0",
             "total_score": 90,
             "hard_gate_triggered": False,
         },

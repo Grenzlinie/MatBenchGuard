@@ -1,0 +1,105 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The magnetization curve's plateau structure is recomputed from the raw CSV by checking M/M0 values in specified h intervals; step counts and critical fields are implicitly verified through the plateau ranges and values.",
+  "pass_threshold": 0.8,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected plateau intervals and values for magnetization steps at 2 K and 10 K derived from paper.",
+      "source_provenance": "Based on paper Fig.1, reported critical fields hS1≈1.2 T, hS2≈2.4 T, hc≈3.6 T, and plateaus M/M0 = 0, 0.33, 0.67, 1.0.",
+      "generation_method": "Intervals were chosen to avoid transition regions; tolerances were set to allow simulation noise (e.g. ±0.04 for 0 and 1, ±0.06 for 0.33 and 0.67) while excluding qualitatively wrong results.",
+      "why_not_fabricated": "Values reflect the paper's main quantitative features as stated in the text and figures; no made-up numbers are used."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "magnetization_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "h",
+            "M_M0"
+          ],
+          "columns": {
+            "T": "float (K)",
+            "h": "float (T)",
+            "M_M0": "float (dimensionless)"
+          }
+        },
+        "description": "Simulated magnetization curves for temperatures 2 K and 10 K. The checker will compute the derivative d(M_M0)/dh, detect step transitions, and verify the number of steps and their critical field positions against the paper’s reported behavior."
+      }
+    ],
+    "notes": "Only the magnetization curves for the two temperatures are scored. The agent is not required to produce spin configuration snapshots, phase diagrams, or analysis of varying disorder strength."
+  },
+  "steps": [
+    {
+      "id": "mc_magnetization_curves",
+      "output_file": "magnetization_curves.csv",
+      "weight": 1.0,
+      "kind": "rubric",
+      "params": {
+        "temp_checks": [
+          {
+            "T": 2.0,
+            "intervals": [
+              [
+                0.0,
+                1.0,
+                0.0,
+                0.04
+              ],
+              [
+                1.3,
+                2.2,
+                0.33,
+                0.06
+              ],
+              [
+                2.5,
+                3.4,
+                0.67,
+                0.06
+              ],
+              [
+                3.8,
+                5.0,
+                1.0,
+                0.04
+              ]
+            ],
+            "weight": 0.5
+          },
+          {
+            "T": 10.0,
+            "intervals": [
+              [
+                0.0,
+                0.15,
+                0.0,
+                0.04
+              ],
+              [
+                0.3,
+                3.3,
+                0.33,
+                0.06
+              ],
+              [
+                3.8,
+                5.0,
+                1.0,
+                0.04
+              ]
+            ],
+            "weight": 0.5
+          }
+        ]
+      }
+    }
+  ]
+}

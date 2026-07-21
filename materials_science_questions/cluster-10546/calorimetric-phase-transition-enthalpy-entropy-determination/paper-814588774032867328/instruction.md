@@ -3,21 +3,29 @@
 ## Problem background
 Copper(I) selenide (Cu₂Se) is a congruently melting semiconductor that undergoes a solid–solid α ↔ β polymorphic phase transition near 400 K. Reliable thermodynamic functions—heat capacity, enthalpy increment, absolute entropy, and reduced Gibbs free energy—over the temperature range from room temperature to above the melting point are essential for phase‑diagram modeling and for processing this material. This task evaluates critically selected literature data and computes the full set of thermodynamic functions for solid Cu₂Se up to 1400 K, including an internal consistency check at the phase transition.
 
+## Thermodynamic Parameters (recommended values from Pashinkin et al., 2015)
+
+| Parameter | Symbol | Value | Unit |
+|-----------|--------|-------|------|
+| Standard entropy of α‑Cu₂Se at 298.15 K | S°₂₉₈ | 125.5 | J/(mol·K) |
+| α → β transition temperature | Tₜᵣ | 400 | K |
+| Enthalpy of transition | ΔHₜᵣ | 6570 | J/mol |
+| Heat capacity of α‑Cu₂Se | Cp,α(T) | 58.6 + 0.0774 T | J/(mol·K) |
+| Heat capacity of β‑Cu₂Se (constant) | Cp,β | 82.9 | J/(mol·K) |
+
+**Convention:** The enthalpy increment H°(T) – H°(298.15 K) is zero by definition at T = 298.15 K.
+
 ## Approach
-The calculation uses recommended input parameters provided in the Assets section: the standard entropy at 298.15 K, a linear heat‑capacity expression for the low‑temperature α phase, a constant heat capacity for the high‑temperature β phase, the transition temperature Tₜᵣ, and the enthalpy of transformation ΔHₜᵣ. For the α phase, integrate the heat capacity from 298.15 K to Tₜᵣ to obtain the enthalpy increment H°(T)−H°(298) and the absolute entropy S°(T). At Tₜᵣ, add the transition enthalpy and the corresponding entropy of transition (ΔSₜᵣ = ΔHₜᵣ/Tₜᵣ) to reach the β‑phase values just above the transition. For the β phase above Tₜᵣ, use the constant heat capacity to extend H and S to 1400 K. For every calculated point, compute the reduced Gibbs free energy Φ(T) = S°(T) − [H°(T)−H°(298)]/T. Finally, verify that the reduced Gibbs free energy is continuous at the transition: Φ for the α phase at Tₜᵣ must equal Φ for the β phase at the same temperature within a small tolerance, which confirms internal consistency of the chosen transition parameters.
+The calculation uses the thermodynamic parameters listed above. For the α phase, integrate the heat capacity from 298.15 K to Tₜᵣ to obtain the enthalpy increment H°(T) − H°(298) and the absolute entropy S°(T). At Tₜᵣ, add the transition enthalpy and the corresponding entropy of transition (ΔSₜᵣ = ΔHₜᵣ/Tₜᵣ) to reach the β‑phase values just above the transition. For the β phase above Tₜᵣ, use the constant heat capacity to extend H and S to 1400 K. For every calculated point, compute the reduced Gibbs free energy Φ(T) = S°(T) − [H°(T)−H°(298)]/T. Finally, verify that the reduced Gibbs free energy is continuous at the transition: Φ for the α phase at Tₜᵣ must equal Φ for the β phase at the same temperature within a small tolerance, which confirms internal consistency of the chosen transition parameters.
 
 ## Reproduction target
 Reproduce the thermodynamic functions of solid Cu₂Se from 298.15 K to 1400 K using the recommended parameters. Specifically, compute and tabulate the heat capacity, enthalpy increment, absolute entropy, and reduced Gibbs free energy for the α phase at 298.15 K and at the transition temperature, and for the β phase at the transition temperature and at 500, 600, …, 1400 K. In addition, check that the reduced Gibbs free energy is continuous across the transition: the values for the α and β phases at the transition temperature must agree within 0.1 J/(mol·K). The deliverables are the CSV table of thermodynamic functions and a JSON file reporting the two Φ values at the transition and whether they match within the specified tolerance.
-
-## Assets
-
-- Recommended Thermodynamic Parameters
 
 ## Workflow steps
 
 ### Step 1: Compute Thermodynamic Functions
 - Role: scored (load-bearing)
-- Action: Using the recommended parameters (S°298, Cp(α) equation, Cp(β), Ttr, ΔHtr), compute the thermodynamic functions (Cp, enthalpy increment H°(T)-H°(298), absolute entropy S°(T), and reduced Gibbs free energy Φ(T) = S°(T) - (H°(T)-H°(298))/T) for all required temperatures and phases. Write the results to a CSV file.
+- Action: Using the thermodynamic parameters (S°298, Cp,α(T) equation, Cp,β, Ttr, ΔHtr) given above, compute the thermodynamic functions (Cp, enthalpy increment H°(T)-H°(298), absolute entropy S°(T), and reduced Gibbs free energy Φ(T) = S°(T) - (H°(T)-H°(298))/T) for all required temperatures and phases. Write the results to a CSV file.
 - Output file: `/app/outputs/thermodynamic_functions.csv`
 - Format: csv
 - Contract: CSV with columns: T (number, K), Phase (string, 'α' or 'β'), Cp (number, J/(mol·K)), H (number, J/mol), S (number, J/(mol·K)), Phi (number, J/(mol·K)). Rows must include temperatures: 298.15 (α), 400 (α), 400 (β), and 500, 600, …, 1400 (β).

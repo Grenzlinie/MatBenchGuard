@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Cannot recompute formation energies from raw defect energies because agent does not output E_defect; tolerance comparison with paper gold values.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold formation energies, E_VBM, mu_O2, and LEMS labels from paper",
+      "source_provenance": "paper 1403.0685 Table II and text",
+      "generation_method": "extracted numeric values from paper table and text",
+      "why_not_fabricated": "values are the paper-reported numbers used as reproduction reference"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "slab_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "surface",
+            "slab_total_energy",
+            "E_VBM"
+          ],
+          "units": {
+            "slab_total_energy": "eV",
+            "E_VBM": "eV"
+          }
+        },
+        "description": "Total energy and valence band maximum for each relaxed stoichiometric α-quartz slab, required as reference in the defect formation energy formula."
+      },
+      {
+        "file": "mu_O2.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "A single float value (eV) representing the total energy of the O₂ molecule (chemical potential)."
+        },
+        "description": "Total energy of O₂ molecule computed with LSDA, used as µ_O₂ in formation energy calculations."
+      },
+      {
+        "file": "formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "surface",
+            "site",
+            "charge",
+            "geometry_type",
+            "E_form",
+            "magnetic_moment_ground_state",
+            "is_LEMS"
+          ],
+          "units": {
+            "E_form": "eV",
+            "magnetic_moment_ground_state": "µB"
+          }
+        },
+        "description": "Formation energies (eV) and magnetic ground-state classification for 18 oxygen vacancy defects, including geometry type, magnetic moment, and low-energy magnetic state (LEMS) indicator."
+      }
+    ],
+    "notes": "The formation energy is computed as the standard defect formation energy: E_form = E_defect - E_slab + 0.5*µ_O₂ + q*E_VBM, where q is the defect charge. The slab_energies.csv and mu_O2.txt provide the required reference values. The checker compares the formation energies to paper-reported values with a tolerance and verifies LEMS classification consistency."
+  },
+  "steps": [
+    {
+      "id": "check_slab_energies",
+      "output_file": "slab_energies.csv",
+      "kind": "numeric",
+      "weight": 0.04,
+      "tolerance_E_VBM": 0.01
+    },
+    {
+      "id": "check_slab_total_energy",
+      "output_file": "slab_energies.csv",
+      "kind": "numeric",
+      "weight": 0.01,
+      "tolerance": 0.0
+    },
+    {
+      "id": "check_mu_O2",
+      "output_file": "mu_O2.txt",
+      "kind": "numeric",
+      "weight": 0.05,
+      "tolerance": 0.001
+    },
+    {
+      "id": "check_formation_energies",
+      "output_file": "formation_energies.csv",
+      "kind": "numeric",
+      "weight": 0.55,
+      "tolerance_E_form": 0.5
+    },
+    {
+      "id": "check_LEMS",
+      "output_file": "formation_energies.csv",
+      "kind": "classification",
+      "weight": 0.30
+    },
+    {
+      "id": "check_geometry_type",
+      "output_file": "formation_energies.csv",
+      "kind": "classification",
+      "weight": 0.02
+    },
+    {
+      "id": "check_magnetic_moment",
+      "output_file": "formation_energies.csv",
+      "kind": "classification",
+      "weight": 0.03
+    }
+  ]
+}

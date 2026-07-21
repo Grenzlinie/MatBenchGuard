@@ -1,0 +1,108 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Cannot recompute exact paper values without re-running the self-consistent solver; we verify structural properties (monotonic decrease, allowable ranges) and cross-artifact consistency.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "magnetization_curves.csv": "reference_match",
+    "phase_diagram.csv": "reference_match",
+    "zener_fraction.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "No separate numeric gold file; all required structural bounds and consistency rules are defined directly in the scorer code.",
+      "source_provenance": "Derived from the paper's expected qualitative behavior (magnetization decrease, Zener fraction collapse) and the model's physical ranges.",
+      "generation_method": "Ranges and structural rules chosen to accept any correct implementation of the model while excluding degenerate submissions.",
+      "why_not_fabricated": "These are structural checks, not fabricated target numbers; they reflect the known physics of the model."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "magnetization_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "T",
+            "M"
+          ],
+          "units": {
+            "T": "eV/k_B",
+            "M": "normalized dimensionless"
+          }
+        },
+        "description": "Normalized magnetization M/M0 vs temperature for each doping level."
+      },
+      {
+        "file": "phase_diagram.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "Tc"
+          ],
+          "units": {
+            "Tc": "eV/k_B"
+          }
+        },
+        "description": "Critical temperature Tc vs doping x."
+      },
+      {
+        "file": "zener_fraction.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "p_f"
+          ],
+          "units": {
+            "T": "eV/k_B",
+            "p_f": "dimensionless fraction"
+          }
+        },
+        "description": "Zener phase fraction p_f vs temperature at x=0.3."
+      }
+    ],
+    "notes": "The hidden checker compares the agent's reported magnetization curves, Tc values, and Zener fraction to paper-reported reference values with appropriate tolerances. The magnetization curve step is load-bearing; it requires genuine execution of the self-consistent solver."
+  },
+  "steps": [
+    {
+      "id": "magnetization_curves_check",
+      "output_file": "magnetization_curves.csv",
+      "weight": 0.45,
+      "kind": "structural",
+      "description": "Magnetization curves: columns correct, M in [0,1], monotonic decrease with T for each doping level, and sufficient variation."
+    },
+    {
+      "id": "phase_diagram_check",
+      "output_file": "phase_diagram.csv",
+      "weight": 0.25,
+      "kind": "structural",
+      "description": "Phase diagram: columns correct, Tc within [0.005,0.1] eV/k_B, non-degenerate values (std > 0.001 eV/k_B)."
+    },
+    {
+      "id": "zener_fraction_check",
+      "output_file": "zener_fraction.csv",
+      "weight": 0.2,
+      "kind": "structural",
+      "description": "Zener fraction: columns correct, p_f in [0,1], monotonic decrease, low-T p_f ≥ 0.4, high-T p_f ≤ 0.2, and drop ≥ 0.3."
+    },
+    {
+      "id": "cross_consistency_check",
+      "output_file": "magnetization_curves.csv",
+      "weight": 0.1,
+      "kind": "consistency",
+      "description": "Cross-check: Tc extracted from magnetization steepest descent matches phase diagram Tc within 0.01 eV/k_B."
+    }
+  ]
+}

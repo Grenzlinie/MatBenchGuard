@@ -4,20 +4,20 @@
 In high‑power laser diodes, the temperature of the mirror facet is a critical parameter that influences device reliability and catastrophic optical damage. Reflectance‑modulation thermometry is an optical technique that measures the local temperature rise by detecting the change in the reflected intensity of a probe beam. The temperature change is related to the measured relative reflectance change via a calibration constant C that must be determined from the optical properties of the semiconductor material. This task targets the computation of that calibration constant for the specific material, probe wavelength, and incidence angle used in a representative study.
 
 ## Approach
-The calibration constant C is defined through the linear relation ΔT = C × (ΔR/R). The steady reflectance R depends on the refractive index n of the material and the incidence angle, following the standard p‑polarized Fresnel reflectance formula for oblique incidence. By differentiating R with respect to n, either analytically or numerically, one obtains dR/dn. The calibration constant is then given by C = R × (dR/dn)⁻¹ × (δn/δT)⁻¹, where δn/δT is the thermo‑optic coefficient. The agent will retrieve the refractive index n and its temperature derivative δn/δT for the target composition and wavelength from the publicly available reference (Aspnes et al. 1986), apply the reflectance formula at an incidence angle of 45°, evaluate the derivative, and compute C.
+The calibration constant C is defined through the linear relation ΔT = C × (ΔR/R). The steady reflectance R depends on the refractive index n of the material and the incidence angle, following the standard p‑polarized Fresnel reflectance formula for oblique incidence. By differentiating R with respect to n, either analytically or numerically, one obtains dR/dn. The calibration constant is then given by C = R × (dR/dn)⁻¹ × (δn/δT)⁻¹, where δn/δT is the thermo‑optic coefficient. The agent will retrieve the refractive index n and its temperature derivative δn/δT for the target composition and wavelength from the provided resource (Aspnes et al. 1986), apply the reflectance formula at an incidence angle of 45°, evaluate the derivative, and compute C.
 
 ## Reproduction target
-Compute the calibration constant C (in Kelvin) for the specified material (Al₀.₆₅Ga₀.₃₅As, probe wavelength 632.8 nm, incidence angle 45°) using the p‑polarized Fresnel reflectance formula. Obtain the necessary refractive index n and its temperature derivative δn/δT from the literature (Aspnes et al., J. Appl. Phys. 60, 754, 1986). Record the computed value in the output file `/app/outputs/calibration_constant.json` under the key "C".
+Compute the calibration constant C (in Kelvin) for the specified material (Al₀.₆₅Ga₀.₃₅As, probe wavelength 632.8 nm, incidence angle 45°) using the p‑polarized Fresnel reflectance formula. Obtain the necessary refractive index n and its temperature derivative δn/δT from the provided resource `aspnes1986` (Aspnes et al., J. Appl. Phys. 60, 754, 1986). Record the computed value in the output file `/app/outputs/calibration_constant.json` under the key "C".
 
 ## Assets
 
-- Refractive index and thermo-optic coefficient of Al0.65Ga0.35As at 632.8 nm (Aspnes et al., J. Appl. Phys. 60, 754 (1986)): https://doi.org/10.1063/1.337057
+- Refractive index and thermo‑optic coefficient of Al₀.₆₅Ga₀.₃₅As at 632.8 nm (Aspnes et al., J. Appl. Phys. 60, 754 (1986)): see resource `aspnes1986` in `resources.json`.
 
 ## Workflow steps
 
 ### Step 1: Compute calibration constant C
 - Role: scored (load-bearing)
-- Action: Obtain the refractive index n and its temperature derivative δn/δT for Al0.65Ga0.35As at a probe wavelength of 632.8 nm from the literature (Aspnes et al. 1986). Using the p-polarized Fresnel reflectance formula for oblique incidence (incidence angle i = π/4), compute the steady reflectance R(n). Evaluate dR/dn analytically or numerically. Then calculate the calibration constant C = R × (dR/dn)⁻¹ × (δn/δT)⁻¹. Write the computed value in Kelvin to a JSON file.
+- Action: Obtain the refractive index n and its temperature derivative δn/δT for Al₀.₆₅Ga₀.₃₅As at a probe wavelength of 632.8 nm from the provided resource `aspnes1986` (Aspnes et al. 1986). Using the p-polarized Fresnel reflectance formula for oblique incidence (incidence angle i = π/4), compute the steady reflectance R(n). Evaluate dR/dn analytically or numerically. Then calculate the calibration constant C = R × (dR/dn)⁻¹ × (δn/δT)⁻¹. Write the computed value in Kelvin to a JSON file.
 - Output file: `/app/outputs/calibration_constant.json`
 - Format: json
 - Contract: {"type":"object","properties":{"C":{"type":"number","unit":"K"}},"required":["C"]}

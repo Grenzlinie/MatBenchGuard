@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step1",
+    "title": "Isolated pentacene geometry optimization",
+    "role": "process",
+    "action": "Perform DFT geometry optimization of neutral pentacene molecule (C22H14) and its monocation (C22H14+) using the PBE-D functional and ultrasoft pseudopotentials. Converge the plane-wave cutoff and supercell size to obtain relaxed atomic coordinates.",
+    "output_file": "",
+    "evidence": "optimized_structures.xyz",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Optimized geometries of neutral and charged pentacene are required to construct the initial dimer structures.",
+    "output_schema": "XYZ coordinate file(s) containing the optimized atomic positions."
+  },
+  {
+    "id": "step2",
+    "title": "Construction of pentacene dimer structures",
+    "role": "process",
+    "action": "Stack the optimized neutral and cation pentacene molecules cofacially (parallel molecular planes) at intermolecular distances of 4 Å, 5 Å, and 7 Å along the axis perpendicular to the molecular planes. Produce coordinate files for each distance.",
+    "output_file": "",
+    "evidence": "dimers_initial.xyz",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The three initial dimer configurations serve as input for the constrained DFT calculations.",
+    "output_schema": "XYZ coordinate file containing three dimer structures (one per distance)."
+  },
+  {
+    "id": "step3",
+    "title": "Frozen-dimer CDFT analysis and frozen reorganization energy",
+    "role": "process",
+    "action": "For each dimer distance, run constrained DFT calculations with Löwdin charge constraint to localize a +1 charge on the cation molecule. Scan the imposed charge difference N_c to find the value (around 1.3e) that yields correct charge localization (spin density concentrated on the cation molecule). Using that N_c, compute the energies of the two charge states (charge on the cation vs. on the neutral molecule) and evaluate the frozen reorganization energy: lambda_frozen = E(-N_c) - E(N_c). Record the chosen N_c and lambda_frozen for each distance.",
+    "output_file": "",
+    "evidence": "frozen_cdft_scan.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "This step determines the required charge constraint strength and computes the reorganization energy in the absence of structural relaxation.",
+    "output_schema": "CSV with columns: distance (Å), N_c, lambda_frozen (Hartree). One row per distance (4,5,7 Å)."
+  },
+  {
+    "id": "step4",
+    "title": "Geometry relaxation of dimers under CDFT constraint",
+    "role": "process",
+    "action": "For each dimer distance, using the N_c value found in step 3, relax the atomic positions via geometry optimization or simulated annealing while keeping the intermolecular distance fixed (e.g., by constraining selected atoms). Use the CDFT Löwdin constraint with the same functional and pseudopotentials. Produce relaxed coordinate files for each distance.",
+    "output_file": "",
+    "evidence": "relaxed_geometries.xyz",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Structural relaxation captures the polarization and geometric response of the neutral molecule to the charged neighbor, which affects the reorganization energy.",
+    "output_schema": "XYZ coordinate file containing three relaxed dimer structures (one per distance)."
+  },
+  {
+    "id": "step5",
+    "title": "Reorganization energy evaluation for frozen and relaxed dimers",
+    "role": "scored",
+    "action": "For each relaxed dimer geometry, compute the energy E(N_c) and E(-N_c) using the same CDFT protocol and calculate the relaxed reorganization energy lambda_relaxed = E(-N_c) - E(N_c). Combine the frozen lambda (from step 3) and relaxed lambda for all three distances into a CSV file.",
+    "output_file": "reorganization_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Final reorganization energies for the pentacene dimer at 4 Å, 5 Å, and 7 Å. The CSV lists both the frozen and relaxed values.",
+    "output_schema": "Columns: distance (float, Angstrom), lambda_frozen (float, Hartree), lambda_relaxed (float, Hartree). Three rows corresponding to distances 4, 5, 7 Å."
+  }
+]

@@ -1,0 +1,158 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes MAPE and relative errors from agent's curves compared to reference values derived from paper figures; KT temperatures compared directly.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "mu_vs_T.csv": "reference_match",
+    "ns_vs_T.csv": "reference_match",
+    "KT_temperatures.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference mu_2D values at selected T points for mu_vs_T.csv check",
+      "source_provenance": "Approximated from paper Figure 1 (dashed VC curve and interpolated solid line). Values read from published graph using digital ruler.",
+      "generation_method": "Manual extraction from published Figure 1; matched to reference solve.sh parameterization for consistency.",
+      "why_not_fabricated": "Directly derived from the paper's plotted data, preserving the reported temperature dependence."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference n_s for mixture at n_gas=1e18, T=0.15 K",
+      "source_provenance": "Estimated from paper Figure 2; the curve for n=1e18 at T=0.15 K yields n_s ≈ 3.0e13 cm^{-2}.",
+      "generation_method": "Visual inspection of published curve; rounded to one significant digit.",
+      "why_not_fabricated": "Taken from the paper's own result plot."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Saturation limits for structural check",
+      "source_provenance": "Paper states mixture saturation ~8e13 cm^{-2} (abstract), single-type saturation ~10^{13} cm^{-2} (text). We use 2.5e13 for single to match the reference solve curve and order-of-magnitude statement.",
+      "generation_method": "Adopted paper's stated magnitude with tolerance buffer.",
+      "why_not_fabricated": "Directly from paper's reported saturation findings."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "KT transition temperatures",
+      "source_provenance": "Paper reports T_KT = 180 mK for mixture and 160 mK for single-type H↓ at n_gas=10^{18} cm^{-3} (section 3).",
+      "generation_method": "Direct quote from paper.",
+      "why_not_fabricated": "Exact published values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "mu_vs_T.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "mu_2D"
+          ],
+          "units": {
+            "T": "K",
+            "mu_2D": "K"
+          }
+        },
+        "description": "2D chemical potential as a function of temperature at n_s = 1e13 cm^{-2}. The checker compares against reference values derived from the published computation."
+      },
+      {
+        "file": "ns_vs_T.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "n_gas",
+            "component",
+            "T",
+            "n_s"
+          ],
+          "units": {
+            "n_gas": "cm^{-3}",
+            "T": "K",
+            "n_s": "cm^{-2}"
+          }
+        },
+        "description": "Surface density as a function of temperature for given gas densities and mixture/single cases. The checker verifies the shape and representative point values against the published curves."
+      },
+      {
+        "file": "KT_temperatures.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "mixture": "number (K)",
+            "single": "number (K)"
+          }
+        },
+        "description": "KT transition temperatures at n_gas = 1e18 cm^{-3} for mixture and single-type H↓. The checker compares against reference values derived from the published calculation."
+      }
+    ],
+    "notes": "All required physical constants, the Silvera potential, and the scattering length are given in the task description; the agent must implement the numerical methods. The checker will compare the agent's curves and reported KT temperatures against benchmarks with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_03_mu2d_check",
+      "output_file": "mu_vs_T.csv",
+      "kind": "custom",
+      "weight": 0.3,
+      "reference_T": [
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.4
+      ],
+      "reference_mu": [
+        0.105,
+        0.138,
+        0.19,
+        0.209,
+        0.216
+      ],
+      "mape_threshold": 0.15,
+      "decay_factor": 0.4
+    },
+    {
+      "id": "step_04a_ns_point",
+      "output_file": "ns_vs_T.csv",
+      "kind": "custom",
+      "weight": 0.3,
+      "target_n_gas": 1e+18,
+      "target_T": 0.15,
+      "target_component": "mixture",
+      "reference_ns": 30000000000000.0,
+      "tolerance_relative": 0.2,
+      "decay_factor": 0.5
+    },
+    {
+      "id": "step_04b_ns_structure",
+      "output_file": "ns_vs_T.csv",
+      "kind": "custom",
+      "weight": 0.2,
+      "sat_targets": {
+        "mixture": 80000000000000.0,
+        "single": 25000000000000.0
+      },
+      "sat_tolerance_relative": 0.3,
+      "monotonic_check": true
+    },
+    {
+      "id": "step_05_kt_check",
+      "output_file": "KT_temperatures.json",
+      "kind": "custom",
+      "weight": 0.2,
+      "targets": {
+        "mixture": 0.18,
+        "single": 0.16
+      },
+      "tolerance_relative": 0.15,
+      "decay_factor": 0.4
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Transition temperatures can be recomputed from I-T curves; delta_E_half can be computed from interaction energies and checked against paper's value.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "interaction_energies.json": "exact_match",
+    "half_monolayer_IT_curve.csv": "metric_recompute",
+    "quarter_monolayer_IT_curve.csv": "metric_recompute",
+    "heat_capacity_curve.csv": "metric_recompute"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "interaction_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "epsilon1": "number (kcal/mol)",
+            "epsilon2": "number (kcal/mol)",
+            "epsilon4": "number (kcal/mol)",
+            "scaling_factor": "number",
+            "delta_E_half": "number (kcal/mol)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Final scaled pairwise interaction energies and the half\u2011monolayer constraint \u0394E_\u00bd = 3\u03b52 \u2212 4\u03b54."
+      },
+      {
+        "file": "half_monolayer_IT_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required": {},
+          "items": {},
+          "required_columns": [
+            "T",
+            "I1",
+            "I2",
+            "E_total",
+            "S"
+          ],
+          "units": {
+            "T": "K",
+            "I1": "dimensionless",
+            "I2": "dimensionless",
+            "E_total": "kcal/mol",
+            "S": "units of k (dimensionless)"
+          }
+        },
+        "description": "I\u2013T curve, energy, and configurational entropy for the final parameter set at \u03b8=0.5. The checker infers the transition temperature from the inflection point of I1 or I2 vs T."
+      },
+      {
+        "file": "quarter_monolayer_IT_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required": {},
+          "items": {},
+          "required_columns": [
+            "T",
+            "I1",
+            "I2",
+            "E_total"
+          ],
+          "units": {
+            "T": "K",
+            "I1": "dimensionless",
+            "I2": "dimensionless",
+            "E_total": "kcal/mol"
+          }
+        },
+        "description": "I\u2013T curve for the final parameter set at \u03b8=0.25. The checker infers the transition temperature from the inflection point of I1 or I2 vs T."
+      },
+      {
+        "file": "heat_capacity_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required": {},
+          "items": {},
+          "required_columns": [
+            "T",
+            "Cv"
+          ],
+          "units": {
+            "T": "K",
+            "Cv": "kcal/(mol K)"
+          }
+        },
+        "description": "Heat capacity per adatom at half\u2011monolayer coverage. The checker verifies that the peak lies near the half\u2011monolayer transition temperature."
+      }
+    ],
+    "notes": "The half\u2011monolayer I\u2011T curve includes configurational entropy as an auxiliary column; only the transition temperature is scored."
+  },
+  "steps": [
+    {
+      "id": "interaction_energies",
+      "output_file": "interaction_energies.json",
+      "kind": "custom",
+      "weight": 0.2
+    },
+    {
+      "id": "half_monolayer_it_curve",
+      "output_file": "half_monolayer_IT_curve.csv",
+      "kind": "custom",
+      "weight": 0.35
+    },
+    {
+      "id": "quarter_monolayer_it_curve",
+      "output_file": "quarter_monolayer_IT_curve.csv",
+      "kind": "custom",
+      "weight": 0.25
+    },
+    {
+      "id": "heat_capacity_curve",
+      "output_file": "heat_capacity_curve.csv",
+      "kind": "custom",
+      "weight": 0.2
+    }
+  ]
+}

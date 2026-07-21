@@ -37,10 +37,11 @@ where dΔ/dβ = –T² (dΔ/dT) is obtained by finite differences of the Δ(T) c
 **Molecular-field constant U₀** (K) is given by the sum of quadrupole, dispersion and valence‑force contributions:
  U₀ = –21.47 Q² R₀⁻⁵ + 46 k² ε σ⁶ R₀⁻⁶ – (51037 – 7168 ξ) B d⁴ R₀⁻¹⁶,
 with ξ = 1 for N₂, CO and ξ = 3/2 for N₂O, CO₂.  
-The repulsive constant B (in 10⁻⁸ erg Å¹²) is determined in the calibration step (see Procedure).  
+The repulsive constant B (in 10⁻⁸ erg Å¹²) is **not** known a priori; it must be determined in the calibration step (see Procedure).  
+All other quantities in the expression are known molecular parameters, listed below.  
 Conversion from erg to K: 1 erg = 7.2429717 × 10¹⁵ K.
 
-**Molecular parameters** (input data)
+**Molecular parameters** (input data, except B which is the calibration target)
 
 | Parameter   | Symbol | N₂        | CO        | N₂O       | CO₂       |
 |-------------|--------|-----------|-----------|-----------|-----------|
@@ -65,7 +66,7 @@ Conversion from erg to K: 1 erg = 7.2429717 × 10¹⁵ K.
 **Procedure overview**
 1. **Calibration** (process step): using Δ₀ and the T=0 equations (VI),(VII), solve for α and γ.  
    From α compute U₀ = (2/3) α² θ_rot.  
-   Using the expression for U₀ and the known molecular parameters, solve for B.
+   Using the expression for U₀ and the known molecular parameters, **the repulsive constant B is the only unknown**; solve for B from that equation.
 2. **Temperature‑dependent computation** (scored step): for each crystal and each specified T, solve the system (I)–(IV) for γ, Δ, η (U = U₀ determined above).  
    Compute C_v/R using the Δ(T) curve and the formula above.  
    Find T_λ by root‑finding on F_order(T)–F_disorder(T)=0.
@@ -82,8 +83,7 @@ For each of the four crystals (N2, CO, N2O, CO2), compute and write to `results.
 
 ### Step 1: Calibrate repulsive constant B and molecular-field constant U0
 - Role: process
-- Action: Using the molecular parameters and Δ0 from the table in the Approach section, solve the T=0 equations (VI) and (VII) together with expansion (V) to obtain α and γ. Compute U0 = (2/3) α² θ_rot, then determine B from the U0 expression given in the Approach using the known molecular parameters. Produce the dimensionless parameter α.
-- Evidence: `/app/outputs/calibration.json`
+- Action: Using the molecular parameters and Δ0 from the table in the Approach section, solve the T=0 equations (VI) and (VII) together with expansion (V) to obtain α and γ. Compute U0 = (2/3) α² θ_rot, then determine B from the U0 expression given in the Approach using the known molecular parameters. The repulsive constant B is the only unknown quantity in that expression.
 
 ### Step 2: Compute temperature-dependent properties and disordering temperature
 - Role: scored (load-bearing)

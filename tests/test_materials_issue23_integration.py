@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import importlib.util
 import json
 import shutil
@@ -66,13 +65,7 @@ def copy_source_package(destination: Path) -> None:
     shutil.copytree(
         SOURCE_PACKAGE,
         destination,
-        ignore=shutil.ignore_patterns("solution"),
     )
-    (destination / "solution").mkdir()
-
-
-def file_hash(path: Path) -> str:
-    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 class MaterialsIssue23IntegrationTests(unittest.TestCase):
@@ -80,7 +73,7 @@ class MaterialsIssue23IntegrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             package = Path(temporary) / SOURCE_PACKAGE.name
             copy_source_package(package)
-            run_review.run_review(package, None, paper_mode="no_paper")
+            run_review.run_review(package, paper_mode="no_paper")
             report = json.loads(
                 (package / "benchmark_audit/audit_report.json").read_text(
                     encoding="utf-8"
@@ -161,71 +154,20 @@ class MaterialsIssue23IntegrationTests(unittest.TestCase):
             repair.collect_review_implementation_hashes(),
         )
 
-    def test_source_bound_fixture_satisfies_review_and_repair(self) -> None:
+    def test_removed_fixture_binding_cannot_enter_review_or_repair(self) -> None:
         repair = load_repair_module()
+        self.assertFalse(
+            hasattr(dynamic_checker_probe, "validate_known_valid_fixture")
+        )
+        self.assertFalse(hasattr(dynamic_checker_probe, "fixture_hashes"))
         with tempfile.TemporaryDirectory() as temporary:
-            workspace = Path(temporary)
-            package = workspace / SOURCE_PACKAGE.name
+            package = Path(temporary) / SOURCE_PACKAGE.name
             copy_source_package(package)
-            specification = json.loads(
-                (package / "tests/grading_spec.json").read_text(
-                    encoding="utf-8"
-                )
+            bindings, assessments = repair.external_binding_hashes(
+                package, {}, {"assessment_hashes": {}}
             )
-            fixture = workspace / "known-valid-output"
-            fixture.mkdir()
-            output_names = {
-                Path(str(item["file"])).name
-                for item in specification["output_contract"]["outputs"]
-            }
-            for name in output_names:
-                (fixture / name).write_text("independent fixture\n")
-            source_roles = {
-                role: file_hash(package / role)
-                for role in dynamic_checker_probe.QUALITY_EVIDENCE_ROLES
-                if (package / role).is_file()
-            }
-            fixture_hashes = {
-                name: file_hash(fixture / name) for name in sorted(output_names)
-            }
-            (fixture / "fixture_manifest.json").write_text(
-                json.dumps(
-                    {
-                        "schema_version": (
-                            "materials-known-valid-fixture/1.0"
-                        ),
-                        "source_kind": "INDEPENDENT_PUBLIC_FIXTURE",
-                        "public": True,
-                        "oracle_used": False,
-                        "source_role_hashes": source_roles,
-                        "fixture_hashes": fixture_hashes,
-                    }
-                ),
-                encoding="utf-8",
-            )
-            review_binding = dynamic_checker_probe.validate_known_valid_fixture(
-                package, fixture, specification
-            )
-            fixture_digest = repair.sha256_path(fixture)
-            repair_binding, assessment_binding = repair.external_binding_hashes(
-                package,
-                {"known_valid_output": str(fixture)},
-                {
-                    "fixture_hashes": {
-                        "known_valid_output": fixture_digest
-                    },
-                    "assessment_hashes": {},
-                },
-            )
-
-        self.assertEqual(
-            review_binding["source_kind"], "INDEPENDENT_PUBLIC_FIXTURE"
-        )
-        self.assertFalse(review_binding["oracle_used"])
-        self.assertEqual(
-            repair_binding["known_valid_output"], fixture_digest
-        )
-        self.assertEqual(assessment_binding, {})
+        self.assertEqual(bindings, {})
+        self.assertEqual(assessments, {})
 
     def test_direct_input_hard_gate_propagates_to_batch_state(self) -> None:
         codes = run_review.pre_paper_hard_gate_codes(
@@ -294,7 +236,7 @@ class MaterialsIssue23IntegrationTests(unittest.TestCase):
                 repair.run_equal_depth_review(
                     candidate,
                     report,
-                    {"fixture_hashes": {}, "assessment_hashes": {}},
+                    {"assessment_hashes": {}},
                     {},
                 )
 

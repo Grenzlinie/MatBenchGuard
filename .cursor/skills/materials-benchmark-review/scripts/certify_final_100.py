@@ -32,12 +32,19 @@ from finalize_audit_output import validate_qa_axes as validate_review_qa_axes
 from prepare_audit_output import (  # noqa: E402
     collect_review_implementation_hashes,
 )
+from artifact_schema import (  # noqa: E402
+    SCORING_SCHEMA_VERSION,
+    AUDIT_REPORT_SCHEMA_VERSION,
+    AUDIT_MANIFEST_SCHEMA_VERSION,
+    CHECKER_TESTS_SCHEMA_VERSION,
+    require_schema,
+)
 
 
 SCHEMA_VERSION = "materials-final-100-index/1.0"
 CERTIFIER_VERSION = "materials-final-100-certifier/1.0"
 EXECUTION_LEVEL = "E1"
-SCORING_VERSION = "materials-review-scoring/1.1"
+SCORING_VERSION = SCORING_SCHEMA_VERSION
 FIVE_PROBE_CLASSES = (
     "positive",
     "negative",
@@ -46,11 +53,13 @@ FIVE_PROBE_CLASSES = (
     "component_isolation",
 )
 DIMENSION_MAX_POINTS = {
-    "scientific_validity": 35,
-    "instruction_answerability": 20,
-    "checker_gold_alignment": 25,
-    "robustness_discrimination": 15,
-    "solution_completeness": 5,
+    "C01": 10,
+    "C02": 20,
+    "C03": 20,
+    "C04": 20,
+    "C05": 10,
+    "C06": 10,
+    "C07": 10,
 }
 HARD_GATES = (
     "NON_MATERIALS_TASK",
@@ -416,10 +425,7 @@ def verify_external_bytes(
     evidence = record.get("evidence")
     if not isinstance(evidence, dict):
         raise CertificationError("record evidence is absent")
-    for field, path_field in (
-        ("assessment_hashes", "assessment_paths"),
-        ("fixture_hashes", "fixture_paths"),
-    ):
+    for field, path_field in (("assessment_hashes", "assessment_paths"),):
         declared = manifest.get(field, {})
         if declared is None:
             declared = {}
@@ -522,38 +528,39 @@ def validate_qa_axes(report: dict[str, Any]) -> None:
 
 
 def validate_dimensions(report: dict[str, Any]) -> None:
-    dimensions = report.get("dimension_scores")
+    dimensions = report.get("dimensions_v11")
     if not isinstance(dimensions, list) or [
         item.get("dimension") for item in dimensions
     ] != list(DIMENSION_MAX_POINTS):
-        raise CertificationError("weighted dimensions are missing or reordered")
+        raise CertificationError("v11 dimensions are missing or reordered")
     for item in dimensions:
         name = item["dimension"]
-        if item.get("max_points") != DIMENSION_MAX_POINTS[name]:
-            raise CertificationError(f"invalid weighted dimension maximum: {name}")
+        if (
+            item.get("weight") != DIMENSION_MAX_POINTS[name]
+            or item.get("max_points") != DIMENSION_MAX_POINTS[name]
+        ):
+            raise CertificationError(f"invalid v11 dimension maximum: {name}")
         earned = item.get("points_earned")
         if earned is not None and (
             isinstance(earned, bool)
             or not isinstance(earned, (int, float))
             or not 0 <= earned <= DIMENSION_MAX_POINTS[name]
         ):
-            raise CertificationError(f"invalid weighted dimension score: {name}")
-        if not isinstance(item.get("evidence"), list) or not item["evidence"]:
-            raise CertificationError(f"weighted dimension evidence is missing: {name}")
-        normalized = item.get("normalized_score")
+            raise CertificationError(f"invalid v11 dimension score: {name}")
+        normalized = item.get("normalized")
         if earned is None or normalized != round(
-            float(earned) / DIMENSION_MAX_POINTS[name], 6
+            float(earned) / DIMENSION_MAX_POINTS[name] * 100, 4
         ):
-            raise CertificationError(f"weighted dimension normalization is invalid: {name}")
+            raise CertificationError(f"v11 dimension normalization is invalid: {name}")
         expected_status = (
             "FAIL"
-            if normalized < 0.5
+            if normalized < 50
             else "WARNING"
-            if normalized < 0.8
+            if normalized < 80
             else "PASS"
         )
         if item.get("status") != expected_status:
-            raise CertificationError(f"weighted dimension status is invalid: {name}")
+            raise CertificationError(f"v11 dimension status is invalid: {name}")
 
 
 def validate_score(report: dict[str, Any], cli_scoring: Any) -> None:
@@ -568,14 +575,22 @@ def validate_score(report: dict[str, Any], cli_scoring: Any) -> None:
         or not PASS_THRESHOLD <= float(score) <= 100
     ):
         raise CertificationError("PASS score is absent, out of bounds, or below threshold")
-    dimensions = report.get("dimension_scores")
-    if round(sum(float(item["points_earned"]) for item in dimensions), 2) != score:
-        raise CertificationError("PASS score does not equal weighted dimensions")
+    dimensions = report.get("dimensions_v11")
+    expected_score = round(
+        sum(
+            float(item["weight"]) * float(item["normalized"])
+            for item in dimensions
+        )
+        / sum(float(item["weight"]) for item in dimensions),
+        2,
+    )
+    if expected_score != score:
+        raise CertificationError("PASS score does not equal v11 dimensions")
     if (
         not isinstance(cli_scoring, dict)
         or cli_scoring.get("total_score") != score
         or cli_scoring.get("final_verdict") != "PASS"
-        or cli_scoring.get("dimension_scores") != dimensions
+        or cli_scoring.get("dimensions_v11") != dimensions
         or cli_scoring.get("hard_gates") != report.get("hard_gates")
     ):
         raise CertificationError("persisted PASS scoring snapshot is stale")
@@ -661,12 +676,16 @@ def validate_probes(checker: dict[str, Any]) -> None:
         elif not isinstance(probe.get("reason"), str) or not probe["reason"].strip():
             raise CertificationError(f"unavailable probe lacks reason: {name}")
         if status != "ASSESSED":
-            for key in ("cases", "source_kinds", "fixture_hashes"):
+            for key in ("cases", "source_kinds"):
                 value = provenance.get(key)
                 if isinstance(value, (list, dict)) and value:
                     raise CertificationError(
                         f"unavailable probe has contradictory evidence: {name}"
                     )
+            if provenance.get("external_result_directory_accepted") is not False:
+                raise CertificationError(
+                    f"unavailable probe accepts an external result directory: {name}"
+                )
             if provenance.get("source_kind") not in {None, "", "NONE"}:
                 raise CertificationError(
                     f"unavailable probe has contradictory provenance: {name}"
@@ -731,7 +750,7 @@ def validate_boundaries(
         raise CertificationError("Gold provenance crosses Oracle boundary")
     for context in (
         gold,
-        report.get("dimension_scores"),
+        report.get("dimensions_v11"),
         report.get("qa_axes"),
         {
             name: probe
@@ -1124,9 +1143,24 @@ def validate_record(
         base=batch,
         context="checker tests",
     )
-    report = read_json(report_path, "audit report")
-    manifest = read_json(manifest_path, "audit manifest")
-    checker = read_json(checker_path, "checker tests")
+    try:
+        report = require_schema(
+            read_json(report_path, "audit report"),
+            AUDIT_REPORT_SCHEMA_VERSION,
+            "audit report",
+        )
+        manifest = require_schema(
+            read_json(manifest_path, "audit manifest"),
+            AUDIT_MANIFEST_SCHEMA_VERSION,
+            "audit manifest",
+        )
+        checker = require_schema(
+            read_json(checker_path, "checker tests"),
+            CHECKER_TESTS_SCHEMA_VERSION,
+            "checker tests",
+        )
+    except (TypeError, ValueError) as exc:
+        raise CertificationError("audit artifacts use an unsupported schema") from exc
     if not isinstance(report.get("evidence_contract"), dict):
         raise CertificationError("evidence contract is absent")
     if report.get("audit_id") != identity.get("audit_id"):
@@ -1512,7 +1546,6 @@ def certify(
         "review_implementation": implementation_hashes,
         "review_implementation_hash": implementation_hashes["aggregate_hash"],
         "packages": packages,
-        "legacy_v8_role": "IDENTITY_ORDER_SOURCE_BINDING_BASELINE_ONLY",
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = Path(

@@ -26,8 +26,12 @@ def assisted_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
     value["evidence"] = [
         {
             "id": "paper-method",
+            "source_kind": "PACKAGE_PAPER",
             "source": "paper/paper.md",
-            "quote": "The exact public replacement is paper-supported quantity.",
+            "exact_quote": "The exact public replacement is paper-supported quantity.",
+            "applicability": "The package claims the published method's public quantity.",
+            "derivation": "The exact quoted replacement supplies the corrected public wording.",
+            "core_science_change": False,
             "kind": "scientific_method",
             "precision": {
                 "kind": "scientific_method",
@@ -56,6 +60,42 @@ def assisted_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
             "expected": "paper-supported quantity",
         }
     ]
+    return value
+
+
+def web_assisted_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
+    value = assisted_plan(audit_id, finding_id)
+    value["evidence"] = [
+        {
+            "id": "primary-web",
+            "source_kind": "AUTHORITATIVE_PRIMARY_WEB",
+            "source": "https://example.org/primary-method",
+            "url": "https://example.org/primary-method",
+            "exact_quote": "The exact public replacement is paper-supported quantity.",
+            "source_hash": "sha256:" + "a" * 64,
+            "retrieved_at": "2026-07-21T03:00:00Z",
+            "retrieval_metadata": {
+                "retrieved_at": "2026-07-21T03:00:00Z",
+                "content_hash": "sha256:" + "a" * 64,
+            },
+            "approval": {
+                "approved": True,
+                "primary": True,
+                "authority": "PEER_REVIEWED_PRIMARY",
+                "reference": "approval-record-1",
+            },
+            "applicability": "The primary source defines this exact public quantity.",
+            "derivation": "The quoted source determines the replacement wording.",
+            "core_science_change": False,
+            "kind": "scientific_method",
+            "precision": {
+                "kind": "scientific_method",
+                "claim": "paper-supported quantity",
+                "replacement": "paper-supported quantity",
+            },
+        }
+    ]
+    value["operations"][0]["evidence_ids"] = ["primary-web"]
     return value
 
 
@@ -115,6 +155,70 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
             self.assertEqual(result["status"], "BLOCKED_EVIDENCE")
             self.assertEqual(sha256_file(package / "instruction.md"), before)
             self.assertFalse((package / "benchmark_repair").exists())
+
+    def test_assisted_fix_requires_exact_typed_provenance_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(
+                workspace, paper_mode="paper_grounded"
+            )
+            plan = workspace / "assisted-plan.json"
+            value = assisted_plan(report["audit_id"], finding_id)
+            value["evidence"][0].pop("exact_quote")
+            write_plan(plan, value)
+
+            completed = run_repair(package, plan, runner)
+
+            self.assertEqual(completed.returncode, 3)
+            result = json.loads(completed.stdout)
+            self.assertEqual(result["status"], "BLOCKED_EVIDENCE")
+            self.assertFalse((package / "benchmark_repair").exists())
+
+    def test_approved_primary_web_evidence_can_drive_assisted_fix(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(
+                workspace, paper_mode="paper_grounded"
+            )
+            plan = workspace / "web-assisted-plan.json"
+            write_plan(
+                plan, web_assisted_plan(report["audit_id"], finding_id)
+            )
+
+            completed = run_repair(package, plan, runner)
+
+            self.assertEqual(
+                completed.returncode,
+                0,
+                msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
+            )
+            result = json.loads(completed.stdout)
+            self.assertEqual(result["status"], "REPAIRED")
+
+    def test_source_score_below_repair_gate_is_abandoned(self) -> None:
+        module = repair_module()
+        with self.assertRaises(module.PolicyStop) as context:
+            module.enforce_source_score_gate(
+                {"summary": {"total_score": 59}}
+            )
+        self.assertEqual(context.exception.status, "ABANDONED")
+
+    def test_agent_quality_finding_cannot_be_auto_fix(self) -> None:
+        module = repair_module()
+        with self.assertRaises(module.PolicyStop) as context:
+            module.enforce_repair_lane_boundary(
+                {
+                    "finding_id": "quality-1",
+                    "repair_class": "AUTO_FIX",
+                },
+                {
+                    "finding_id": "quality-1",
+                    "lane": "agent_quality",
+                    "judgment_type": "AGENT_JUDGMENT",
+                },
+                {"agent_quality": {"finding_ids": ["quality-1"]}},
+            )
+        self.assertEqual(context.exception.status, "POLICY_VIOLATION")
 
     def test_plan_cannot_redefine_core_science(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -213,7 +317,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
                 sha256_file(package / "tests/grading_spec.json"), before
             )
 
-    def test_two_failed_attempts_roll_back_then_abandon_root_cause(self) -> None:
+    def test_failed_control_attempts_remain_rolled_back(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
@@ -248,7 +352,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
             ]
             self.assertEqual(
                 [item["status"] for item in results],
-                ["ROLLED_BACK", "ABANDONED", "ABANDONED"],
+                ["ROLLED_BACK", "ROLLED_BACK", "ROLLED_BACK"],
             )
             self.assertEqual(
                 sha256_file(package / "instruction.md"), instruction_before
@@ -269,7 +373,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
             )
             self.assertEqual(
                 [item["status"] for item in attempts],
-                ["ROLLED_BACK", "ABANDONED"],
+                ["ROLLED_BACK", "ROLLED_BACK", "ROLLED_BACK"],
             )
             for path in history_root.glob("*/attempt_manifest.json"):
                 attempt = json.loads(path.read_text(encoding="utf-8"))

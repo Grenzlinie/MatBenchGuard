@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1_defect_relaxation",
+    "title": "Lattice relaxation around F⁻ interstitial",
+    "role": "process",
+    "action": "Using the Catlow–Norgett interatomic potential, relax the positions of the 14 host ions (8 F⁻ first neighbours and 6 Ca²⁺ second neighbours) surrounding an F⁻ interstitial in CaF₂. The relaxation may be performed with an open-source lattice-statics code (e.g., GULP, LAMMPS).",
+    "output_file": "",
+    "evidence": "relaxed_coords.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Produces the relaxed atomic positions of the defect neighbourhood. These coordinates are used in later steps to construct the defect perturbation matrices.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_green_perturbation",
+    "title": "Compute host Green's functions and defect perturbation matrices",
+    "role": "process",
+    "action": "From the shell-model phonon data of Elcombe–Pryor, compute the perfect-crystal phonon frequencies and eigenvectors for CaF₂. Construct the real-space Green’s function submatrix g(ω) for the defect space (42×42). Using the relaxed coordinates from step 1 and the Catlow–Norgett potential, compute the deformation matrix δl and coupling matrix a.",
+    "output_file": "",
+    "evidence": "green_perturbation_data.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generates the frequency-dependent g(ω), δl, and a matrices required to set up the scattering problem.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3_displacement_amplitudes",
+    "title": "Build scattering operators and compute displacement amplitudes",
+    "role": "process",
+    "action": "For a dense grid of reduced frequencies (approximately x = 0.01–0.99), compute the interstitial Green’s function γ(ω) using the interstitial mass and a frozen-lattice frequency estimate. Form the combined perturbation δl + a γ aᵀ, invert [I − g(δl + a γ aᵀ)], and obtain the scattered displacement vectors u₁(ω) and interstitial displacement ξ(ω). Evaluate and store the squared amplitudes u₁²(1,ω) and ξ²(ω).",
+    "output_file": "",
+    "evidence": "displacement_amplitudes.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces frequency-resolved displacement amplitudes needed for mean-square displacement integration.",
+    "output_schema": ""
+  },
+  {
+    "id": "step4_b_values",
+    "title": "Compute B-values and output final CSV",
+    "role": "scored",
+    "action": "Integrate the displacement amplitudes using ⟨u²⟩ = (ħ/2) ∫ (u²(ω)/ω) coth(ħω/(2kT)) dω. Compute B = (8π²/3)⟨u²⟩ for temperatures 50 K to 500 K at 50 K intervals (harmonic approximation). For the quasiharmonic approximation, incorporate thermal expansion and mode-Grüneisen-parameter frequency shifts, scale the Green's functions accordingly, and recompute B-values at 300, 1000, 1500 K. Write all results to b_values.csv.",
+    "output_file": "b_values.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV containing the computed B-values for the interstitial, first-neighbour F⁻, second-neighbour Ca²⁺, and host-crystal F⁻ and Ca²⁺ ions under harmonic and quasiharmonic approximations.",
+    "output_schema": "CSV with columns: temperature (K), approximation (HA or QHA), B_interstitial (Å²), B_F_D (Å²), B_Ca_D (Å²), B_F_H (Å²), B_Ca_H (Å²)."
+  }
+]

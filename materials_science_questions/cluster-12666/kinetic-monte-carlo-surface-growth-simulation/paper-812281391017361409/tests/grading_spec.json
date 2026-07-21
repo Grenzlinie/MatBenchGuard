@@ -1,0 +1,103 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Arrhenius data is checked by recomputing apparent activation energy from submitted TOF vs T; the other two artifacts are scored by structural trends (monotonicity and ordering) which are robust to simulation noise.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "catalyst_relative_activity_vs_dispersion.tsv": "structural_audit",
+    "selectivity_vs_dispersion.tsv": "structural_audit",
+    "arrhenius_data.tsv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden activation energy acceptable range (50–70 kJ/mol) and TOF magnitude bounds (0.001–1.0 s⁻¹), derived from paper Fig. 3 caption and text: 'The corresponding Ea was 60 kJ/mol' and simulated conditions in Section 2.2.",
+      "source_provenance": "paper Fig. 3 and text (Section 3, Fig. 3 discussion)",
+      "generation_method": "Extracted from paper; no holdout labels needed. The bounds are set to +/−10 kJ/mol around 60 kJ/mol and one-order-of-magnitude catch-all for TOF.",
+      "why_not_fabricated": "These values are directly reported in the paper and are used only to validate the agent's recomputed activation energy; they are not fabricated."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "catalyst_relative_activity_vs_dispersion.tsv",
+        "format": "tsv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Dx",
+            "catalyst_relative_activity"
+          ]
+        },
+        "description": "Catalyst relative activity (c.r.a.) vs metal dispersion Dx at 323.15 K, t=0 s."
+      },
+      {
+        "file": "selectivity_vs_dispersion.tsv",
+        "format": "tsv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Dx",
+            "selectivity_HANT",
+            "selectivity_4A2NT",
+            "selectivity_2A4NT"
+          ]
+        },
+        "description": "Selectivity to HANT, 4A2NT, 2A4NT at t=0 s vs Dx."
+      },
+      {
+        "file": "arrhenius_data.tsv",
+        "format": "tsv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "TOF_2_4DNT"
+          ]
+        },
+        "description": "TOF of 2,4‑DNT disappearance at t=0 s for Dx=0.3 at three temperatures."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "run_dispersion_activity",
+      "output_file": "catalyst_relative_activity_vs_dispersion.tsv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "target": "strict decreasing c.r.a. with Dx; Dx set {0.0,0.3,0.6,0.9}; c.r.a.(Dx=0)=1.0",
+      "tolerance": "strict_inequality"
+    },
+    {
+      "id": "run_dispersion_selectivity",
+      "output_file": "selectivity_vs_dispersion.tsv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "target": "strict increasing selectivity_4A2NT with Dx; selectivity_4A2NT > selectivity_2A4NT at all Dx",
+      "tolerance": "strict_increase"
+    },
+    {
+      "id": "run_temperature_arrhenius",
+      "output_file": "arrhenius_data.tsv",
+      "kind": "recompute_metric",
+      "weight": 0.4,
+      "metric": "apparent_activation_energy",
+      "target": {
+        "Ea_kJ_per_mol_range": [
+          50.0,
+          70.0
+        ],
+        "TOF_range": [
+          0.001,
+          1.0
+        ]
+      }
+    }
+  ]
+}

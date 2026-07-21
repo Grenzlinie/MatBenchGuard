@@ -1,0 +1,57 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute of max charge transfer is infeasible because the checker cannot re-run the BOMD simulations and the agent provides only the summary JSON; therefore scoring compares reported values to hidden thresholds derived from the paper's reported ranges and the stable/unstable criteria.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Threshold golds for max_charge_transfer and bond_cleavage_observed, derived from paper-reported values: G4 <0.2 e / no bond cleavage, Ca[CB11H12]2 ~0 e / no bond cleavage, Ca[PF6]2 ~8 e / complete decomposition.",
+      "source_provenance": "Paper sections on TD-CT analysis and structural snapshots (Figures 2,3,5,6 and discussion).",
+      "generation_method": "Rounded/conservative thresholds: stable ≤0.3 e, unstable ≥1.5 e; bond cleavage booleans from description of decomposition/non-decomposition.",
+      "why_not_fabricated": "Thresholds are directly informed by the paper's quantitative statements and observed decomposition events, not arbitrarily set."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "stability_assessment.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required_top_keys": [
+            "G4",
+            "CaCB11H12"
+          ],
+          "additional_key_must_be_one_of": [
+            "CaPF6",
+            "CaTFSI",
+            "CaBhfip4"
+          ],
+          "value_object_schema": {
+            "max_charge_transfer": "float",
+            "bond_cleavage_observed": "boolean"
+          }
+        },
+        "description": "JSON file reporting the maximum charge transferred from the Ca surface to each electrolyte candidate and whether bond cleavage was observed."
+      }
+    ],
+    "notes": "The chosen unstable reference candidate must be one of CaPF6, CaTFSI, or CaBhfip4, corresponding to the salts studied in the original work. The hidden checker verifies that stable candidates exhibit negligible charge transfer and no bond cleavage, while the unstable candidate shows significant charge transfer and bond cleavage, consistent with the reported stability ordering."
+  },
+  "steps": [
+    {
+      "id": "stability_assessment",
+      "output_file": "stability_assessment.json",
+      "kind": "rubric",
+      "weight": 1.0,
+      "stable_max_charge_threshold": 0.3,
+      "unstable_min_charge_threshold": 1.5,
+      "allowed_unstable_keys": [
+        "CaPF6",
+        "CaTFSI",
+        "CaBhfip4"
+      ]
+    }
+  ]
+}

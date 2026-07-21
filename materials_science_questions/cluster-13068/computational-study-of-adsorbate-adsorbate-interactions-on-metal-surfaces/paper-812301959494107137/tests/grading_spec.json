@@ -1,0 +1,112 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute from raw PWFRG data not feasible in checker; scored against paper-reported gamma and gamma_tilde with structural consistency on A2 vanishing.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gamma and gamma_tilde values digitized from Fig. 3 for temperatures 0.3,0.35,0.4,0.45,0.5",
+      "source_provenance": "Paper Fig. 3 – Stiffening Transition in Vicinal Surfaces with Adsorption, doi:10.1143/ptp.105.361",
+      "generation_method": "manual digitization of published figure",
+      "why_not_fabricated": "values directly trace to the paper's own experimental reported results"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "vertex_model_description.json",
+        "format": "json",
+        "purpose": "process",
+        "schema": {
+          "type": "object",
+          "required": ["model_type", "nonzero_weights", "parameters"]
+        }
+      },
+      {
+        "file": "pwfrg_fixedpoint_info.log",
+        "format": "txt",
+        "purpose": "process",
+        "schema": {}
+      },
+      {
+        "file": "p_eta_curves.csv",
+        "format": "csv",
+        "purpose": "process",
+        "schema": {
+          "type": "table",
+          "required_columns": ["temperature", "eta", "p"]
+        }
+      },
+      {
+        "file": "step_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "gamma",
+            "A2",
+            "gamma_tilde"
+          ],
+          "units": {
+            "temperature": "k_B T/ε",
+            "gamma": "ε",
+            "A2": "ε",
+            "gamma_tilde": "ε"
+          }
+        },
+        "description": "Scored artifact containing the extracted step tension γ, quadratic fitting coefficient A2, and step stiffness γ̃ for the five specified temperatures. The stiffness diverging behaviour (large γ̃) and vanishing A2 near T≈0.4 indicate the stiffening transition."
+      }
+    ],
+    "notes": "The hidden checker compares gamma and gamma_tilde against digitised reference values from the paper’s Fig. 3 with appropriate tolerances, and also verifies that A2 at T≈0.4 is significantly smaller than at 0.3 and 0.5 (structural signature of the transition)."
+  },
+  "steps": [
+    {
+      "id": "gamma_check",
+      "output_file": "step_properties.csv",
+      "kind": "numeric_match",
+      "weight": 0.3,
+      "hidden_gold_gamma": {
+        "0.3": 0.55,
+        "0.35": 0.53,
+        "0.4": 0.52,
+        "0.45": 0.51,
+        "0.5": 0.5
+      },
+      "tolerance_abs": 0.15
+    },
+    {
+      "id": "gamma_tilde_check",
+      "output_file": "step_properties.csv",
+      "kind": "numeric_match",
+      "weight": 0.3,
+      "hidden_gold_gamma_tilde": {
+        "0.3": 0.5,
+        "0.35": 0.8,
+        "0.4": 5.0,
+        "0.45": 0.6,
+        "0.5": 0.4
+      },
+      "tolerance_rel": 0.2,
+      "tolerance_rel_peak": 0.3,
+      "peak_temp": 0.4
+    },
+    {
+      "id": "A2_structural",
+      "output_file": "step_properties.csv",
+      "kind": "structural",
+      "weight": 0.3,
+      "description": "A2 at T=0.4 must be the minimum among all five temperatures and drastically smaller than at T=0.3 and T=0.5"
+    },
+    {
+      "id": "gamma_tilde_self_consistency",
+      "output_file": "step_properties.csv",
+      "kind": "recompute",
+      "weight": 0.1,
+      "tolerance_relative": 0.01,
+      "description": "Recompute gamma_tilde from A2 and temperature and compare to reported value"
+    }
+  ]
+}

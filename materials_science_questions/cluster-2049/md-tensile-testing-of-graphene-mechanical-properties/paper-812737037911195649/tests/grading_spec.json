@@ -1,0 +1,83 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The hidden checker recomputes the rotational spring-slider model using the paper's equations and parameters, comparing the agent's computed total energy and critical area to the recomputed gold, achieving a strong recompute-based verification.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "energy_vs_curvature.csv": "reference_match",
+    "critical_condition.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Recomputed gold values from the paper's model; critical area A_g^c from Eq. 22, and reference total energy curves from the spring-slider model implementation.",
+      "source_provenance": "Paper's Eq. 22 and the rotational spring-slider model formulation as defined in the task plan.",
+      "generation_method": "Checker implements the model equations and computes the expected values, which are also used by the reference solve.sh.",
+      "why_not_fabricated": "Values are derived directly from the paper's published formulas and parameters; they are not arbitrary."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_vs_curvature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "curvature_1_per_nm",
+            "total_energy_J",
+            "spring_energy_J",
+            "slider_energy_J",
+            "potential_energy_J",
+            "rotational_angle_rad",
+            "critical_angle_rad"
+          ]
+        },
+        "description": "Energy components and angles as a function of droplet curvature. The checker compares the total energy values at sampled curvatures to hidden gold values using MAPE within 10%."
+      },
+      {
+        "file": "critical_condition.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Four lines: A_g_c (nm²), kappa_d_E (nm⁻¹ or 'No root'), theta_t at that curvature (rad, if root exists), theta_t^c (rad)."
+        },
+        "description": "Critical area and root information. The checker compares A_g_c to the paper's Eq. 22 value within 2% and verifies that kappa_d_E is 'No root' (expected for these parameters)."
+      }
+    ],
+    "notes": "The hidden gold values are extracted from the paper's Fig. 5a and Eq. 22. The solver must implement the model equations; no external datasets are needed. The agent's discretisation and root-finding choices are free as long as the output exceeds the minimum number of points."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "energy_vs_curvature.csv",
+      "weight": 0.6,
+      "kind": "custom",
+      "params": {
+        "L_g_nm": 40,
+        "P_t_atm": 10,
+        "B_J": 2.38e-19,
+        "E_Pa": 1000000000000.0,
+        "t_m": 3.4e-10,
+        "Gamma_b_Jpm2": -0.232,
+        "mapethresh": 0.1
+      },
+      "description": "MAPE of total_energy_J against recomputed gold values at the agent's curvature points. Full credit if MAPE <= mapethresh, linear decay up to 0.20."
+    },
+    {
+      "id": "step_02",
+      "output_file": "critical_condition.txt",
+      "weight": 0.4,
+      "kind": "custom",
+      "params": {
+        "A_g_c_target_nm2": 3765,
+        "A_g_c_rel_tol": 0.02,
+        "kappa_d_E_expected": "No root"
+      },
+      "description": "Critical area A_g_c within 2% relative tolerance, and kappa_d_E must be 'No root' (case-insensitive). Sub-weights: 0.6 for area, 0.4 for root."
+    }
+  ]
+}

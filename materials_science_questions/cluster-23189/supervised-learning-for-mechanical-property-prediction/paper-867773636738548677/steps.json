@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01",
+    "title": "Synthetic PLIC dataset generation",
+    "role": "process",
+    "action": "Generate input-output pairs (normal orientation angles, volume fraction α0 → plane constant C) for square, cubic, triangular, and tetrahedral meshes using the discretization formulas for normal orientations and volume fractions described in the method. Compute exact C via analytical PLIC algorithms (e.g., Scardovelli & Zaleski for rectangles, López et al. for triangles/tetrahedra). Output dataset sizes as evidence.",
+    "output_file": "",
+    "evidence": "dataset_sizes.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "This step creates the synthetic training/testing data. No external dataset is needed; the procedure is fully described and must be implemented from scratch.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "NPLIC model training",
+    "role": "process",
+    "action": "For each mesh type, randomly split the generated dataset into 70% training, 20% testing, 10% validation. Train a separate fully-connected MLP with one hidden layer of 48 neurons, ReLU activation in hidden layer, linear output neuron, using mean-squared error loss, Adam optimizer, early stopping, max epochs, batch size as described. Train each model three times with different random seeds. Keep the final trained models for evaluation.",
+    "output_file": "",
+    "evidence": "training_log.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Training the neural network models. The agent must implement the training loop; no pre-trained weights are provided.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Test set evaluation and metrics",
+    "role": "scored",
+    "action": "For each mesh type and each of the three training runs, compute predictions on the held-out test set (20% of the full dataset). Calculate MSE and MAE between predictions and ground truth for each run, then average these metrics over the three seeds. Write a JSON file /app/outputs/test_metrics.json containing the averaged MSE and MAE for square, cubic, triangular, and tetrahedral meshes.",
+    "output_file": "test_metrics.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The final scored artifact containing test set MSE and MAE for each mesh type, averaged over three random initializations.",
+    "output_schema": "JSON object with top-level keys 'square', 'cubic', 'triangular', 'tetrahedral'. Each value is an object with numeric keys 'mse' and 'mae'."
+  }
+]

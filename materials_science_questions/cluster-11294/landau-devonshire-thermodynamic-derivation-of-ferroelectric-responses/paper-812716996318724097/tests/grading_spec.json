@@ -1,0 +1,63 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute peak ΔT from the agent's CSV and compare to paper-reported values within tolerance; verify peak location to ensure correct transition behavior.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "delta_T_vs_temperature.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference peak ΔT and expected Curie temperature range for each composition",
+      "source_provenance": "Paper abstract/results: 'ΔT~32.2 K for P(VDF-TrFE) 65/35 and 65 K for P(VDF-TrFE) 70/30 under −100 MPa'; 'Tc(0) of 65/35 is 103 °C, 70/30 is 81 °C'.",
+      "generation_method": "Extracted directly from the paper text.",
+      "why_not_fabricated": "These are the paper's own reported quantities used as gold for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "delta_T_vs_temperature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "stress_MPa",
+            "temperature_C",
+            "delta_T_K"
+          ],
+          "units": {
+            "stress_MPa": "MPa",
+            "temperature_C": "°C",
+            "delta_T_K": "K"
+          }
+        },
+        "description": "Adiabatic elastocaloric temperature change ΔT as a function of temperature for the two copolymer compositions under a uniaxial compressive stress of −100 MPa. The peak ΔT values near the zero-stress Curie temperature are the scored quantities, compared against a hidden reference with a tolerance."
+      }
+    ],
+    "notes": "The checker will extract the maximum ΔT for each composition at the given stress and verify they are within an acceptable tolerance of the paper's predicted values, and that the peak occurs within ±20 °C of the expected Curie temperature. The file must contain rows covering a temperature range that includes the peak."
+  },
+  "steps": [
+    {
+      "id": "delta_T_peak",
+      "output_file": "delta_T_vs_temperature.csv",
+      "kind": "numeric",
+      "weight": 1.0,
+      "reference": {
+        "peak_delta_T_K": {
+          "65/35": 32.2,
+          "70/30": 65.0
+        },
+        "rel_tol": 0.1,
+        "expected_peak_temperature_C": {
+          "65/35": 103,
+          "70/30": 81
+        },
+        "peak_temp_tol": 20
+      }
+    }
+  ]
+}

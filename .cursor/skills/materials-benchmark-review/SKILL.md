@@ -27,7 +27,7 @@ or Gold-provenance evidence. Missing or broken `solution/solve.sh` is a
 repairable completeness finding, not evidence that the task science is wrong.
 
 The Stage 0→5 flow, the Agent-adjudicated classification reform (no keyword
-prescreen), the D1–D7 and A1–A5 tables with declared input files, the
+prescreen), the D1–D6 deterministic-core and Agent-quality tables with declared input files, the
 dimension→check mapping, and the unified terminal fields are in
 [references/checks-and-stages.md](references/checks-and-stages.md).
 
@@ -35,6 +35,18 @@ Every authoritative E1 report emits the shared D1–D6 deterministic contract.
 Only proven OPEN repairable blockers enter its complete `REQUIRED` queue;
 advisory risks never block PASS. A PASS report is eligible for publication only
 when the contract is valid and `CLEAN`.
+
+Review persists two non-interchangeable lanes:
+
+- `deterministic_core` contains static D1–D6 results and code-defined runtime
+  probes. Malformed, full-integration, partial, and all-wrong cases are
+  generated from the declared output schema and grading steps; they are not
+  Agent-authored scientific examples and never bind an external fixture.
+- `agent_quality` contains the Agent assessment and separately reported quality
+  results. The Agent may justify only Gold, target, unit, formula, tolerance,
+  threshold, and scoring-direction claims from the paper or authoritative
+  sources. It does not generate probe outputs or judge whether synthetic probe
+  values are scientifically meaningful.
 
 ## Narrow D1–D6 `AUTO_FIX` boundary
 Review classifies repairability against the frozen contract and does not mutate a package. `AUTO_FIX` is limited to unique source-bound restoration of existing D1–D6 contract/scoring wiring: output declaration/path synchronization, scorer registration/binding/return/final-reward connections, a standard Harbor entrypoint around one existing producer, or ratio-preserving normalization of finite positive declared weights.
@@ -86,7 +98,10 @@ recognized output; use an unclassified output and unknown read/score states.
 ## Checker and Gold audit
 
 The checker audit must combine static contract mapping with isolated dynamic
-probes. Inspect for:
+probes. Deterministic-core probe failures are limited to objective integration
+and explicitly schema/step-implied ordering or malformed-input failures.
+Discrimination, equivalence, and component-isolation results remain quality
+results and cannot acquire D1–D6 ownership. Inspect for:
 
 - core outputs that are never read;
 - file-existence or schema-only checks that ignore the scientific result;
@@ -99,11 +114,9 @@ probes. Inspect for:
 - malformed, incomplete, random, or scientifically wrong but
   format-valid outputs receiving a low score.
 
-`largest_weight >= pass_threshold` is only a static risk, not proof of
-`SINGLE_COMPONENT_CAN_PASS`; prove it with a component-isolation probe from
-source-bound components, verified checker bindings, and an independent public
-fixture. The Oracle positive mock is never an isolation fixture; otherwise
-record `component_isolation` as required but `NOT_RUN`.
+`largest_weight >= pass_threshold` is only a static risk, not proof of a
+scientific quality defect. Component isolation is Agent-quality assessment and
+is not executed in the deterministic lane or supplied through a fixture.
 Every reward-derived conclusion uses the shared usable-result predicate. A
 finite reward with malformed breakdown or non-empty/malformed `_errors` is
 unusable.
@@ -145,21 +158,24 @@ Repair. It is external, non-overwriting, read-only, and byte-binds audit and
 external-input hashes. Review provenance hashes the canonical dependency list
 in `references/review-implementation-files.json`.
 
-An independently justified non-Oracle output may additionally be supplied with
-`--known-valid-output`. It is used only for discrimination and equivalence
-probes and requires an external public `fixture_manifest.json` bound to current
-instruction/tests hashes; it never replaces the isolated Oracle positive mock.
+Review accepts no external result directory or fixture-manifest input.
+The isolated Oracle is used only to seed code-generated positive, partial, and
+all-wrong contract probes. Those temporary case directories are stored only
+under the external audit workspace and are never a Harbor role, Gold fixture,
+or deterministic input. Legacy audits containing fixture hashes or lineage
+must be regenerated before they can be used as current evidence.
 
 Every E1 run records coverage for these probe classes:
 
 - positive — isolated Oracle mock only;
 - negative — missing, empty, malformed, random, duplicate, sparse, and
   non-finite attacks;
-- discrimination — an independently justified public fixture and scientifically
-  worse outputs must not score better;
-- equivalence — scientifically equivalent ordering or serialization must not
-  change reward, using the same independent public fixture;
-- component isolation — independently sourced one-component submissions.
+- discrimination — Agent-quality assessment of whether the declared scoring
+  direction distinguishes scientifically worse outputs;
+- equivalence — Agent-quality assessment of whether equivalent representations
+  preserve the declared result;
+- component isolation — Agent-quality assessment only; no deterministic fixture
+  or external result directory is accepted.
 
 Execute checker cases through `tests/test.sh` in the disposable prebuilt
 `qa-checker` Docker sandbox and label runtime provenance as `sandbox`. Build the
@@ -179,13 +195,6 @@ Review CLI exactly once after mutation. That equal-depth re-audit alone
 controls the post-repair verdict and deterministic CLEAN state; local repair
 heuristics and regression results cannot publish a package.
 
-## Direct inputs
-Read [references/materials-resource-policy.md](references/materials-resource-policy.md).
-Probe only a direct input or service that instruction explicitly marks as
-indispensable and without an equivalent. Do not probe resources metadata,
-solver-generated structures/trajectories/models, ordinary solver parameters,
-or replaceable software.
-
 ## Score and disposition
 Read [references/scoring-rubric.md](references/scoring-rubric.md). The Review
 CLI is the sole scoring authority; batch and calibration layers only aggregate
@@ -199,8 +208,7 @@ reproducibility 10, C07 difficulty & auditability 10 (total 100). Each dimension
 records max/earned/normalized points, its finding IDs, and exact evidence, and
 deducts by severity ratio within that dimension only; a non-key evidence gap
 never leaks into another dimension. `summary.total_score` is the C01–C07
-weighted total on a 0–100 scale; `legacy_total_score` keeps the old five-
-dimension sum as a compatibility field. Reproduction-intent classes never change
+weighted total on a 0–100 scale. Reproduction-intent classes never change
 points. See [references/scoring-rubric.md](references/scoring-rubric.md) for the
 dimension→check mapping.
 
@@ -222,10 +230,9 @@ disposition also carries the unified terminal fields `disposition`,
 `PASS` additionally requires the fail-closed evidence contract: authoritative
 materials qualification, non-empty evidence for every scored dimension, honest
 status and provenance for all probe classes, and Oracle-safe solution status
-only. Assessed discrimination/equivalence must use an independent non-Oracle
-fixture; when no such fixture exists, keep both probes unavailable, deduct the
-documented non-critical robustness limitation within C07, and continue scoring.
-No findings never substitutes for positive evidence.
+only. Discrimination, equivalence, and component isolation are not
+deterministic-core inputs; their Agent-quality status is reported separately
+and cannot block D1–D6. No findings never substitutes for positive evidence.
 
 For repair publication, overall PASS is necessary but not sufficient. The
 atomic invariant is:
@@ -233,20 +240,11 @@ atomic invariant is:
 allowed mutation scope + all target findings resolved`. Any residual D1–D6
 blocker is terminal and non-publishable.
 
-Preserve the pinned three-axis taxonomy labels and exact package evidence. The
-versioned runtime source is
+Preserve the pinned taxonomy labels and exact package evidence from
 [references/materials-taxonomy.json](references/materials-taxonomy.json).
-
-## Batch
-Read [references/fast-e1-batch.md](references/fast-e1-batch.md). The candidate
-manifest freezes identities only. Finish and freeze the complete original
-review baseline before any repair begins.
 
 ## Completion
 
-The run is complete when the fixed bundle validates, Oracle values are absent,
-quality files are limited to instruction/tests plus the isolated Oracle role and
-the always-read paper for A2/A4/A5, every checker case records
-class/reward/status/exit code, the seven C01–C07 weights sum to 100, exactly
-four Hard Gates are present, the unified terminal fields are set, and taxonomy
-labels remain unchanged.
+Complete only when the bundle validates, Oracle values are absent, checker
+cases record class/reward/status/exit code, weights sum to 100, exactly four
+Hard Gates and unified terminal fields are present, and taxonomy labels remain.

@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_1",
+    "title": "Bulk calcium density of states reference calculation",
+    "role": "process",
+    "action": "Perform a self-consistent DFT calculation for bulk fcc calcium using the local-density approximation (Hedin-Lundqvist) and lattice constant 10.5296 au. Compute the total and s, p, d partial densities of states to serve as the reference for film DOS comparison.",
+    "output_file": "",
+    "evidence": "step_1_bulk_dos.dat",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Reference bulk Ca density of states used for later comparison of film DOS maxima.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Neutral Ca(001) five-layer film self-consistent DFT calculation",
+    "role": "process",
+    "action": "Set up a symmetric five-layer Ca(001) slab with fcc(001) surface orientation, lattice constant 10.5296 au, and sufficient vacuum (≥15 Å). Perform a self-consistent DFT calculation with LDA (Hedin-Lundqvist) to obtain the total density of states and the planar-averaged electrostatic potential. Extract the vacuum potential and the Fermi level.",
+    "output_file": "",
+    "evidence": "step_2_neutral_film.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Converged neutral Ca(001) slab calculation providing the basis for work function and DOS shifts.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3",
+    "title": "Charged Ca(001) film DFT calculations for q=0.01 and q=0.03",
+    "role": "process",
+    "action": "Starting from the converged neutral film calculation, add excess electrons per unit cell corresponding to q=0.01 and q=0.03. Run separate self-consistent DFT calculations for each charge state, computing the total density of states.",
+    "output_file": "",
+    "evidence": "step_3_charged_outputs.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Charged slab calculations needed for surface state analysis via Δn difference.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_4",
+    "title": "Extract work function",
+    "role": "scored",
+    "action": "From the neutral film electrostatic potential, compute the work function as W = V_vacuum - E_Fermi (in eV). Write the single number to work_function.txt.",
+    "output_file": "work_function.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Work function of the Ca(001) five-layer film.",
+    "output_schema": "A single floating-point number representing the work function in eV."
+  },
+  {
+    "id": "step_5",
+    "title": "Compute DOS maxima shifts (I, II, III) between bulk and film",
+    "role": "scored",
+    "action": "Align the energy scales of the bulk Ca DOS (step_1) and the neutral film DOS (step_2) (e.g., by matching the Fermi levels or aligning prominent bulk-like features). Identify the three main maxima I, II, III in the relevant energy region. For each maximum, measure the energy shift (film position minus bulk position, positive = closer to Fermi level). Write the shifts to dos_shifts.csv with columns: maxima (string), shift_eV (float).",
+    "output_file": "dos_shifts.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Shifts of the three main DOS peaks from bulk to film.",
+    "output_schema": "CSV with columns: maxima (string, one of 'I','II','III'), shift_eV (float)."
+  },
+  {
+    "id": "step_6",
+    "title": "Extract occupied surface state energies (a1–a5)",
+    "role": "scored",
+    "action": "For each excess charge q=0.01 and 0.03, compute the difference in densities of states Δn(q,E) = n_charged(E + C(q), q) - n_neutral(E,0). Determine the Stark shift C(q) (e.g., from the dipole-moment change or by aligning bulk-like features). Shift the charged DOS by C(q), then subtract the neutral DOS. Identify local minima in Δn(q,E) that correspond to maxima in the surface-state density. For occupied states (energies below the neutral film Fermi level), locate the five features a1–a5. Report their energies (in eV, relative to the neutral film's Fermi level) in occupied_surface_states.csv with columns: feature (string), q (float), energy (float).",
+    "output_file": "occupied_surface_states.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Energies of occupied surface states from Δn analysis.",
+    "output_schema": "CSV with columns: feature (e.g., 'a1'), q (0.01 or 0.03), energy (float, eV, negative values)."
+  },
+  {
+    "id": "step_7",
+    "title": "Extract unoccupied surface state energies (b1–b4)",
+    "role": "scored",
+    "action": "Using the same Δn(q,E) procedure as for occupied states, identify the four unoccupied surface-state features b1–b4 (positive energies relative to the neutral film Fermi level). Report their energies in unoccupied_surface_states.csv with the same format.",
+    "output_file": "unoccupied_surface_states.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Energies of unoccupied surface states from Δn analysis.",
+    "output_schema": "CSV with columns: feature (e.g., 'b1'), q (0.01 or 0.03), energy (float, eV, positive values)."
+  }
+]

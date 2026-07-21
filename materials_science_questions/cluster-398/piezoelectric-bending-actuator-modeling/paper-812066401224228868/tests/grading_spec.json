@@ -1,0 +1,115 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes bulk band edges, surface velocities, and effective constants directly from the transfer matrix and averaging formulas; T1 is feasible and used.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "bulk_band_edges.csv": "metric_recompute",
+    "surface_phase_velocities.csv": "metric_recompute",
+    "effective_constants.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Material constants (Table 1 of the paper) and the transfer-matrix / effective-medium formulas, all encoded as code constants and functions; no external file needed.",
+      "source_provenance": "Paper Table 1 and equations (2.5), (2.7), Appendix, Section 3.3.",
+      "generation_method": "Direct transcription of the paper's stated parameters and analytical expressions into Python code.",
+      "why_not_fabricated": "These are the exact physical constants and paper-derived formulas used in the reference computation; no synthetic or guessed values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bulk_band_edges.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "k_parallel_D",
+            "band1_lower",
+            "band1_upper",
+            "band2_lower",
+            "band2_upper"
+          ],
+          "units": {
+            "k_parallel_D": "dimensionless",
+            "band1_lower": "dimensionless (Ω)",
+            "band1_upper": "dimensionless (Ω)",
+            "band2_lower": "dimensionless (Ω)",
+            "band2_upper": "dimensionless (Ω)"
+          }
+        },
+        "description": "Bulk band-edge frequencies for the first two SH bands; the hidden checker will recompute the transfer matrix and compare the band edges within a relative tolerance."
+      },
+      {
+        "file": "surface_phase_velocities.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "k_parallel_D",
+            "velocity_CdS_nonmetal",
+            "velocity_CdS_metal",
+            "velocity_ZnO_metal"
+          ],
+          "units": {
+            "k_parallel_D": "dimensionless",
+            "velocity_CdS_nonmetal": "v / C_t(CdS) (dimensionless)",
+            "velocity_CdS_metal": "v / C_t(CdS) (dimensionless)",
+            "velocity_ZnO_metal": "v / C_t(CdS) (dimensionless)"
+          }
+        },
+        "description": "Surface wave phase velocities for selected k∥D values; the hidden checker will recompute the surface wave conditions and compare velocities within a relative tolerance. NaN entries are allowed when a mode does not exist."
+      },
+      {
+        "file": "effective_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "C44_eff": "float (unit 10^10 N/m²)",
+            "e15_eff": "float (unit C/m²)",
+            "epsilon11_eff": "float (unit 10⁻¹¹ F/m)"
+          }
+        },
+        "description": "Effective medium constants; the hidden checker will compute the expected values from the material parameters and compare them with an absolute tolerance."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "bulk_band_scoring",
+      "output_file": "bulk_band_edges.csv",
+      "description": "Recompute bulk band edges for each agent-reported k∥D and compare within relative tolerance 1e-4.",
+      "weight": 0.5,
+      "tolerance_rel": 0.0001,
+      "target_policy": "metric_recompute"
+    },
+    {
+      "id": "surface_velocity_scoring",
+      "output_file": "surface_phase_velocities.csv",
+      "description": "Recompute surface wave phase velocities at the specified k∥D values and compare within relative tolerance 1e-4; NaN entries are skipped.",
+      "weight": 0.35,
+      "tolerance_rel": 0.0001,
+      "target_policy": "metric_recompute"
+    },
+    {
+      "id": "effective_constants_scoring",
+      "output_file": "effective_constants.json",
+      "description": "Compare effective constants against expected values derived from the averaging formulas, absolute tolerance 1e-3 in original units.",
+      "weight": 0.15,
+      "tolerance_abs": {
+        "C44_eff": 0.001,
+        "e15_eff": 0.001,
+        "epsilon11_eff": 0.001
+      },
+      "target_policy": "reference_match"
+    }
+  ]
+}

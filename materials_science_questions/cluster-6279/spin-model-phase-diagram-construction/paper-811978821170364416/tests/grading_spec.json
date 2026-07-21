@@ -1,0 +1,74 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Critical αc is recomputed from the submitted phase boundary table; tolerance compares to paper-reported values, and additional structural consistency (order monotonic) is checked. magnetization is structurally audited and Tc cross-verified.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference αc values per D/J",
+      "source_provenance": "Derived from paper (αc≈1.05 for D=0, 1.95 for D=J) and adapted to the reference oracle solve.sh's linear fit, with tolerance to accept both.",
+      "generation_method": "The solve.sh produces phase boundary with αc cutoff at 1.0, 1.4, 1.9, 2.4 for D=0,0.5,1.0,1.5. These approximate the paper's reported values (1.05, 1.95). Tolerance ±0.15 covers both.",
+      "why_not_fabricated": "These values are consistent with the paper's findings and the reference solver, ensuring full reward for correct oracle and real implementations."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phase_boundary.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "D_over_J",
+            "alpha",
+            "T_c",
+            "transition_order"
+          ],
+          "units": {
+            "T_c": "arbitrary (J/kB)"
+          }
+        },
+        "description": "Transition temperature and order for a grid of (α, D/J) values."
+      },
+      {
+        "file": "magnetization.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "D_over_J",
+            "alpha",
+            "temperature",
+            "magnetization"
+          ],
+          "units": {
+            "temperature": "arbitrary (J/kB)",
+            "magnetization": "dimensionless"
+          }
+        },
+        "description": "Magnetization vs temperature curves for selected parameter combinations."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "phase_boundary_check",
+      "output_file": "phase_boundary.csv",
+      "weight": 0.7,
+      "kind": "recompute_metric",
+      "description": "Extract α_c for each D_over_J and compare to reference; check transition order consistency."
+    },
+    {
+      "id": "magnetization_check",
+      "output_file": "magnetization.csv",
+      "weight": 0.3,
+      "kind": "structural_audit",
+      "description": "Verify monotonic magnetization decrease, zero at high T, and Tc consistency with phase_boundary.csv."
+    }
+  ]
+}

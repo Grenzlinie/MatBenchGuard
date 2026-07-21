@@ -17,24 +17,28 @@ All intermediate quantities and final answers must be derived from the provided 
 
 ## Assets
 
-- Molar heat capacities of cyanoadamantane (stable and metastable phases)
+- **Heat capacity data file**: `heat_capacity_data.csv` — Provided in the task bundle. This CSV file contains the molar heat capacities of cyanoadamantane extracted from Table I of the published paper. The file includes columns:
+  - `T`: Temperature in K
+  - `Cp_stable`: Molar heat capacity of the stable phases (ordered crystal at low temperatures, plastic phase above the first-order transition) in J/K/mol
+  - `Cp_metastable`: Molar heat capacity of the metastable phases (glassy crystal at low temperatures, supercooled plastic above the glass transition) in J/K/mol
+  The data cover the temperature range from approximately 5 K to 310 K.
 - Python scientific stack (numpy, scipy, pandas, matplotlib): https://pypi.org
 
 ## Workflow steps
 
 ### Step 1: Load and validate heat capacity data
 - Role: process
-- Action: Load the provided heat capacity CSV, separate the stable (ordered crystal + plastic) and metastable (glassy crystal + supercooled plastic) phase series, and ensure temperature ranges and data completeness.
+- Action: Load the provided heat capacity CSV file (`heat_capacity_data.csv`) from the task bundle. Separate the stable (ordered crystal + plastic) and metastable (glassy crystal + supercooled plastic) phase series using the columns `Cp_stable` and `Cp_metastable`. Validate temperature ranges and check for data completeness.
 - Evidence: none
 
-### Step 2: Determine baselines for excess heat capacity integration
+### Step 2: Identify transition features and define baselines
 - Role: process
-- Action: From the loaded Cp curves, locate the first‑order transition anomaly near 273 K in the stable data and the glass transition jump near 160 K in the metastable data. Define physically motivated baselines (e.g., interpolation of Cp from the ordered phase below the transition and from the plastic phase above) for the transition region, and establish a baseline for the glass transition jump.
+- Action: From the loaded Cp curves, identify the first-order transition anomaly in the stable data (characterized by a sharp peak or discontinuity in Cp where the ordered phase transforms to the plastic phase) and the glass transition jump in the metastable data (characterized by a step-like increase in Cp). Define physically motivated baselines: for the first-order transition, interpolate Cp between the ordered phase below the transition and the plastic phase above it; for the glass transition, establish baselines by extrapolating the Cp trends from below and above the step.
 - Evidence: none
 
 ### Step 3: Compute transition enthalpy and entropy
 - Role: scored (load-bearing)
-- Action: Integrate the excess heat capacity (Cp − baseline) over the first‑order transition region (e.g., 265–280 K) to obtain the transition enthalpy ΔH_trs (kJ/mol). Compute the transition entropy ΔS_trs (J/K/mol) either as ΔH_trs/T_trs or by integrating (Cp − baseline)/T over the same region.
+- Action: Integrate the excess heat capacity (Cp_stable − baseline) over the first-order transition region to obtain the transition enthalpy ΔH_trs (kJ/mol). Compute the transition entropy ΔS_trs (J/K/mol) either as ΔH_trs/T_trs (where T_trs is the transition temperature identified from the data) or by integrating (Cp_stable − baseline)/T over the same region. The integration limits should cover the full temperature interval where Cp_stable deviates from the baseline.
 - Output file: `/app/outputs/transition_enthalpy_entropy.json`
 - Format: json
 - Contract: {"delta_H_kJ_per_mol": number, "delta_S_J_per_K_per_mol": number}
@@ -50,7 +54,20 @@ All intermediate quantities and final answers must be derived from the provided 
 
 ### Step 5: Compute configurational entropy curve
 - Role: scored (load-bearing)
-- Action: Using the thermodynamic relation S_c(T) = ΔS_trs − ∫_{T}^{T_trs} (Cp_pc − Cp_gc)/T' dT' − ∫_{0}^{T_trs} (Cp_gc − Cp_oc)/T' dT', compute the configurational entropy S_c (J/K/mol) as a function of temperature over the range from near 0 K to T_trs, employing the Cp data for the ordered, glassy, and plastic phases. Produce a complete temperature dependence curve.
+- Action: Compute the configurational entropy S_c (J/K/mol) as a function of temperature using the thermodynamic relation:
+
+  S_c(T) = ΔS_trs − ∫_{T}^{T_trs} (Cp_pc(T') − Cp_gc(T'))/T' dT' − ∫_{0}^{T_trs} (Cp_gc(T') − Cp_oc(T'))/T' dT'
+
+  where:
+  - T_trs is the first-order transition temperature identified from the stable Cp data
+  - ΔS_trs is the transition entropy computed in Step 3
+  - Cp_oc is the heat capacity of the ordered crystal (stable phase below T_trs, from Cp_stable)
+  - Cp_pc is the heat capacity of the plastic crystal (stable phase above T_trs, from Cp_stable)
+  - Cp_gc is the heat capacity of the glassy crystal / supercooled plastic (from Cp_metastable)
+
+  For temperatures below the lowest available data point (~5 K), extrapolate the heat capacity using the Debye T³ law: Cp(T) = a·T³, where the coefficient a is determined by fitting the lowest-temperature data (e.g., using Cp(5 K) = a·5³ for each phase). The contribution of the 0–5 K range to the integrals is typically very small.
+
+  Produce a complete temperature dependence curve over the range from near 0 K to T_trs.
 - Output file: `/app/outputs/configurational_entropy.csv`
 - Format: csv
 - Contract: CSV with columns: T (K), S_c (J/K/mol)
@@ -58,7 +75,7 @@ All intermediate quantities and final answers must be derived from the provided 
 
 ### Step 6: Extract residual configurational entropy at Tg
 - Role: scored
-- Action: From the computed S_c(T) curve, read the value at the glass transition temperature (where S_c plateaus) to obtain the residual configurational entropy S_c,residual (J/K/mol).
+- Action: From the computed S_c(T) curve, read the value at the glass transition temperature (where S_c plateaus at low temperature) to obtain the residual configurational entropy S_c,residual (J/K/mol).
 - Output file: `/app/outputs/residual_configurational_entropy.json`
 - Format: json
 - Contract: {"S_c_residual_J_per_K_per_mol": number, "T_g_K": number}
@@ -104,7 +121,7 @@ Every file the hidden verifier reads is described below. Write each file under `
 - format: csv
 - purpose: scored
 - target_policy: structural_audit
-- description: Temperature dependence of the configurational entropy; must exhibit a monotonic decrease and plateau near Tg.
+- description: Temperature dependence of the configurational entropy. When ordered by increasing temperature, the configurational entropy must exhibit a monotonic increase (non‑decreasing) with a clear plateau at low temperatures below the glass transition.
 - schema:
   - `type`: table
   - `required_columns`: `T`, `S_c`
@@ -124,7 +141,7 @@ Every file the hidden verifier reads is described below. Write each file under `
     - `S_c_residual_J_per_K_per_mol`: number
     - `T_g_K`: number
 
-Notes: The target_policy for the S_c curve uses structural audit to verify monotonic decrease and plateau near Tg, while scalar quantities are evaluated by exact match with the paper‑reported values within appropriate tolerances.
+Notes: The target_policy for the S_c curve uses structural audit to verify monotonic increase (non-decreasing with temperature) and plateau at low temperatures near Tg, while scalar quantities are evaluated by exact match with the paper‑reported values within appropriate tolerances.
 
 ## Self-check before finishing (optional, not scored)
 
@@ -179,7 +196,7 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
           "S_c": "J/K/mol"
         }
       },
-      "description": "Temperature dependence of the configurational entropy; must exhibit a monotonic decrease and plateau near Tg."
+      "description": "Temperature dependence of the configurational entropy. When ordered by increasing temperature, the configurational entropy must exhibit a monotonic increase (non‑decreasing) with a clear plateau at low temperatures below the glass transition."
     },
     {
       "file": "residual_configurational_entropy.json",
@@ -196,9 +213,6 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
       "description": "Residual configurational entropy (J/K/mol) at the glass transition temperature."
     }
   ],
-  "notes": "The target_policy for the S_c curve uses structural audit to verify monotonic decrease and plateau near Tg, while scalar quantities are evaluated by exact match with the paper‑reported values within appropriate tolerances."
+  "notes": "The target_policy for the S_c curve uses structural audit to verify monotonic increase (non-decreasing with temperature) and plateau at low temperatures near Tg, while scalar quantities are evaluated by exact match with the paper‑reported values within appropriate tolerances."
 }
 ```
-
-## How you are scored
-A hidden verifier independently inspects your output artifacts and computes a reward between 0 and 1. The scalar quantities (transition enthalpy, transition entropy, glass transition temperature and jump, residual configurational entropy) are checked against reference values derived from the underlying physical properties; numeric agreement within appropriate tolerances is required. The configurational entropy curve is assessed both by verifying its structural properties (e.g., monotonic decrease with temperature, a clear plateau near the glass transition) and by checking selected point values. Your reward will reflect the accuracy and plausibility of all these artifacts combined. Simply writing down assumed numbers without performing the prescribed analysis will not produce a reward.

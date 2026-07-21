@@ -1,0 +1,54 @@
+[
+  {
+    "id": "data_prep",
+    "title": "Prepare QM7 dataset and splits",
+    "role": "process",
+    "action": "Download the QM7 dataset (atomization energies and molecular geometries). Create the 5-fold split as described in Rupp et al.: use the first fold for training, folds 2+3 for validation, folds 4+5 for test. From the first fold, extract training subsets with the first N molecules for N = 100, 300, 500, 1000. Save the split indices for reproducibility.",
+    "output_file": "",
+    "evidence": "split_indices.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Record of which molecules belong to each split fold and training subset.",
+    "output_schema": "Array of fold assignments or index lookup (exact format left flexible; used only for record)."
+  },
+  {
+    "id": "hyperparam_opt",
+    "title": "Hyperparameter optimization for HMPP kernel",
+    "role": "scored",
+    "action": "Implement the HMPP kernel: construct localized graphs with Gaussian-weighted adjacency, compute maximum probability paths via a modified Floyd-Warshall algorithm, compute Coulomb label vectors, and hybrid kernel combining an MPP kernel and a Coulomb kernel. Using the validation folds (2+3), perform a grid search over the hyperparameters (cutoff radius, Gaussian width, kernel decay parameters, hybridization weight) to minimize RMSE of atomization energies. Save the best hyperparameters.",
+    "output_file": "hyperparameters.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Optimal hyperparameters for the HMPP kernel determined via grid search on the QM7 validation set.",
+    "output_schema": "Object with keys: r_cut (float, Å), gamma (float, Å), beta1 (float), beta2 (float), alpha (float)."
+  },
+  {
+    "id": "train_krr",
+    "title": "Train HMPP KRR models on QM7 training subsets",
+    "role": "process",
+    "action": "For each training size N = 100, 300, 500, 1000, using the optimal hyperparameters, compute the HMPP kernel matrix between training molecules and between training and test molecules. Train kernel ridge regression models to predict atomization energies (target values) on the training set. Store the trained model parameters (e.g., dual coefficients) for each N.",
+    "output_file": "",
+    "evidence": "training_log.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Log of training process (e.g., number of support vectors, runtime) for each subset.",
+    "output_schema": "Arbitrary JSON documenting the training stage."
+  },
+  {
+    "id": "evaluate_hppp",
+    "title": "Evaluate HMPP predictions and compute MAE/RMSE",
+    "role": "scored",
+    "action": "For each training size N, apply the trained KRR model to the test set (folds 4+5) to predict atomization energies. Compute the mean absolute error (MAE) and root mean square error (RMSE) in kcal/mol between predictions and the reference energies. Write the results to results.json.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "MAE and RMSE of atomization energy predictions for each training size.",
+    "output_schema": "Object with keys '100', '300', '500', '1000'; each value is an object with keys 'MAE' (float, kcal/mol) and 'RMSE' (float, kcal/mol)."
+  }
+]

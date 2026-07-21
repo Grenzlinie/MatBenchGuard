@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Run the first end-to-end no-paper E1 materials benchmark review slice."""
+"""Run the E1 materials review with isolated core and quality lanes.
+
+Static checks and schema-derived runtime probes form the deterministic core.
+Agent assessments provide the separate quality lane; no external result
+directory is accepted as a probe input.
+"""
 
 from __future__ import annotations
 
@@ -25,6 +30,11 @@ from prepare_audit_output import (
     skill_root,
     validate_paper_boundary,
     write_audit_attestation,
+)
+from artifact_schema import (
+    AGENT_ASSESSMENT_SCHEMA_VERSION,
+    CHECKER_TESTS_SCHEMA_VERSION,
+    RESOURCE_CHECKS_SCHEMA_VERSION,
 )
 from probe_resources import probe_resources
 import sandbox_runtime
@@ -330,7 +340,7 @@ def validate_agent_assessment(
         assessment.get("taxonomy"), taxonomy
     )
     normalized: dict[str, Any] = {
-        "schema_version": "0.1",
+        "schema_version": AGENT_ASSESSMENT_SCHEMA_VERSION,
         "taxonomy": normalized_taxonomy,
         "taxonomy_evidence": validate_taxonomy_evidence(
             root,
@@ -580,7 +590,7 @@ def checker_skipped_by_static_gate(
     root: Path, output: Path, reason: str = "STATIC_GATE"
 ) -> dict[str, Any]:
     result = {
-        "schema_version": "0.1",
+        "schema_version": CHECKER_TESTS_SCHEMA_VERSION,
         "benchmark_root": str(root),
         "checker_path": "tests/checker.py",
         "runtime": {
@@ -617,18 +627,21 @@ def checker_skipped_by_static_gate(
             probe_class: {
                 "status": (
                     "NOT_APPLICABLE"
-                    if probe_class == "process_evidence"
+                    if probe_class in {"process_evidence", "component_isolation"}
                     else "NOT_ASSESSABLE"
                 ),
                 "reason": (
                     "process evidence is not a dynamic fixture or "
                     "checker-probe target"
                     if probe_class == "process_evidence"
+                    else "component isolation is Agent-quality evidence and has no deterministic fixture API"
+                    if probe_class == "component_isolation"
                     else reason
                 ),
                 "provenance": {
                     "source_kind": "NONE",
                     "oracle_used": False,
+                    "external_result_directory_accepted": False,
                     **(
                         {
                             "source_bindings_verified": False,
@@ -688,7 +701,7 @@ def resources_skipped_by_static_gate(
     parse_status: str,
 ) -> dict[str, Any]:
     result = {
-        "schema_version": "0.1",
+        "schema_version": RESOURCE_CHECKS_SCHEMA_VERSION,
         "status": "NOT_ASSESSED",
         "summary": {
             "resource_count": 0,
@@ -744,7 +757,6 @@ def pre_paper_hard_gate_codes(
 
 def run_review(
     input_path: Path,
-    known_valid_output: Path | None,
     paper_mode: str = "no_paper",
     agent_assessment_path: Path | None = None,
     execution_level: str = "E1",
@@ -753,6 +765,8 @@ def run_review(
     allow_private_network: bool = False,
     audit_output_dir: Path | None = None,
 ) -> dict[str, Any]:
+    if paper_mode is None:
+        paper_mode = "no_paper"
     if execution_level != AUTHORITATIVE_EXECUTION_LEVEL:
         raise ValueError(
             "authoritative materials review is fixed at E1-only; "
@@ -853,7 +867,6 @@ def run_review(
         checker_result = dynamic_checker_probe(
             root,
             temp_dir / "checker_tests.json",
-            known_valid_output=known_valid_output,
         )
     resource_result = probe_resources(
         root,
@@ -932,7 +945,6 @@ def run_review(
         )
     external_bindings = bind_external_evidence(
         temp_dir,
-        known_valid_output,
         agent_assessment_path if agent_assessment is not None else None,
     )
     synthesize_report(
@@ -969,13 +981,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--execution-level",
         choices=[AUTHORITATIVE_EXECUTION_LEVEL],
         default=AUTHORITATIVE_EXECUTION_LEVEL,
-    )
-    parser.add_argument(
-        "--known-valid-output",
-        help=(
-            "external public output directory with source-bound "
-            "fixture_manifest.json"
-        ),
     )
     parser.add_argument(
         "--resource-timeout",
@@ -1015,11 +1020,6 @@ def main() -> int:
     try:
         result = run_review(
             Path(arguments.input),
-            (
-                Path(arguments.known_valid_output)
-                if arguments.known_valid_output
-                else None
-            ),
             paper_mode=arguments.paper_mode,
             agent_assessment_path=(
                 Path(arguments.agent_assessment)

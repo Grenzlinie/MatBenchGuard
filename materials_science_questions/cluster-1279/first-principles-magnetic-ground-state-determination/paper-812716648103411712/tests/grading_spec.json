@@ -1,0 +1,476 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The only scored artifact is the final aggregated JSON. No raw intermediate artifacts are available in the output contract to recompute from, so the checker reads the agent's reported values and compares them to paper-reported gold with tolerances appropriate for DFT code spread.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported property values for all five compounds.",
+      "source_provenance": "Tables 1, 2, 3 and Figures 6, 8 of the source paper.",
+      "generation_method": "Copied directly from the paper's tables and figure captions.",
+      "why_not_fabricated": "Values are verbatim from the paper's own reported results; they trace to the exact same quantities and units the solver is asked to compute."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_volume_data.json",
+        "format": "json",
+        "purpose": "unscored",
+        "schema": {}
+      },
+      {
+        "file": "dos_data.json",
+        "format": "json",
+        "purpose": "unscored",
+        "schema": {}
+      },
+      {
+        "file": "strain_data.json",
+        "format": "json",
+        "purpose": "unscored",
+        "schema": {}
+      },
+      {
+        "file": "calculated_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "BeF3": "object",
+            "MgF3": "object",
+            "CaF3": "object",
+            "SrF3": "object",
+            "BaF3": "object"
+          },
+          "items": {
+            "a": "number (Å)",
+            "E_f": "number (eV/f.u.)",
+            "E_c": "number (eV/f.u.)",
+            "T_C": "number (K)",
+            "M_t": "number (μB/f.u.)",
+            "E_g_up": "number (eV)",
+            "E_g_HM": "number (eV)",
+            "VBM": "number (eV)",
+            "CBM": "number (eV)",
+            "M_F_A": "number (μB/atom)",
+            "M_F_B": "number (μB/atom)",
+            "M_F_C": "number (μB/atom)",
+            "M_X": "number (μB/atom)",
+            "M_int": "number (μB/f.u.)",
+            "C11": "number (GPa)",
+            "C12": "number (GPa)",
+            "C44": "number (GPa)",
+            "B": "number (GPa)",
+            "G": "number (GPa)",
+            "E": "number (GPa)",
+            "nu": "number",
+            "K": "number",
+            "A": "number",
+            "hydrostatic_HM_range": {
+              "min_strain": "number (%)",
+              "max_strain": "number (%)"
+            },
+            "tetragonal_HM_range": {
+              "min_c_over_a": "number",
+              "max_c_over_a": "number"
+            }
+          }
+        },
+        "description": "All computed physical properties for the five XF3 compounds. The checker compares these values to the paper-reported references with appropriate tolerances."
+      }
+    ],
+    "notes": "The agent must compute each property by running the DFT workflow. The scored output is a single JSON file; all required fields must be present and numeric. Tolerances are hidden."
+  },
+  "steps": [
+    {
+      "id": "struct_thermo",
+      "output_file": "calculated_properties.json",
+      "weight": 0.15,
+      "kind": "reference_match",
+      "config": {
+        "compounds": [
+          "BeF3",
+          "MgF3",
+          "CaF3",
+          "SrF3",
+          "BaF3"
+        ],
+        "fields": [
+          {
+            "name": "a",
+            "gold_per_compound": {
+              "BeF3": 5.173,
+              "MgF3": 5.404,
+              "CaF3": 5.724,
+              "SrF3": 6.019,
+              "BaF3": 6.371
+            },
+            "tol_rel": 0.01
+          },
+          {
+            "name": "E_f",
+            "gold_per_compound": {
+              "BeF3": -5.592,
+              "MgF3": -10.007,
+              "CaF3": -12.638,
+              "SrF3": -12.999,
+              "BaF3": -13.029
+            },
+            "tol_abs": 0.5
+          },
+          {
+            "name": "E_c",
+            "gold_per_compound": {
+              "BeF3": 13.602,
+              "MgF3": 13.762,
+              "CaF3": 16.778,
+              "SrF3": 16.834,
+              "BaF3": 17.133
+            },
+            "tol_abs": 0.5
+          },
+          {
+            "name": "T_C",
+            "gold_per_compound": {
+              "BeF3": 466.182,
+              "MgF3": 411.246,
+              "CaF3": 376.048,
+              "SrF3": 382.118,
+              "BaF3": 379.921
+            },
+            "tol_abs": 20.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "half_metallicity",
+      "output_file": "calculated_properties.json",
+      "weight": 0.3,
+      "kind": "reference_match",
+      "config": {
+        "compounds": [
+          "BeF3",
+          "MgF3",
+          "CaF3",
+          "SrF3",
+          "BaF3"
+        ],
+        "fields": [
+          {
+            "name": "VBM",
+            "gold_per_compound": {
+              "BeF3": -0.599,
+              "MgF3": -0.568,
+              "CaF3": -0.566,
+              "SrF3": -0.495,
+              "BaF3": -0.411
+            },
+            "tol_abs": 0.2
+          },
+          {
+            "name": "CBM",
+            "gold_per_compound": {
+              "BeF3": 3.889,
+              "MgF3": 5.784,
+              "CaF3": 8.229,
+              "SrF3": 8.22,
+              "BaF3": 8.3
+            },
+            "tol_abs": 0.2
+          },
+          {
+            "name": "E_g_up",
+            "gold_per_compound": {
+              "BeF3": 4.488,
+              "MgF3": 6.352,
+              "CaF3": 8.795,
+              "SrF3": 8.715,
+              "BaF3": 8.711
+            },
+            "tol_abs": 0.2
+          },
+          {
+            "name": "E_g_HM",
+            "gold_per_compound": {
+              "BeF3": 0.599,
+              "MgF3": 0.568,
+              "CaF3": 0.566,
+              "SrF3": 0.495,
+              "BaF3": 0.411
+            },
+            "tol_abs": 0.2
+          }
+        ],
+        "self_consistency_weight": 0.05,
+        "half_metallic_condition_weight": 0.05,
+        "ordering_weight": 0.05
+      }
+    },
+    {
+      "id": "magnetic_moments",
+      "output_file": "calculated_properties.json",
+      "weight": 0.2,
+      "kind": "reference_match",
+      "config": {
+        "compounds": [
+          "BeF3",
+          "MgF3",
+          "CaF3",
+          "SrF3",
+          "BaF3"
+        ],
+        "fields": [
+          {
+            "name": "M_t",
+            "gold_per_compound": {
+              "BeF3": 1.0,
+              "MgF3": 1.0,
+              "CaF3": 1.0,
+              "SrF3": 1.0,
+              "BaF3": 1.0
+            },
+            "tol_abs": 0.05
+          },
+          {
+            "name": "M_F_A",
+            "gold_per_compound": {
+              "BeF3": 0.191,
+              "MgF3": 0.198,
+              "CaF3": 0.206,
+              "SrF3": 0.214,
+              "BaF3": 0.22
+            },
+            "tol_abs": 0.05
+          },
+          {
+            "name": "M_F_B",
+            "gold_per_compound": {
+              "BeF3": 0.572,
+              "MgF3": 0.536,
+              "CaF3": 0.506,
+              "SrF3": 0.481,
+              "BaF3": 0.453
+            },
+            "tol_abs": 0.05
+          },
+          {
+            "name": "M_F_C",
+            "gold_per_compound": {
+              "BeF3": 0.191,
+              "MgF3": 0.198,
+              "CaF3": 0.206,
+              "SrF3": 0.214,
+              "BaF3": 0.222
+            },
+            "tol_abs": 0.05
+          },
+          {
+            "name": "M_X",
+            "gold_per_compound": {
+              "BeF3": -0.014,
+              "MgF3": -0.004,
+              "CaF3": -0.009,
+              "SrF3": -0.002,
+              "BaF3": -0.001
+            },
+            "tol_abs": 0.05
+          },
+          {
+            "name": "M_int",
+            "gold_per_compound": {
+              "BeF3": 0.06,
+              "MgF3": 0.072,
+              "CaF3": 0.091,
+              "SrF3": 0.093,
+              "BaF3": 0.106
+            },
+            "tol_abs": 0.05
+          }
+        ],
+        "sum_consistency_weight": 0.1
+      }
+    },
+    {
+      "id": "elastic_mechanical",
+      "output_file": "calculated_properties.json",
+      "weight": 0.2,
+      "kind": "reference_match",
+      "config": {
+        "compounds": [
+          "BeF3",
+          "MgF3",
+          "CaF3",
+          "SrF3",
+          "BaF3"
+        ],
+        "fields": [
+          {
+            "name": "C11",
+            "gold_per_compound": {
+              "BeF3": 289.095,
+              "MgF3": 228.859,
+              "CaF3": 179.169,
+              "SrF3": 155.671,
+              "BaF3": 125.58
+            },
+            "tol_rel": 0.1
+          },
+          {
+            "name": "C12",
+            "gold_per_compound": {
+              "BeF3": 157.452,
+              "MgF3": 126.844,
+              "CaF3": 107.823,
+              "SrF3": 81.837,
+              "BaF3": 68.767
+            },
+            "tol_rel": 0.1
+          },
+          {
+            "name": "C44",
+            "gold_per_compound": {
+              "BeF3": 5.165,
+              "MgF3": 25.493,
+              "CaF3": 46.084,
+              "SrF3": 47.202,
+              "BaF3": 45.783
+            },
+            "tol_rel": 0.1
+          },
+          {
+            "name": "B",
+            "gold_per_compound": {
+              "BeF3": 201.333,
+              "MgF3": 160.849,
+              "CaF3": 131.605,
+              "SrF3": 106.448,
+              "BaF3": 87.705
+            },
+            "tol_rel": 0.1
+          },
+          {
+            "name": "G",
+            "gold_per_compound": {
+              "BeF3": 18.804,
+              "MgF3": 33.784,
+              "CaF3": 41.593,
+              "SrF3": 42.233,
+              "BaF3": 37.808
+            },
+            "tol_rel": 0.1
+          },
+          {
+            "name": "E",
+            "gold_per_compound": {
+              "BeF3": 54.709,
+              "MgF3": 94.721,
+              "CaF3": 112.887,
+              "SrF3": 111.901,
+              "BaF3": 99.172
+            },
+            "tol_rel": 0.1
+          },
+          {
+            "name": "nu",
+            "gold_per_compound": {
+              "BeF3": 0.455,
+              "MgF3": 0.402,
+              "CaF3": 0.357,
+              "SrF3": 0.325,
+              "BaF3": 0.312
+            },
+            "tol_abs": 0.05
+          },
+          {
+            "name": "K",
+            "gold_per_compound": {
+              "BeF3": 10.707,
+              "MgF3": 4.761,
+              "CaF3": 3.164,
+              "SrF3": 2.52,
+              "BaF3": 2.32
+            },
+            "tol_rel": 0.1
+          },
+          {
+            "name": "A",
+            "gold_per_compound": {
+              "BeF3": 0.078,
+              "MgF3": 0.5,
+              "CaF3": 1.292,
+              "SrF3": 1.252,
+              "BaF3": 1.612
+            },
+            "tol_rel": 0.1
+          }
+        ],
+        "stability_weight": 0.1
+      }
+    },
+    {
+      "id": "strain_ranges",
+      "output_file": "calculated_properties.json",
+      "weight": 0.15,
+      "kind": "reference_match",
+      "config": {
+        "compounds": [
+          "BeF3",
+          "MgF3",
+          "CaF3",
+          "SrF3",
+          "BaF3"
+        ],
+        "fields": [
+          {
+            "name": "hydrostatic_HM_min",
+            "gold_per_compound": {
+              "BeF3": -25.44,
+              "MgF3": -30.511,
+              "CaF3": -21.963,
+              "SrF3": -13.452,
+              "BaF3": -13.324
+            },
+            "tol_rel": 0.05
+          },
+          {
+            "name": "hydrostatic_HM_max",
+            "gold_per_compound": {
+              "BeF3": 15.0,
+              "MgF3": 15.0,
+              "CaF3": 15.0,
+              "SrF3": 15.0,
+              "BaF3": 15.0
+            },
+            "tol_rel": 0.05
+          },
+          {
+            "name": "tetragonal_HM_min_c_over_a",
+            "gold_per_compound": {
+              "BeF3": 0.69795,
+              "MgF3": 0.68331,
+              "CaF3": 0.66749,
+              "SrF3": 0.65609,
+              "BaF3": 0.68928
+            },
+            "tol_rel": 0.05
+          },
+          {
+            "name": "tetragonal_HM_max_c_over_a",
+            "gold_per_compound": {
+              "BeF3": 1.74747,
+              "MgF3": 1.83274,
+              "CaF3": 2.10223,
+              "SrF3": 2.47141,
+              "BaF3": 2.71072
+            },
+            "tol_rel": 0.05
+          }
+        ]
+      }
+    }
+  ]
+}

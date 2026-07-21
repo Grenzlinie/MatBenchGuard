@@ -1,0 +1,70 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Main load‑bearing artifact (scan) is recomputed via derivative analysis; secondary artifact compared to paper gold.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_scan_results.csv": "metric_recompute",
+    "step_02_phase_analysis.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for phases and critical coupling",
+      "source_provenance": "paper Figure 3 (text)",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "directly from paper‑reported result"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_scan_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "c1",
+            "U_metropolis",
+            "U_improved",
+            "rho_metropolis",
+            "rho_improved"
+          ],
+          "units": {}
+        },
+        "description": "Energy and density scan data; the checker recomputes the derivative of U_improved to locate the first-order transition and compare to the paper-reported critical range."
+      },
+      {
+        "file": "step_02_phase_analysis.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "low_c1_phase": "string",
+            "high_c1_phase": "string",
+            "critical_c1_range": "array of two floats"
+          }
+        },
+        "description": "Phase classification results and the estimated critical coupling range; the checker compares the phase labels and the range against the paper-reported gold values."
+      }
+    ],
+    "notes": "The checker performs T1 recompute on the CSV (derivative analysis) and T0 result-level comparison on the JSON."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_scan_results.csv",
+      "weight": 0.7,
+      "kind": "recompute_metric"
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_phase_analysis.json",
+      "weight": 0.3,
+      "kind": "reference_match"
+    }
+  ]
+}

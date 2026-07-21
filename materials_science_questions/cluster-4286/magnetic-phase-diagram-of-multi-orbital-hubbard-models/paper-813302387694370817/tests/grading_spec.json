@@ -1,0 +1,64 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Both energy spectrum (purely analytic) and magnetization (zero‑temperature self‑consistency equation) can be recomputed from raw artifacts using high‑accuracy numerical integration.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "energy_spectrum.csv": "exact_match",
+    "magnetization_value.txt": "exact_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_spectrum.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "kx",
+            "ky",
+            "E_plus",
+            "E_minus"
+          ],
+          "units": {
+            "kx": "radians per lattice constant",
+            "ky": "radians per lattice constant",
+            "E_plus": "eV",
+            "E_minus": "eV"
+          }
+        },
+        "description": "Two rows with eigenvalues at Γ and X. Columns: dimensionless k‑vector components and the two energy branches."
+      },
+      {
+        "file": "magnetization_value.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": "Single decimal number representing magnetization S (dimensionless)."
+        },
+        "description": "The ground‑state magnetization S obtained by solving the zero‑temperature self‑consistency equation."
+      }
+    ],
+    "notes": "All quantities are deterministic given the specified parameters. The scoring compares against the correct values computed from the same analytical formulas, not against the paper's figure."
+  },
+  "checks": [
+    {
+      "id": "step_energy",
+      "output_file": "energy_spectrum.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "tolerance_abs": 1e-06
+    },
+    {
+      "id": "step_magnetization",
+      "output_file": "magnetization_value.txt",
+      "kind": "numeric",
+      "weight": 0.6,
+      "tolerance_abs": 0.0001
+    }
+  ]
+}

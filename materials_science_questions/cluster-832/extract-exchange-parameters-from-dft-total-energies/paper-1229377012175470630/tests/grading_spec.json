@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Renormalization factors are final aggregates compared to paper-reported values. Magnon dispersion is scored structurally because the exact reference dispersion curve is not available.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "renormalization_factors.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "k_label",
+            "mode",
+            "r_value"
+          ],
+          "units": {
+            "r_value": "dimensionless"
+          }
+        },
+        "description": "Momentum-resolved renormalization factors r_{k,α} at the Γ and M points. Values are compared to hidden paper-reported references with a relative tolerance."
+      },
+      {
+        "file": "magnon_dispersion.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "k_label",
+            "kx",
+            "ky",
+            "mode",
+            "energy_meV"
+          ],
+          "units": {
+            "kx": "reduced wavevector units",
+            "ky": "reduced wavevector units",
+            "energy_meV": "meV"
+          }
+        },
+        "description": "Magnon dispersion energies along the Γ–M path. Key structural features (peak positions, energy at M point) are compared to hidden paper-derived references."
+      }
+    ],
+    "notes": "The solver must reimplement the entire IEP procedure from scratch; no precomputed coefficients are supplied. The required J=20.7 meV and D∥/J=0.12 are fixed inputs. All LSW calculations are part of the pipeline."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold renormalization factors at Gamma and M points.",
+      "source_provenance": "Fig. 2 of the source paper (Ising expansion renormalization factors for D∥/J=0.12).",
+      "generation_method": "Digitized from the published plot.",
+      "why_not_fabricated": "These are the paper's reported numbers; used as hidden reference for result-level comparison."
+    }
+  ],
+  "steps": [
+    {
+      "id": "renorm_check",
+      "output_file": "renormalization_factors.csv",
+      "kind": "reference_match",
+      "weight": 0.7,
+      "target_policy": "reference_match",
+      "expected": [
+        {
+          "k_label": "Gamma",
+          "mode": 0,
+          "r_value": 1.0,
+          "tolerance_rel": 0.05
+        },
+        {
+          "k_label": "Gamma",
+          "mode": 1,
+          "r_value": 0.95,
+          "tolerance_rel": 0.05
+        },
+        {
+          "k_label": "Gamma",
+          "mode": 2,
+          "r_value": 0.95,
+          "tolerance_rel": 0.05
+        },
+        {
+          "k_label": "M",
+          "mode": 0,
+          "r_value": 0.7,
+          "tolerance_rel": 0.05
+        },
+        {
+          "k_label": "M",
+          "mode": 1,
+          "r_value": 0.55,
+          "tolerance_rel": 0.05
+        },
+        {
+          "k_label": "M",
+          "mode": 2,
+          "r_value": 0.3,
+          "tolerance_rel": 0.05
+        }
+      ]
+    },
+    {
+      "id": "disp_check",
+      "output_file": "magnon_dispersion.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "target_policy": "structural_audit",
+      "sub_checks": [
+        "mode0_monotonic",
+        "mode1_flat",
+        "mode2_peak_not_at_ends",
+        "mode2_min_at_M",
+        "mode1_mode2_degenerate_at_Gamma"
+      ]
+    }
+  ]
+}

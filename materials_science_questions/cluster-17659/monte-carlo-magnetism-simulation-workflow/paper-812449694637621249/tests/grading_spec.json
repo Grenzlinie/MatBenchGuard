@@ -1,0 +1,94 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute for mean field ODE (independent numerical integration + RMSE); T0 result-level compare for MC critical points because full MC rerun inside checker is infeasible.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "ce_mc_results.json": "threshold_or_better",
+    "mce_mc_results.json": "threshold_or_better",
+    "mean_field_results.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for MC critical points and MF critical point",
+      "source_provenance": "Paper reports η_T ≈ 1.515 for N=2000, η_MC ≈ 1.33, η_C^R = 2.517551",
+      "generation_method": "directly from paper text",
+      "why_not_fabricated": "these are the paper's own simulation results"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ce_mc_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "eta_values": "array of float",
+            "f_values": "array of float",
+            "deltaU_sq_values": "array of float",
+            "eta_T": "float"
+          }
+        },
+        "description": "Canonical ensemble MC outputs: equation of state and identified collapse point."
+      },
+      {
+        "file": "mce_mc_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "eta_values": "array of float",
+            "f_values": "array of float",
+            "cV_values": "array of float",
+            "eta_MC": "float"
+          }
+        },
+        "description": "Microcanonical ensemble MC outputs: equation of state in the gaseous and collapsed phases and collapse point."
+      },
+      {
+        "file": "mean_field_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "etaR_values": "array of float",
+            "f_MF_values": "array of float",
+            "etaC_R": "float"
+          }
+        },
+        "description": "Mean field solution: f_MF(η^R) curve and critical point η_C^R."
+      }
+    ],
+    "notes": "The MC simulations require adequate compute resources (N=2000, multiple η/ξ points). The solver agent is expected to use external/remote compute if needed. The check will compare the reported critical points and shapes of f(η) curves against hidden paper-derived gold values with tolerances, plus an independent recomputation of the mean field ODE."
+  },
+  "steps": [
+    {
+      "id": "mc_ce",
+      "output_file": "ce_mc_results.json",
+      "weight": 0.5,
+      "gold_eta_T": 1.515,
+      "tolerance_win": 0.1
+    },
+    {
+      "id": "mc_mce",
+      "output_file": "mce_mc_results.json",
+      "weight": 0.2,
+      "gold_eta_MC": 1.33,
+      "tolerance_win": 0.1
+    },
+    {
+      "id": "mf_ode",
+      "output_file": "mean_field_results.json",
+      "weight": 0.3,
+      "gold_etaC_R": 2.517551,
+      "tolerance_win_etaC": 0.01
+    }
+  ]
+}

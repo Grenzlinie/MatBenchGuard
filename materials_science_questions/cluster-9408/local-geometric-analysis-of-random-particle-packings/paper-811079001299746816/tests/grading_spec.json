@@ -1,0 +1,171 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Result-level comparison of computed stress curves to reference Surface Evolver simulation data; raw artifacts only contain final curves, not intermediate forces, so full recompute not feasible.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "isotropic_pressure.csv": "reference_match",
+    "uniaxial_stress.csv": "reference_match",
+    "shear_stress.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference stress values for comparison",
+      "source_provenance": "digitized from Figures 4,5,6 and Table 2 of the paper",
+      "generation_method": "digitization of publication plots using a plot digitizer tool; Table 2 values directly.",
+      "why_not_fabricated": "Values are extracted from the paper's published Surface Evolver simulation results, which are the ground truth for the many-body model's validation."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "isotropic_pressure.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phi",
+            "pressure"
+          ],
+          "units": {
+            "phi": "dimensionless",
+            "pressure": "Π * R_o / γ"
+          }
+        },
+        "description": "Confinement pressure vs packing fraction for isotropic compression of fcc bubble packing, computed using the many-body model."
+      },
+      {
+        "file": "uniaxial_stress.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "extension_ratio_minus_one",
+            "normal_stress_difference"
+          ],
+          "units": {
+            "extension_ratio_minus_one": "dimensionless",
+            "normal_stress_difference": "γ/R_o"
+          }
+        },
+        "description": "Normal stress difference vs extension ratio for isochoric uniaxial strain of fcc bubble packing, computed using the many-body model."
+      },
+      {
+        "file": "shear_stress.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "shear_strain",
+            "shear_stress"
+          ],
+          "units": {
+            "shear_strain": "dimensionless",
+            "shear_stress": "γ/R_o"
+          }
+        },
+        "description": "Shear stress vs shear strain for simple shear deformation of fcc bubble packing, computed using the many-body model."
+      }
+    ],
+    "notes": "The agent computes the many-body interaction model predictions for the fcc packing under isotropic compression, uniaxial strain, and simple shear. The hidden checker compares the computed stress curves to Surface Evolver simulation data from the literature, using relative and absolute tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_iso",
+      "output_file": "isotropic_pressure.csv",
+      "weight": 0.35,
+      "kind": "reference_match",
+      "x_col": "phi",
+      "y_col": "pressure",
+      "tolerance": 0.15,
+      "tolerance_type": "relative",
+      "monotonic_required": true,
+      "ref_points": [
+        {
+          "phi": 0.79,
+          "pressure": 0.07
+        },
+        {
+          "phi": 0.81,
+          "pressure": 0.13
+        },
+        {
+          "phi": 0.83,
+          "pressure": 0.2
+        },
+        {
+          "phi": 0.85,
+          "pressure": 0.28
+        }
+      ]
+    },
+    {
+      "id": "step_uni",
+      "output_file": "uniaxial_stress.csv",
+      "weight": 0.32,
+      "kind": "reference_match",
+      "x_col": "extension_ratio_minus_one",
+      "y_col": "normal_stress_difference",
+      "tolerance": 0.005,
+      "tolerance_type": "absolute",
+      "monotonic_required": true,
+      "ref_points": [
+        {
+          "extension_ratio_minus_one": 0.02,
+          "normal_stress_difference": 0.002
+        },
+        {
+          "extension_ratio_minus_one": 0.05,
+          "normal_stress_difference": 0.005
+        },
+        {
+          "extension_ratio_minus_one": 0.08,
+          "normal_stress_difference": 0.008
+        },
+        {
+          "extension_ratio_minus_one": 0.1,
+          "normal_stress_difference": 0.0105
+        },
+        {
+          "extension_ratio_minus_one": 0.12,
+          "normal_stress_difference": 0.013
+        }
+      ]
+    },
+    {
+      "id": "step_shear",
+      "output_file": "shear_stress.csv",
+      "weight": 0.33,
+      "kind": "reference_match",
+      "x_col": "shear_strain",
+      "y_col": "shear_stress",
+      "tolerance": 0.01,
+      "tolerance_type": "absolute",
+      "monotonic_required": true,
+      "ref_points": [
+        {
+          "shear_strain": 0.05,
+          "shear_stress": 0.004
+        },
+        {
+          "shear_strain": 0.1,
+          "shear_stress": 0.0085
+        },
+        {
+          "shear_strain": 0.15,
+          "shear_stress": 0.013
+        },
+        {
+          "shear_strain": 0.2,
+          "shear_stress": 0.018
+        }
+      ]
+    }
+  ]
+}

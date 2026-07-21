@@ -7,10 +7,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.test_materials_benchmark_review_e1 import (
-    bind_public_fixture,
-    write_public_valid_dispersion,
-)
 from tests.test_materials_benchmark_review_paper_grounded import (
     assessment,
     copy_source_package,
@@ -33,7 +29,9 @@ RUNNER = (
 )
 
 
-def run_review(package: Path, assessment_path: Path, fixture: Path) -> subprocess.CompletedProcess[str]:
+def run_review(
+    package: Path, assessment_path: Path
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [
             sys.executable,
@@ -45,8 +43,6 @@ def run_review(package: Path, assessment_path: Path, fixture: Path) -> subproces
             "E1",
             "--agent-assessment",
             str(assessment_path),
-            "--known-valid-output",
-            str(fixture),
         ],
         cwd=REPO_ROOT,
         capture_output=True,
@@ -70,17 +66,14 @@ def write_assessment(path: Path) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
 
 
-def prepare_passing_review(workspace: Path) -> tuple[Path, Path, Path]:
+def prepare_passing_review(workspace: Path) -> tuple[Path, Path]:
     package = workspace / "paper-fixture"
     copy_source_package(package)
     clear_external_resources(package)
     install_passing_oracle(package)
-    fixture = workspace / "known-valid-output"
-    write_public_valid_dispersion(fixture)
-    bind_public_fixture(package, fixture)
     assessment_path = workspace / "assessment.json"
     write_assessment(assessment_path)
-    return package, assessment_path, fixture
+    return package, assessment_path
 
 
 class MaterialsIssue27DeterministicGateTests(unittest.TestCase):
@@ -120,7 +113,7 @@ class MaterialsIssue27DeterministicGateTests(unittest.TestCase):
 
     def test_proven_medium_blocker_routes_high_score_to_repair_queue(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            package, assessment_path, fixture = prepare_passing_review(
+            package, assessment_path = prepare_passing_review(
                 Path(temporary)
             )
             grading_path = package / "tests/grading_spec.json"
@@ -135,9 +128,7 @@ class MaterialsIssue27DeterministicGateTests(unittest.TestCase):
             grading_path.write_text(
                 json.dumps(grading, ensure_ascii=False), encoding="utf-8"
             )
-            bind_public_fixture(package, fixture)
-
-            completed = run_review(package, assessment_path, fixture)
+            completed = run_review(package, assessment_path)
             self.assertEqual(
                 completed.returncode,
                 0,

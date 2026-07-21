@@ -1,0 +1,86 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes the expected values using the paper's analytical formulas and compares with agent's output; no hidden gold data required beyond parameters.",
+  "pass_threshold": 0.8,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pe_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "R",
+            "Z",
+            "Z0",
+            "U12_NL",
+            "epsilon_eff_NL"
+          ],
+          "units": {}
+        },
+        "description": "Nonlocal PEI energy and effective dielectric function computed at the specified test points. The checker compares the reported values to hidden reference values with a relative tolerance of 5%."
+      },
+      {
+        "file": "cpe_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "R",
+            "Z",
+            "Z0",
+            "U13_NL_cross",
+            "epsilon_eff_NL_cross"
+          ],
+          "units": {}
+        },
+        "description": "Nonlocal cross-media PEI energy and effective cross-media dielectric function. The checker compares to hidden reference values with relative tolerance."
+      },
+      {
+        "file": "slab_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "case",
+            "epsilon_slab",
+            "U_slab_12"
+          ],
+          "units": {}
+        },
+        "description": "Slab-model electrostatic energies for the protein association application. The checker compares the reported U_slab_12 values to the paper's stated values (approx. 11.7 k_B T for ε_slab=9 and 6.7 k_B T for ε_slab=41.2) with an absolute tolerance of 0.5 k_B T."
+      }
+    ],
+    "notes": "All outputs are compared to hidden reference values derived from the paper's formulas. For pe_energies and cpe_energies, a relative tolerance absorbs numerical integration differences. For slab_energies, an absolute tolerance is used."
+  },
+  "steps": [
+    {
+      "id": "check_pe_energies",
+      "output_file": "pe_energies.csv",
+      "kind": "recompute",
+      "weight": 0.4,
+      "description": "Recompute U12_NL and epsilon_eff_NL from Eqs. (6‑8) using the agent's own (R,Z,Z0) points; each row must match within 5% relative tolerance."
+    },
+    {
+      "id": "check_cpe_energies",
+      "output_file": "cpe_energies.csv",
+      "kind": "recompute",
+      "weight": 0.3,
+      "description": "Recompute U13_NL_cross and epsilon_eff_NL_cross from Eqs. (15‑17); each row within 5% relative tolerance."
+    },
+    {
+      "id": "check_slab_energies",
+      "output_file": "slab_energies.csv",
+      "kind": "recompute",
+      "weight": 0.3,
+      "description": "Recompute U_slab_12 from Eq. (21) with given geometry; each row within 0.5 k_B T absolute tolerance and 5% relative tolerance."
+    }
+  ]
+}

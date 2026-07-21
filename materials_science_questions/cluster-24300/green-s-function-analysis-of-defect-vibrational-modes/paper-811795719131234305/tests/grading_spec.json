@@ -1,0 +1,96 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute linear extrapolation from finite-size data and compare to agent's extrapolated values; then compare extrapolated values to paper gold.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "finite_size_data.csv": "structural_audit",
+    "extrapolated_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for extrapolated transition points and latent heats from paper.",
+      "source_provenance": "Paper: Kc=0.206(2), -0.32(1), -0.76(10) and Q=0.356(30), 0.08(3), 0.05(5).",
+      "generation_method": "Directly transcribed from paper's text (Eqs. 5, 8, 9, 10, 11, 12).",
+      "why_not_fabricated": "These are the paper's reported numeric results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "finite_size_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "transition",
+            "L",
+            "K_c(L)",
+            "Q(L)"
+          ]
+        },
+        "description": "Finite-size data for verification of the transfer-matrix pipeline and self-consistency check."
+      },
+      {
+        "file": "extrapolated_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "K_c_1",
+            "K_c_1_err",
+            "Q_1",
+            "Q_1_err",
+            "K_c_2",
+            "K_c_2_err",
+            "Q_2",
+            "Q_2_err",
+            "K_c_3",
+            "K_c_3_err",
+            "Q_3",
+            "Q_3_err"
+          ]
+        },
+        "description": "Extrapolated transition points and latent heats to be compared with hidden reference values from the paper."
+      }
+    ],
+    "notes": "Scoring checks self-consistency between the finite-size data and extrapolated results, then compares the extrapolated Kc and Q to the paper's reported numbers within tolerances. The finite-size CSV must have exactly 12 rows."
+  },
+  "steps": [
+    {
+      "id": "finite_size",
+      "output_file": "finite_size_data.csv",
+      "kind": "consistency_check",
+      "weight": 0.3,
+      "consistency_tol": 1e-06,
+      "description": "Validate CSV structure and check that extrapolation from finite-size data matches extrapolated_results.json values."
+    },
+    {
+      "id": "extrapolated",
+      "output_file": "extrapolated_results.json",
+      "kind": "reference_match",
+      "weight": 0.7,
+      "gold": {
+        "K_c_1": 0.206,
+        "Q_1": 0.356,
+        "K_c_2": -0.32,
+        "Q_2": 0.08,
+        "K_c_3": -0.76,
+        "Q_3": 0.05
+      },
+      "tolerances": {
+        "K_c_1": 0.004,
+        "Q_1": 0.06,
+        "K_c_2": 0.02,
+        "Q_2": 0.06,
+        "K_c_3": 0.2,
+        "Q_3": 0.1
+      },
+      "description": "Compare extrapolated Kc and Q values to paper's gold tolerances."
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_generate_data",
+    "title": "Generate training and validation trajectories",
+    "role": "process",
+    "action": "Numerically integrate the PCR3BP equations for 10000 training trajectories and 1000 validation trajectories (e=0.1, initial resonant angles sampled as described) to create the supervised learning dataset. The integration spans 25000 yr with 100 equally‑spaced output points per trajectory, recording orbital elements (a, e, ϖ, λ).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required intermediate step that produces the trajectories used for training and validation. Execution is forced by the downstream load‑bearing evaluation step.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_train_ann",
+    "title": "Train the Conv1d‑FC neural network",
+    "role": "process",
+    "action": "Construct and train a feed‑forward neural network (Conv1d input layer, two fully‑connected hidden layers, ReLU activations, Adam optimizer) on the generated training trajectories. The network learns to map the first 25 time points to the remaining 75 points of the orbital elements.",
+    "output_file": "",
+    "evidence": "trained_model.pt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Core learning stage; the trained model is required for the final evaluation. The evidence file is optional but documents that training occurred.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_evaluate",
+    "title": "Evaluate on validation set and compile results",
+    "role": "scored",
+    "action": "Apply the trained model to each validation trajectory (first 25 points) to predict the remaining 75 points. For each trajectory compute the validation loss (mean absolute error over the four orbital elements) and a sinusoidal fit to the predicted resonant angle to obtain the resonant amplitude A_σ. Assemble a CSV containing the initial resonant angle σ₀, validation loss, and predicted A_σ for all 1000 validation particles.",
+    "output_file": "best_ann_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The scored artifact contains per‑trajectory validation loss and predicted resonant amplitude, enabling comparison with hidden reference values and a check that all amplitudes are below 120°.",
+    "output_schema": "CSV with columns: sigma_0 (float, degrees), validation_loss (float), predicted_A_sigma (float, degrees). Exactly 1000 rows, one per validation trajectory."
+  }
+]

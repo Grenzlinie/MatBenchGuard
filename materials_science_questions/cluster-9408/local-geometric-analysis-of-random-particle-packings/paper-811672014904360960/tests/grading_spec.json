@@ -1,0 +1,101 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 recompute is infeasible because the paper reports the results as visual distributions and qualitative trends; the main claim is the monotonic evolution and anomalous response, not a specific metric value.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "shape_factor_cells.json": "structural_audit",
+    "memory_effect.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Definition of structural trends: fraction of cells with ζ < 1.108 non‑decreasing and strictly increasing overall, mean ζ monotonically decreasing; for memory effect, density drop/increase at tap 31 followed by reversal.",
+      "source_provenance": "Paper Figure 1, Figure 4, and associated text",
+      "generation_method": "Trend rules encoded directly in checker logic.",
+      "why_not_fabricated": "These trends are the paper's core findings; no fabricated numeric gold is needed, only the structural compliance."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "shape_factor_cells.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "2",
+            "8",
+            "15",
+            "30",
+            "50",
+            "70"
+          ],
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Shape factor zeta values for interior Voronoi cells at six selected tapping stages. Used to verify microstructural evolution during compaction."
+      },
+      {
+        "file": "memory_effect.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "scenario",
+            "tap",
+            "density"
+          ],
+          "units": {
+            "scenario": "integer (0 or 1)",
+            "tap": "integer",
+            "density": "float"
+          }
+        },
+        "description": "Packing density evolution under two memory-effect protocols. The CSV must include tap 30 (pre-switch density) and taps 31,32,... up to at least 50, with scenario labels. Used to verify the system's density response under abrupt intensity changes."
+      }
+    ],
+    "notes": "The checker will perform structural audits: for shape_factor_cells.json it will compute summary statistics (e.g., fraction of cells with zeta below a threshold, mean zeta) and check for trends consistent with physical compaction; for memory_effect.csv it will examine the density evolution around the intensity switch (taps 30, 31, 32) to assess the memory effect. Specific trend directions are not disclosed."
+  },
+  "steps": [
+    {
+      "id": "shape_factor_fraction_monotonic",
+      "output_file": "shape_factor_cells.json",
+      "kind": "structural_audit",
+      "weight": 0.25,
+      "description": "Compute fraction of Voronoi cells with ζ < 1.108 per tap; verify it is non-decreasing across taps and strictly increases from tap 2 to tap 70.",
+      "target_policy": "structural_audit"
+    },
+    {
+      "id": "shape_factor_mean_monotonic",
+      "output_file": "shape_factor_cells.json",
+      "kind": "structural_audit",
+      "weight": 0.15,
+      "description": "Compute mean ζ per tap; verify it monotonically decreases from tap 2 to tap 70.",
+      "target_policy": "structural_audit"
+    },
+    {
+      "id": "memory_effect_scenario0_anomaly",
+      "output_file": "memory_effect.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "description": "For scenario 0 (3%→0.5% switch at t=30), verify density at tap 31 is less than at tap 30, and density then increases (tap 32 > tap 31).",
+      "target_policy": "structural_audit"
+    },
+    {
+      "id": "memory_effect_scenario1_anomaly",
+      "output_file": "memory_effect.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "description": "For scenario 1 (0.5%→3% switch at t=30), verify density at tap 31 is greater than at tap 30, and density then decreases (tap 32 < tap 31).",
+      "target_policy": "structural_audit"
+    }
+  ]
+}

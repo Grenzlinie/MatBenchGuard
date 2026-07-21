@@ -6,9 +6,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.test_materials_benchmark_review_e1 import (  # noqa: E402
-    bind_public_fixture,
-)
 from tests.test_materials_issue27_deterministic_gate import (  # noqa: E402
     prepare_passing_review,
     run_review,
@@ -153,7 +150,7 @@ class MaterialsIssue30D1D2Tests(unittest.TestCase):
 
     def test_review_cli_routes_d1_drift_to_deterministic_queue(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            package, assessment, fixture = prepare_passing_review(
+            package, assessment = prepare_passing_review(
                 Path(temporary)
             )
             grading_path = package / "tests/grading_spec.json"
@@ -168,8 +165,7 @@ class MaterialsIssue30D1D2Tests(unittest.TestCase):
             grading_path.write_text(
                 json.dumps(grading, ensure_ascii=False), encoding="utf-8"
             )
-            bind_public_fixture(package, fixture)
-            completed = run_review(package, assessment, fixture)
+            completed = run_review(package, assessment)
 
             self.assertEqual(completed.returncode, 0, completed.stderr)
             report = json.loads(

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01_random_baseline",
+    "title": "Compute random alloy baseline monomer and dimer fractions",
+    "role": "process",
+    "action": "Analytically compute the expected monomer fraction (1-θ)^4 and dimer fraction 4θ(1-θ)^6 for a non-interacting fcc(100) surface alloy at θ=0.15. Save the results in a JSON file random_baseline.json.",
+    "output_file": "",
+    "evidence": "random_baseline.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Intermediate artifact containing the analytically computed random alloy monomer and dimer fractions.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_monte_carlo",
+    "title": "Run Monte Carlo simulations for AuPd and AuPt surface alloys",
+    "role": "process",
+    "action": "Implement canonical (NVT) Monte Carlo simulation on a 30×30 fcc(100) lattice with periodic boundary conditions. Use the cluster expansion Hamiltonians (effective cluster interactions up to third nearest neighbour) for AuPd/Pd(100) and AuPt/Pt(100) from the Supporting Information to evaluate configuration energies every trial swap. Run simulations for four condition sets: (i) AuPd at θ=0.15, T=300 K; (ii) AuPt at θ=0.15, T=300 K; (iii) AuPd at θ=0.10, T=300 K; (iv) AuPd at θ=0.50, T=100 K. After equilibration, collect ensemble-averaged statistics: monomer and dimer counts per configuration, and the probability of finding a B atom at 1st, 2nd, and 3rd nearest neighbour distances from an A atom. Save the raw statistics to mc_run.log.",
+    "output_file": "",
+    "evidence": "mc_run.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Log file containing raw MC statistics for quality assurance, not directly scored.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_scored_results",
+    "title": "Extract monomer/dimer fractions, short-range order parameters, and output final scored JSON",
+    "role": "scored",
+    "action": "From the MC statistics compute the ensemble-averaged monomer fraction and dimer fraction for each alloy at θ=0.15. For AuPd at θ=0.1, compute the short-range order parameter α(r) = 1 − p_AB(r)/x_B at 1st, 2nd, and 3rd nearest neighbour distances. For AuPd at θ=0.5, T=100 K, compute α at 1st nearest neighbour distance (expected to be ≈−1 reflecting c(2×2) ordering). Combine all results with the random baseline from step_01 into a single JSON file simulation_results.json containing all required fields.",
+    "output_file": "simulation_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Main scored artifact containing monomer/dimer fractions, short-range order parameters derived from Monte Carlo simulations, and the random alloy baseline.",
+    "output_schema": "{\"type\":\"object\",\"required\":[\"AuPd_monomer_fraction_theta015_T300\",\"AuPd_dimer_fraction_theta015_T300\",\"AuPt_monomer_fraction_theta015_T300\",\"AuPt_dimer_fraction_theta015_T300\",\"AuPd_short_range_order_1NN_theta01_T300\",\"AuPd_short_range_order_2NN_theta01_T300\",\"AuPd_short_range_order_3NN_theta01_T300\",\"AuPd_c2x2_alpha_1NN_theta05_T100\",\"random_monomer_fraction_theta015\",\"random_dimer_fraction_theta015\"],\"properties\":{\"AuPd_monomer_fraction_theta015_T300\":{\"type\":\"number\",\"minimum\":0,\"maximum\":1},\"AuPd_dimer_fraction_theta015_T300\":{\"type\":\"number\",\"minimum\":0,\"maximum\":1},\"AuPt_monomer_fraction_theta015_T300\":{\"type\":\"number\",\"minimum\":0,\"maximum\":1},\"AuPt_dimer_fraction_theta015_T300\":{\"type\":\"number\",\"minimum\":0,\"maximum\":1},\"AuPd_short_range_order_1NN_theta01_T300\":{\"type\":\"number\",\"minimum\":-1,\"maximum\":1},\"AuPd_short_range_order_2NN_theta01_T300\":{\"type\":\"number\",\"minimum\":-1,\"maximum\":1},\"AuPd_short_range_order_3NN_theta01_T300\":{\"type\":\"number\",\"minimum\":-1,\"maximum\":1},\"AuPd_c2x2_alpha_1NN_theta05_T100\":{\"type\":\"number\",\"minimum\":-1,\"maximum\":1},\"random_monomer_fraction_theta015\":{\"type\":\"number\",\"minimum\":0,\"maximum\":1},\"random_dimer_fraction_theta015\":{\"type\":\"number\",\"minimum\":0,\"maximum\":1}}}"
+  }
+]

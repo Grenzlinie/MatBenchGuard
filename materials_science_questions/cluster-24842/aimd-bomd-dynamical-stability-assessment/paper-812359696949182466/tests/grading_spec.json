@@ -1,0 +1,82 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Peak temperature is recomputed from the submitted CSV data; no self-reported metric is trusted.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "ga17_specific_heat.csv": "reference_match",
+    "ga13_specific_heat.csv": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ga17_specific_heat.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "normalized_specific_heat"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "normalized_specific_heat": "dimensionless (C_v / C_0)"
+          }
+        },
+        "description": "Ionic canonical specific heat (normalized) as a function of temperature for the Ga17 cluster, computed via the multiple-histogram method from AIMD trajectories."
+      },
+      {
+        "file": "ga13_specific_heat.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "normalized_specific_heat"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "normalized_specific_heat": "dimensionless (C_v / C_0)"
+          }
+        },
+        "description": "Ionic canonical specific heat (normalized) as a function of temperature for the Ga13 cluster, computed via the multiple-histogram method from AIMD trajectories."
+      }
+    ],
+    "notes": "The peak temperature of each specific-heat curve is used to infer the melting temperature. The checker will extract the peak from each CSV and compare to hidden reference values within tolerance, as well as verify the ordering Ga13 > Ga17 > bulk melting point (303 K)."
+  },
+  "steps": [
+    {
+      "id": "ga17_peak",
+      "output_file": "ga17_specific_heat.csv",
+      "kind": "peak_comparison",
+      "weight": 0.4,
+      "description": "Peak temperature for Ga17",
+      "target_temperature": 650,
+      "tolerance_abs": 50.0,
+      "column_temp": "temperature_K",
+      "column_cv": "normalized_specific_heat"
+    },
+    {
+      "id": "ga13_peak",
+      "output_file": "ga13_specific_heat.csv",
+      "kind": "peak_comparison",
+      "weight": 0.4,
+      "description": "Peak temperature for Ga13",
+      "target_temperature": 1400,
+      "tolerance_abs": 50.0,
+      "column_temp": "temperature_K",
+      "column_cv": "normalized_specific_heat"
+    },
+    {
+      "id": "trend_check",
+      "output_file": "ga17_specific_heat.csv",
+      "kind": "trend",
+      "weight": 0.2,
+      "description": "Trend: both peaks > 303 K and Ga13 peak > Ga17 peak"
+    }
+  ]
+}

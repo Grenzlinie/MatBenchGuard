@@ -1,0 +1,106 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Leading/constant terms are recomputed analytically; delta_L values are compared to paper's Table 1 (hidden gold) with appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "delta_L_values.csv": "exact_match",
+    "leading_constant_report.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference delta_L values from paper Table 1 and extrapolated infinite-L limit.",
+      "source_provenance": "Paper Table 1 for L=8,12,16,20,24,28,32 and analytic limit 7*zeta(3)/(8*pi^3*sqrt(2)) from the paper.",
+      "generation_method": "Extracted from paper.",
+      "why_not_fabricated": "These are the actual reported coefficients from the paper, needed to verify reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "delta_L_values.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "L",
+            "delta"
+          ]
+        },
+        "description": "Table of fitted next‑to‑next‑to‑leading order coefficients δ_L for the antiferromagnetic state at each L and the extrapolated infinite‑L limit."
+      },
+      {
+        "file": "leading_constant_report.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "results": "array"
+          },
+          "items": {
+            "L": "integer",
+            "a1": "float",
+            "a2": "float"
+          }
+        },
+        "description": "Computed exact leading coefficient a1 and constant term a2 for the strong‑coupling expansion at each L."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "check_delta_L",
+      "output_file": "delta_L_values.csv",
+      "kind": "numeric",
+      "weight": 0.8,
+      "config": {
+        "columns": [
+          "L",
+          "delta"
+        ],
+        "reference": {
+          "8": 0.0250979,
+          "12": 0.0245631,
+          "16": 0.0243433,
+          "20": 0.0242308,
+          "24": 0.0241652,
+          "28": 0.0241234,
+          "32": 0.024095,
+          "inf": 0.0239866
+        },
+        "tolerance": {
+          "L_finite": 1e-05,
+          "inf": 0.0001
+        },
+        "scoring": "fraction_within_tolerance"
+      }
+    },
+    {
+      "id": "check_leading_constant",
+      "output_file": "leading_constant_report.json",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "config": {
+        "metric": "exact_match",
+        "formula_a1": "sqrt(2) / (L * sin(pi/(2*L)))",
+        "formula_a2": "0.75",
+        "Ls": [
+          8,
+          12,
+          16,
+          20,
+          24,
+          28,
+          32
+        ],
+        "tolerance": 1e-08,
+        "scoring": "fraction_correct"
+      }
+    }
+  ]
+}

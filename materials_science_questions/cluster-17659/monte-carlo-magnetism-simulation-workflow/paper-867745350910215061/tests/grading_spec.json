@@ -1,0 +1,79 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "The main headline is the slope ratio; recomputing it from the raw lifetime CSV requires knowing which data points belong to SD and MD regimes, which is not consistently recoverable from the CSV alone, so the agent's reported slope ratio is compared to the paper gold 2.5 with a tolerance of ±0.5. Lifetime CSV is scored structurally (columns, row count, monotonic trend).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "lifetime_data.csv": "structural_audit",
+    "slope_ratio.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold slope ratio 2.5",
+      "source_provenance": "paper Fig.1 caption: 'The ratio of the slopes of the two lines is approximately 2.5.'",
+      "generation_method": "extracted from paper figure caption",
+      "why_not_fabricated": "paper-reported value"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lifetime_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "H_z",
+            "inv_field",
+            "lifetime"
+          ],
+          "columns_units": {
+            "H_z": "dimensionless (applied field)",
+            "inv_field": "dimensionless (1/|H_z|)",
+            "lifetime": "MCSS"
+          }
+        },
+        "description": "Metastable lifetime data: applied field, inverse field magnitude, and average escape time in MCSS for at least 5 field values covering SD and MD regimes."
+      },
+      {
+        "file": "slope_ratio.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "A single floating-point number representing the slope ratio (MD slope / SD slope)."
+        },
+        "description": "The ratio of the asymptotic linear slopes in the multi-droplet (MD) and single-droplet (SD) regimes, derived from the lifetime data."
+      }
+    ],
+    "notes": "The lifetime data is checked structurally (columns, row count, monotonicity). The slope ratio is compared to the paper-reported value within tolerance."
+  },
+  "steps": [
+    {
+      "id": "sim_lifetime_data",
+      "output_file": "lifetime_data.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "contract": {
+        "required_columns": [
+          "H_z",
+          "inv_field",
+          "lifetime"
+        ],
+        "min_rows": 5,
+        "monotonic": "allow_any_direction"
+      }
+    },
+    {
+      "id": "compute_slope_ratio",
+      "output_file": "slope_ratio.txt",
+      "kind": "exact_match",
+      "weight": 0.8,
+      "target": 2.5,
+      "tolerance_abs": 0.5
+    }
+  ]
+}

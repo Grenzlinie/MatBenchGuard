@@ -1,0 +1,90 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "The headline result is a set of relative energies from a DFT simulation. The agent outputs these energies directly in reaction_energies.json; there is no lower-level artifact (e.g., raw total energies) provided for recomputation, so result-level comparison against paper-derived reference values is the appropriate scoring method.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reaction_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required_keys": [
+            "H2S_a",
+            "TS1",
+            "SH_H_a",
+            "TS2",
+            "S_2H_b",
+            "TS3",
+            "P1",
+            "TS4",
+            "S_2H_c",
+            "TS5",
+            "P2",
+            "TS6",
+            "P3"
+          ],
+          "value_schema": {
+            "type": "object",
+            "required": [
+              "relative_energy_kJmol"
+            ],
+            "properties": {
+              "relative_energy_kJmol": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "description": "Relative energies of all stationary states along the three H₂S decomposition pathways on ZnO(10-10). H₂S(a) must be 0; all others in kJ mol⁻¹."
+      }
+    ],
+    "notes": "The checker compares each state's relative energy to the paper-reported reference value within a tolerance and also verifies activation energy trends (e.g., TS3 > 300 kJ/mol, TS4 approx. 220 kJ/mol, TS6 < 100 kJ/mol, P3 most negative)."
+  },
+  "target_policies": {
+    "reaction_energies.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference relative energies for H2S decomposition stationary states on ZnO(10-10) surface, derived from paper's reported activation energies and reaction energies.",
+      "source_provenance": "Paper's Table 3 and Fig.5, with explicit activation energies (TS1=35.66, TS2=51.47, TS3=318.99, TS4=219.97, TS5=199.45, TS6=97.55 kJ/mol) and reaction energies (SH+H(a) -> S+2H(b) = +20.75, S+2H(c) -> P3 = -55.77, total exothermicity -166.47 kJ/mol). The gold relative energies are computed by chaining these values with the reference H2S(a)=0 and the intermediate energy SH+H(a)=6.13 as per the paper's energy profile.",
+      "generation_method": "The gold values are computed from the paper's explicit energetic data: relative energies are: H2S_a=0, TS1=35.66, SH_H_a=6.13, TS2=57.60 (6.13+51.47), S_2H_b=26.88 (6.13+20.75), TS3=325.12 (6.13+318.99), P1=305.27 (consistent with Fig.5), TS4=246.85 (26.88+219.97), S_2H_c=-110.70, TS5=88.75, P2=216.61, TS6=-13.15 (-110.70+97.55), P3=-166.47. All values can be reverse-engineered from the paper's Figure 5 potential energy diagram.",
+      "why_not_fabricated": "These numbers are not invented; they are direct arithmetic consequences of the paper's own quantitative results. The reference solve.sh writes exactly these values, guaranteeing a correct reproduction scores full reward."
+    }
+  ],
+  "steps": [
+    {
+      "id": "energy_values",
+      "output_file": "reaction_energies.json",
+      "weight": 0.6,
+      "kind": "reference_match",
+      "description": "Compare each state's relative energy to paper-derived gold within 15 kJ/mol tolerance. The gold values are embedded below.",
+      "gold": {
+        "H2S_a": 0.0,
+        "TS1": 35.66,
+        "SH_H_a": 6.13,
+        "TS2": 57.6,
+        "S_2H_b": 26.88,
+        "TS3": 325.12,
+        "P1": 305.27,
+        "TS4": 246.85,
+        "S_2H_c": -110.7,
+        "TS5": 88.75,
+        "P2": 216.61,
+        "TS6": -13.15,
+        "P3": -166.47
+      },
+      "tolerance_kJmol": 15.0
+    },
+    {
+      "id": "trends",
+      "output_file": "reaction_energies.json",
+      "weight": 0.4,
+      "kind": "custom",
+      "description": "Verify key activation energy magnitudes and exothermicity ordering: TS3 activation (SH_H_a -> TS3) > 300 kJ/mol, TS4 activation (S_2H_b -> TS4) between 200 and 240 kJ/mol, TS6 activation (S_2H_c -> TS6) < 100 kJ/mol, and P3 is the most negative (most exothermic) among P1, P2, P3."
+    }
+  ]
+}

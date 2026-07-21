@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step01_solve_self_consistency",
+    "title": "Solve self-consistent mean-field equations",
+    "role": "process",
+    "action": "Implement a mean-field self-consistency solver for the uniaxial spin-1 Hamiltonian with given exchange (J0, ξ), single-ion anisotropy (D), and biquadratic exchange (K0, η, ζ) constants. Solve for the self-consistent values of σ = ⟨S̃^z⟩ and λ = ⟨Q̃^0⟩ across a dense grid of dimensionless temperature θ̃ = T/J0 and magnetic field h̃ = h/J0. Save the complete solution arrays for later use.",
+    "output_file": "",
+    "evidence": "self_consistent_solution.npz",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "This intermediate step produces the σ and λ arrays required by all downstream scored computations. The evidence file documents that the self-consistency loop was executed, but it is not directly scored.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02_order_parameters",
+    "title": "Compute order parameters for Figures 1 and 2",
+    "role": "scored",
+    "action": "From the self-consistent σ and λ, evaluate the order parameter components ⟨S^z⟩, ⟨Q⁰⟩, and ⟨Q²⟩ using the relations derived from the mean-field Hamiltonian diagonalization. Generate temperature-dependent data for ⟨Q⁰⟩ at fixed dimensionless field h̃=4.5, and for ⟨Q²⟩ at h̃=4.7, 5.0, 5.3. Write a CSV file with columns for field, temperature, and the three order parameters.",
+    "output_file": "order_parameters.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the dimensionless field, temperature, and the three order parameter values for the conditions of Figures 1 and 2. The hidden checker will recompute the same quantities from the self-consistent equations and compare within tolerance.",
+    "output_schema": "CSV with columns: field (float, dimensionless h/J0), temperature (float, dimensionless θ/J0), S_z (float), Q0 (float), Q2 (float). Rows must cover the curves shown in Fig.1 (h=4.5) and Fig.2 (h=4.7, 5.0, 5.3)."
+  },
+  {
+    "id": "step03_phase_boundary_fmp",
+    "title": "Determine QP1Z–ferromagnetic phase boundary",
+    "role": "scored",
+    "action": "For a range of magnetic fields h̃, find the critical temperature θ̃_c at which ⟨Q²⟩ = 0 (within a small numerical tolerance). This defines the phase boundary between the QP1Z and ferromagnetic (FMP) phases. Output a CSV with (h̃, θ̃_c) pairs corresponding to Figure 3.",
+    "output_file": "phase_boundary.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the dimensionless field and the critical temperature where ⟨Q²⟩ vanishes. The checker will verify each pair by recomputing ⟨Q²⟩ from the self-consistency equations at the given (h̃, θ̃_c) and checking it is ≤ tolerance.",
+    "output_schema": "CSV with columns: field (float, dimensionless h/J0), critical_temperature (float, dimensionless θ_c/J0). Should cover the curve shown in Fig.3."
+  },
+  {
+    "id": "step04_critical_temp_anisotropy",
+    "title": "Critical temperature dependence on BEI anisotropy constants",
+    "role": "scored",
+    "action": "Using the spin excitation spectrum stability condition ω₁(0)=0, compute the critical temperature θ̃* for the QP1Z→angular phase transition. For fixed fields h̃=2.5, 3.2, 3.8, evaluate θ̃* while varying η (with ζ=3.0) and varying ζ (with η=2.0) to reproduce Figure 4. Output a CSV with the anisotropy constants, field, and critical temperature.",
+    "output_file": "critical_temp_anisotropy.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the anisotropy constants, field, and critical temperature. The checker will recompute ω₁(0) from the agent's σ, λ and the given η, ζ, and verify that at the reported θ̃* the condition ω₁(0)=0 holds within tolerance.",
+    "output_schema": "CSV with columns: eta (float, dimensionless), zeta (float, dimensionless), field (float, dimensionless h/J0), critical_temperature (float, dimensionless θ*/J0). Must include data for η=2.0 with varying ζ and ζ=3.0 with varying η, at fields 2.5, 3.2, 3.8."
+  }
+]

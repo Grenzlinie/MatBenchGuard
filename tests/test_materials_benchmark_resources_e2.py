@@ -148,7 +148,7 @@ class MaterialsBenchmarkResourcesE2Tests(unittest.TestCase):
             )
             self.assertNotIn(
                 "resource_availability",
-                {item["dimension"] for item in report["dimension_scores"]},
+                json.dumps(report["dimensions_v11"]),
             )
 
     def test_equivalent_software_and_solver_parameters_are_not_direct_inputs(

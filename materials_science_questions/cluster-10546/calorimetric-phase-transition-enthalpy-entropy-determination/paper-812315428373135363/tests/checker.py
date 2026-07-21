@@ -3,9 +3,7 @@ import json
 import csv
 
 # === author imports / helpers ===
-import csv
 import math
-
 
 import os as _ff_os
 import json as _ff_json
@@ -35,7 +33,7 @@ def _ff_validate_output_contract():
         if fmt == "json":
             try:
                 data = _ff_json.load(open(path))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 violations.append(base + ": invalid JSON (" + str(exc) + ")")
                 continue
             required = schema.get("required", {})
@@ -48,29 +46,16 @@ def _ff_validate_output_contract():
             import csv as _ff_csv
             delim = "\t" if fmt == "tsv" else ","
             try:
+                # only check that the file is readable and header matches
                 with open(path, newline="") as _f:
-                    cols = set((_ff_csv.reader(_f, delimiter=delim).__next__() or []))
-            except StopIteration:
-                cols = set()
-            except Exception as exc:  # noqa: BLE001
-                violations.append(base + ": cannot read table (" + str(exc) + ")")
-                continue
-            required_cols = schema.get("required_columns", []) or []
-            for col in required_cols:
-                name = col.get("name") if isinstance(col, dict) else col
-                if name and name not in cols:
-                    violations.append(base + ": missing table column '" + str(name) + "'")
-    return violations
-
-
-def _ff_contract_gate():
-    """Zero the reward and exit if the submission violates the output_contract shape."""
-    violations = _ff_validate_output_contract()
-    if not violations:
-        return
-    _ff_os.makedirs("/logs/verifier", exist_ok=True)
-    with open("/logs/verifier/reward.txt", "w") as _f:
-        _f.write("0.0")
+                    reader = _ff_csv.DictReader(_f, delimiter=delim)
+                    headers = reader.fieldnames or []
+                required_cols = schema.get("required_columns", [])
+                for col in required_cols:
+                    if col not in headers:
+                        violations.append(base + ": missing column '" + col + "' in header")
+            except Exception as exc:
+                violations.append(base + ": CSV/TSV read error (" + str(exc) + ")")
     with open("/logs/verifier/breakdown.json", "w") as _f:
         _ff_json.dump({"output_contract_violations": violations}, _f, indent=2)
     raise SystemExit(0)
@@ -83,7 +68,7 @@ def load_artifact(path):
         try:
             with open(path) as f:
                 return json.load(f)
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
     if path.endswith(".csv") or path.endswith(".tsv"):
         delim = "\t" if path.endswith(".tsv") else ","
@@ -99,10 +84,11 @@ def prepare(outputs_dir, spec):
 
 # === block: score_0 (check id='step_01a') ===
 def score_0(artifact, step, ctx):
+    # Hard-coded reference and tolerances for [Fe(phen)2(NCS)2] transition quantities
+    ref = {"Tc_K": 176.29, "Delta_H_kJ_mol": 8.6, "Delta_S_J_K_mol": 48.78}
+    tol = {"Tc_K": 0.02, "Delta_H_kJ_mol": 0.14, "Delta_S_J_K_mol": 0.71}
     artifact = artifact if isinstance(artifact, dict) else {}
-    ref = step.get('reference', {})
-    tol = step.get('tolerances', {})
-    fields = [('Tc_K', 'Tc_K'), ('Delta_H_kJ_mol', 'Delta_H_kJ_mol'), ('Delta_S_J_K_mol', 'Delta_S_J_K_mol')]
+    fields = [("Tc_K", "Tc_K"), ("Delta_H_kJ_mol", "Delta_H_kJ_mol"), ("Delta_S_J_K_mol", "Delta_S_J_K_mol")]
     scores = []
     for field_key, tol_key in fields:
         if field_key not in artifact:
@@ -110,7 +96,7 @@ def score_0(artifact, step, ctx):
             continue
         val = artifact[field_key]
         r = ref.get(field_key)
-        t = tol.get(tol_key, {}).get('value', 0.0)
+        t = tol.get(tol_key, 0.0)
         if not isinstance(r, (int, float)) or t <= 0:
             scores.append(1.0 if abs(val - r) < 1e-9 else 0.0)
             continue
@@ -121,16 +107,16 @@ def score_0(artifact, step, ctx):
             # linear decay to zero at 3*tol
             s = max(0.0, 1.0 - (err - t) / (2.0 * t))
             scores.append(s)
-    # average over three fields
     return sum(scores) / max(len(scores), 1)
 
 
 # === block: score_1 (check id='step_01b') ===
 def score_1(artifact, step, ctx):
+    # Hard-coded reference and tolerances for [Fe(phen)2(NCSe)2] transition quantities
+    ref = {"Tc_K": 231.26, "Delta_H_kJ_mol": 11.6, "Delta_S_J_K_mol": 51.22}
+    tol = {"Tc_K": 0.02, "Delta_H_kJ_mol": 0.44, "Delta_S_J_K_mol": 2.33}
     artifact = artifact if isinstance(artifact, dict) else {}
-    ref = step.get('reference', {})
-    tol = step.get('tolerances', {})
-    fields = [('Tc_K', 'Tc_K'), ('Delta_H_kJ_mol', 'Delta_H_kJ_mol'), ('Delta_S_J_K_mol', 'Delta_S_J_K_mol')]
+    fields = [("Tc_K", "Tc_K"), ("Delta_H_kJ_mol", "Delta_H_kJ_mol"), ("Delta_S_J_K_mol", "Delta_S_J_K_mol")]
     scores = []
     for field_key, tol_key in fields:
         if field_key not in artifact:
@@ -138,7 +124,7 @@ def score_1(artifact, step, ctx):
             continue
         val = artifact[field_key]
         r = ref.get(field_key)
-        t = tol.get(tol_key, {}).get('value', 0.0)
+        t = tol.get(tol_key, 0.0)
         if not isinstance(r, (int, float)) or t <= 0:
             scores.append(1.0 if abs(val - r) < 1e-9 else 0.0)
             continue
@@ -153,9 +139,10 @@ def score_1(artifact, step, ctx):
 
 # === block: score_2 (check id='step_02a') ===
 def score_2(artifact, step, ctx):
+    # Hard-coded reference and tolerances for NCS model parameters
+    ref = {"N_mol-1": 6.34e21, "n": 95}
+    tol = {"N_mol-1": 0.1, "n": 5}   # N: relative, n: absolute
     artifact = artifact if isinstance(artifact, dict) else {}
-    ref = step.get('reference', {})
-    tol = step.get('tolerances', {})
     def field_score(key, t_val, rel=False):
         if key not in artifact:
             return 0.0
@@ -177,16 +164,17 @@ def score_2(artifact, step, ctx):
                 return 1.0
             else:
                 return max(0.0, 1.0 - (err - t_val) / (2.0 * t_val))
-    s1 = field_score('N_mol-1', tol.get('N_mol-1', {}).get('value', 0.1), rel=True)
-    s2 = field_score('n', tol.get('n', {}).get('value', 5), rel=False)
+    s1 = field_score("N_mol-1", tol["N_mol-1"], rel=True)
+    s2 = field_score("n", tol["n"], rel=False)
     return 0.5 * s1 + 0.5 * s2
 
 
 # === block: score_3 (check id='step_02b') ===
 def score_3(artifact, step, ctx):
+    # Hard-coded reference and tolerances for NCSe model parameters
+    ref = {"N_mol-1": 7.83e21, "n": 77}
+    tol = {"N_mol-1": 0.1, "n": 5}
     artifact = artifact if isinstance(artifact, dict) else {}
-    ref = step.get('reference', {})
-    tol = step.get('tolerances', {})
     def field_score(key, t_val, rel=False):
         if key not in artifact:
             return 0.0
@@ -208,29 +196,27 @@ def score_3(artifact, step, ctx):
                 return 1.0
             else:
                 return max(0.0, 1.0 - (err - t_val) / (2.0 * t_val))
-    s1 = field_score('N_mol-1', tol.get('N_mol-1', {}).get('value', 0.1), rel=True)
-    s2 = field_score('n', tol.get('n', {}).get('value', 5), rel=False)
+    s1 = field_score("N_mol-1", tol["N_mol-1"], rel=True)
+    s2 = field_score("n", tol["n"], rel=False)
     return 0.5 * s1 + 0.5 * s2
 
 
 # === block: score_4 (check id='step_03a') ===
 def score_4(artifact, step, ctx):
+    # Hard-coded reference for NCS model Cp curve
+    ref_Tc = 176.29
+    ref_Cp_max = 7164.7
+    tol_Cp_frac = 0.10
+    tol_Tc_abs = 1.0
     rows = artifact if isinstance(artifact, list) else []
-    ref = step.get('reference', {})
-    tols = step.get('tolerances', {})
-    ref_Tc = ref.get('Tc_K', 176.29)
-    ref_Cp_max = ref.get('Cp_max_J_K_mol', 7164.7)
-    tol_Cp_frac = tols.get('Cp_max_relative', 0.10)
-    tol_Tc_abs = tols.get('Tc_abs_K', 1.0)
-    # parse CSV rows
     cp_vals = []
     T_vals = []
     for row in rows:
         if row is None:
             continue
         try:
-            T = float(row.get('T(K)', row.get('T', None)))
-            Cp = float(row.get('Cp_model(J/K/mol)', row.get('Cp', None)))
+            T = float(row.get("T(K)", row.get("T", None)))
+            Cp = float(row.get("Cp_model(J/K/mol)", row.get("Cp", None)))
             cp_vals.append(Cp)
             T_vals.append(T)
         except (ValueError, TypeError):
@@ -240,7 +226,6 @@ def score_4(artifact, step, ctx):
     max_idx = cp_vals.index(max(cp_vals))
     max_Cp = cp_vals[max_idx]
     max_T = T_vals[max_idx]
-    # Cp peak score
     if ref_Cp_max <= 0:
         score_Cp = 1.0 if max_Cp <= 1e-6 else 0.0
     else:
@@ -249,7 +234,6 @@ def score_4(artifact, step, ctx):
             score_Cp = 1.0
         else:
             score_Cp = max(0.0, 1.0 - (rel_err - tol_Cp_frac) / (2.0 * tol_Cp_frac))
-    # Tc location score
     if tol_Tc_abs <= 0:
         score_Tc = 1.0 if abs(max_T - ref_Tc) < 1e-9 else 0.0
     else:
@@ -263,21 +247,20 @@ def score_4(artifact, step, ctx):
 
 # === block: score_5 (check id='step_03b') ===
 def score_5(artifact, step, ctx):
+    # Hard-coded reference for NCSe model Cp curve
+    ref_Tc = 231.26
+    ref_Cp_max = 8010.9
+    tol_Cp_frac = 0.10
+    tol_Tc_abs = 1.0
     rows = artifact if isinstance(artifact, list) else []
-    ref = step.get('reference', {})
-    tols = step.get('tolerances', {})
-    ref_Tc = ref.get('Tc_K', 231.26)
-    ref_Cp_max = ref.get('Cp_max_J_K_mol', 8010.9)
-    tol_Cp_frac = tols.get('Cp_max_relative', 0.10)
-    tol_Tc_abs = tols.get('Tc_abs_K', 1.0)
     cp_vals = []
     T_vals = []
     for row in rows:
         if row is None:
             continue
         try:
-            T = float(row.get('T(K)', row.get('T', None)))
-            Cp = float(row.get('Cp_model(J/K/mol)', row.get('Cp', None)))
+            T = float(row.get("T(K)", row.get("T", None)))
+            Cp = float(row.get("Cp_model(J/K/mol)", row.get("Cp", None)))
             cp_vals.append(Cp)
             T_vals.append(T)
         except (ValueError, TypeError):
@@ -307,12 +290,12 @@ def score_5(artifact, step, ctx):
 
 
 _SCORERS = {
-    'step_01a': score_0,
-    'step_01b': score_1,
-    'step_02a': score_2,
-    'step_02b': score_3,
-    'step_03a': score_4,
-    'step_03b': score_5,
+    "step_01a": score_0,
+    "step_01b": score_1,
+    "step_02a": score_2,
+    "step_02b": score_3,
+    "step_03a": score_4,
+    "step_03b": score_5,
 }
 
 
@@ -346,7 +329,7 @@ def main():
         else:
             try:
                 score = float(fn(artifact, step, ctx))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 score = 0.0
                 breakdown.setdefault("_errors", {})[sid] = repr(exc)
         score = max(0.0, min(1.0, score))

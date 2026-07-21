@@ -1,0 +1,94 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes minimum-energy angles from the agent's raw V_theta curves CSV and compares to paper-reported minima (SiHNSi2: 101.5°, dihydrogenated: 109.5°).",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "V_theta_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "site_type",
+            "mean_angle_deg",
+            "V_theta",
+            "bond"
+          ],
+          "units": {
+            "mean_angle_deg": "degree"
+          }
+        },
+        "description": "CSV of computed V^θ values for each site type, bond, and angle."
+      },
+      {
+        "file": "minima.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "description": "Object mapping site_type (string) to the minimum angle in degrees (float) that minimizes V^θ."
+        },
+        "description": "JSON summary of minimum-energy angles for each site type."
+      }
+    ],
+    "notes": "The checker will recompute the minimum angles from the CSV and compare against the paper-reported values; the JSON is also cross-checked for consistency with the CSV-derived minima."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected minimum-energy bond angles for key tetrahedral sites",
+      "source_provenance": "Paper text: 'the elastic deformation energy of the Si HNSi2 site is minimum for thetaSiSiSi = 101.5°' and 'all dihydrogenated sites have their deformation energy minimized by the regular geometry' (i.e., 109.5°).",
+      "generation_method": "Extracted directly from the paper's explicit numerical statements and text description of Figure 2.",
+      "why_not_fabricated": "These are the paper's own published quantitative results; the exact numbers are stated in the paper."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_01_vtheta_curves",
+      "output_file": "V_theta_curves.csv",
+      "weight": 0.8,
+      "kind": "recompute_metric",
+      "target_policy": "metric_recompute",
+      "description": "Recompute minimum-energy angles from the raw curves and compare to paper gold with tolerance.",
+      "expected_minima": [
+        {
+          "site_type": "SiHNSi2",
+          "bond": "Si-Si",
+          "gold_min_deg": 101.5,
+          "tolerance_deg": 1.5
+        },
+        {
+          "site_type": "SiH2Si2",
+          "bond": "Si-Si",
+          "gold_min_deg": 109.5,
+          "tolerance_deg": 2.0
+        },
+        {
+          "site_type": "SiH2N2",
+          "bond": "average",
+          "gold_min_deg": 109.5,
+          "tolerance_deg": 2.0
+        },
+        {
+          "site_type": "SiH2NSi",
+          "bond": "average",
+          "gold_min_deg": 109.5,
+          "tolerance_deg": 2.0
+        }
+      ]
+    },
+    {
+      "id": "step_02_minima",
+      "output_file": "minima.json",
+      "weight": 0.2,
+      "kind": "consistency",
+      "target_policy": "structural_audit",
+      "description": "Verify that minima.json is consistent with the minima obtained from the CSV curves within tight tolerance.",
+      "tolerance_deg": 0.5
+    }
+  ]
+}

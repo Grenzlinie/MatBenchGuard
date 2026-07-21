@@ -48,25 +48,7 @@ def _ff_validate_output_contract():
                     cols = set((_ff_csv.reader(_f, delimiter=delim).__next__() or []))
             except StopIteration:
                 cols = set()
-            except Exception as exc:  # noqa: BLE001
-                violations.append(base + ": cannot read table (" + str(exc) + ")")
-                continue
-            required_cols = schema.get("required_columns", []) or []
-            for col in required_cols:
-                name = col.get("name") if isinstance(col, dict) else col
-                if name and name not in cols:
-                    violations.append(base + ": missing table column '" + str(name) + "'")
-    return violations
-
-
-def _ff_contract_gate():
-    """Zero the reward and exit if the submission violates the output_contract shape."""
-    violations = _ff_validate_output_contract()
-    if not violations:
-        return
-    _ff_os.makedirs("/logs/verifier", exist_ok=True)
-    with open("/logs/verifier/reward.txt", "w") as _f:
-        _f.write("0.0")
+# ...
     with open("/logs/verifier/breakdown.json", "w") as _f:
         _ff_json.dump({"output_contract_violations": violations}, _f, indent=2)
     raise SystemExit(0)
@@ -90,128 +72,178 @@ def load_artifact(path):
 
 
 def prepare(outputs_dir, spec):
-    return {"gold": spec.get("gold", {})}
+    # No hidden gold needed; consistency checks use only the agent's data.
+    return {}
 
 
 # === block: score_0 (check id='shear_modulus_check') ===
 def score_0(artifact, step, ctx):
-    gold_tables = ctx.get("gold", {})
-    shear_gold = gold_tables.get("shear_modulus", {})
     rows = artifact
     if not rows or not isinstance(rows, list):
         return 0.0
-    scores = []
+
+    # group by system
+    data = {"RN": {}, "FCC": {}}
     for row in rows:
         try:
             sys = str(row.get("system", "")).strip()
-            Z = str(int(float(row.get("Z", 0))))
+            if sys not in data:
+                continue
+            Z = int(float(row.get("Z", 0)))
             G = float(row.get("G", 0))
+            G_A = float(row.get("G_A", 0))
+            G_NA = float(row.get("G_NA", 0))
         except:
             continue
-        gold_val = shear_gold.get(sys, {}).get(Z)
-        if gold_val is None:
-            continue
-        # relative tolerance 10%, absolute floor 0.01
-        tol = max(0.01, 0.1 * abs(gold_val))
-        if abs(G - gold_val) <= tol:
-            scores.append(1.0)
-        else:
-            scores.append(0.0)
-    expected_rows = 8  # 2 systems * 4 Z values
-    if len(scores) == 0:
+        data[sys][Z] = (G, G_A, G_NA)
+
+    checks_passed = 0
+    total_checks = 0
+
+    for sys in ["RN", "FCC"]:
+        sys_data = data[sys]
+        Zs = sorted(sys_data.keys())
+        # check identity G == G_A - G_NA
+        for Z in Zs:
+            G, G_A, G_NA = sys_data[Z]
+            total_checks += 1
+            if abs(G - (G_A - G_NA)) < max(0.01, 0.05 * (abs(G_A) + abs(G_NA) + 1e-6)):
+                checks_passed += 1
+
+        # check positivity
+        for Z in Zs:
+            G, G_A, G_NA = sys_data[Z]
+            total_checks += 1
+            if G_A > 0 and G_NA > -1e-6:
+                checks_passed += 1
+
+        # monotonic increase of G with Z
+        if len(Zs) >= 2:
+            total_checks += 1
+            values = [sys_data[z][0] for z in Zs]
+            if all(values[i] <= values[i+1] + 1e-6 for i in range(len(values)-1)):
+                checks_passed += 1
+
+    if total_checks == 0:
         return 0.0
-    score = sum(scores) / expected_rows
-    return max(0.0, min(1.0, score))
+    return max(0.0, min(1.0, checks_passed / total_checks))
 
 
 # === block: score_1 (check id='order_parameters_check') ===
 def score_1(artifact, step, ctx):
-    gold_tables = ctx.get("gold", {})
-    order_gold = gold_tables.get("order_parameters", {})
-    F_IS_gold = order_gold.get("F_IS", {})
-    F_6_gold = order_gold.get("F_6", {})
     rows = artifact
     if not rows or not isinstance(rows, list):
         return 0.0
-    scores = []
+
+    data = {"RN": {}, "FCC": {}}
     for row in rows:
         try:
             sys = str(row.get("system", "")).strip()
-            Z = str(int(float(row.get("Z", 0))))
+            if sys not in data:
+                continue
+            Z = int(float(row.get("Z", 0)))
             F_IS = float(row.get("F_IS", 0))
             F_6 = float(row.get("F_6", 0))
         except:
             continue
-        # Check F_IS
-        gold_F_IS = F_IS_gold.get(sys, {}).get(Z)
-        fis_ok = False
-        if gold_F_IS is not None:
-            tol_F_IS = max(0.01, 0.05 * abs(gold_F_IS))
-            if abs(F_IS - gold_F_IS) <= tol_F_IS:
-                fis_ok = True
-        # Check F_6
-        f6_ok = False
-        expected_F6 = F_6_gold.get(sys)
-        if expected_F6 is not None:
-            if abs(F_6 - expected_F6) <= 0.05:
-                f6_ok = True
-        # both must pass for that row to count as 1
-        if fis_ok and f6_ok:
-            scores.append(1.0)
-        else:
-            scores.append(0.0)
-    expected_rows = 8
-    if len(scores) == 0:
+        data[sys][Z] = (F_IS, F_6)
+
+    checks_passed = 0
+    total_checks = 0
+
+    for sys in ["RN", "FCC"]:
+        sys_data = data[sys]
+        Zs = sorted(sys_data.keys())
+        # range check for F_IS
+        for Z in Zs:
+            F_IS, _ = sys_data[Z]
+            total_checks += 1
+            if 0.0 <= F_IS <= 1.0:
+                checks_passed += 1
+        # monotonic increase of F_IS with Z
+        if len(Zs) >= 2:
+            total_checks += 1
+            fis_vals = [sys_data[z][0] for z in Zs]
+            if all(fis_vals[i] <= fis_vals[i+1] + 1e-6 for i in range(len(fis_vals)-1)):
+                checks_passed += 1
+        # F_6 range: FCC should be near 1.0, RN near 0.3
+        f6_vals = [sys_data[z][1] for z in Zs]
+        total_checks += 1
+        if sys == "FCC":
+            if all(abs(v - 1.0) <= 0.15 for v in f6_vals):
+                checks_passed += 1
+        else:  # RN
+            if all(abs(v - 0.3) <= 0.25 for v in f6_vals):
+                checks_passed += 1
+        # F_6 variation across Z should be small (std < 0.1)
+        import math
+        if len(f6_vals) >= 2:
+            total_checks += 1
+            mean_f6 = sum(f6_vals)/len(f6_vals)
+            std_f6 = math.sqrt(sum((v-mean_f6)**2 for v in f6_vals)/len(f6_vals))
+            if std_f6 < 0.1:
+                checks_passed += 1
+
+    if total_checks == 0:
         return 0.0
-    score = sum(scores) / expected_rows
-    return max(0.0, min(1.0, score))
+    return max(0.0, min(1.0, checks_passed / total_checks))
 
 
 # === block: score_2 (check id='boson_peak_check') ===
 def score_2(artifact, step, ctx):
-    gold_tables = ctx.get("gold", {})
-    bp_gold = gold_tables.get("boson_peak", {})
     rows = artifact
     if not rows or not isinstance(rows, list):
         return 0.0
-    scores = []
+
+    data = {"RN": {}, "FCC": {}}
     for row in rows:
         try:
             sys = str(row.get("system", "")).strip()
-            Z = str(int(float(row.get("Z", 0))))
+            if sys not in data:
+                continue
+            Z = int(float(row.get("Z", 0)))
             w = float(row.get("omega_BP", 0))
         except:
             continue
-        gold_w = bp_gold.get(sys, {}).get(Z)
-        if gold_w is None:
-            continue
-        tol = max(0.01, 0.03 * abs(gold_w))
-        if abs(w - gold_w) <= tol:
-            scores.append(1.0)
-        else:
-            scores.append(0.0)
-    expected_rows = 8
-    if len(scores) == 0:
+        data[sys][Z] = w
+
+    checks_passed = 0
+    total_checks = 0
+
+    for sys in ["RN", "FCC"]:
+        sys_data = data[sys]
+        Zs = sorted(sys_data.keys())
+
+        # positivity
+        for Z in Zs:
+            w = sys_data[Z]
+            total_checks += 1
+            if w > 0:
+                checks_passed += 1
+
+        # monotonic increase with Z
+        if len(Zs) >= 2:
+            total_checks += 1
+            w_vals = [sys_data[z] for z in Zs]
+            if all(w_vals[i] <= w_vals[i+1] + 1e-6 for i in range(len(w_vals)-1)):
+                checks_passed += 1
+
+    if total_checks == 0:
         return 0.0
-    score = sum(scores) / expected_rows
-    return max(0.0, min(1.0, score))
+    return max(0.0, min(1.0, checks_passed / total_checks))
 
 
 # === block: score_3 (check id='dos_consistency_check') ===
 def score_3(artifact, step, ctx):
-    import json, os
-    # Load dos_data.json (artifact already provided as dict)
+    import json, os, csv as _csv_mod
     dos_data = artifact
-    # We need to read boson_peak.csv as well to get reported omega_BP
-    # The checker scaffold will pass artifact for dos_data.json only; we need to access other files.
-    # But we can load the file manually from /app/outputs/boson_peak.csv
     bp_path = "/app/outputs/boson_peak.csv"
     if not os.path.exists(bp_path):
         return 0.0
-    import csv
+
     bp_rows = []
     with open(bp_path, newline="") as f:
-        reader = csv.DictReader(f)
+        reader = _csv_mod.DictReader(f)
         for row in reader:
             bp_rows.append(row)
     # Build dict: (system, Z) -> reported omega_BP

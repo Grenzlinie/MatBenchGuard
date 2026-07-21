@@ -1,0 +1,396 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Checker reads reported numbers in four JSON files and compares to paper gold values with tolerances for implementation differences. No raw intermediate artifacts to recompute from; the agent must produce the final tabulated numbers.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for structural, band gap, dielectric, absorption anisotropy quantities extracted from Tables I, II, IV, V of Phys. Rev. B 93, 195435 (2016).",
+      "source_provenance": "Paper tables I, II, IV, V and the reference solution's hardcoded values verified against those tables.",
+      "generation_method": "Extracted directly from the paper's printed values and from computed averages (epsilon ratio) consistent with the tabulated components.",
+      "why_not_fabricated": "These are the actual published results; the checker compares the agent's reproduced numbers against them."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "structural_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "orientation",
+              "a_ang",
+              "b_ang",
+              "h_ang",
+              "alpha_avg_deg",
+              "theta_deg",
+              "E_f_eV_per_A2"
+            ],
+            "properties": {
+              "orientation": "string",
+              "a_ang": "float, Å",
+              "b_ang": "float, Å",
+              "h_ang": "float, Å",
+              "alpha_avg_deg": "float, degrees",
+              "theta_deg": "float, degrees",
+              "E_f_eV_per_A2": "float, eV/Å²"
+            }
+          }
+        },
+        "description": "Relaxed structural parameters and film formation energies per surface area for six film orientations."
+      },
+      {
+        "file": "band_gaps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "orientation",
+              "E_g_film_eV",
+              "E_g_bulk_eV",
+              "delta_E_g_eV"
+            ],
+            "properties": {
+              "orientation": "string",
+              "E_g_film_eV": "float, eV",
+              "E_g_bulk_eV": "float, eV",
+              "delta_E_g_eV": "float, eV"
+            }
+          }
+        },
+        "description": "Direct band gaps at Γ for films and their corresponding bulk polymorphs, and the difference."
+      },
+      {
+        "file": "dielectric_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "orientation",
+              "epsilon_inf_xx",
+              "epsilon_inf_yy",
+              "epsilon_inf_zz"
+            ],
+            "properties": {
+              "orientation": "string",
+              "epsilon_inf_xx": "float",
+              "epsilon_inf_yy": "float",
+              "epsilon_inf_zz": "float"
+            }
+          }
+        },
+        "description": "High-frequency dielectric tensor components obtained via supercell extrapolation."
+      },
+      {
+        "file": "absorption_anisotropy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "orientation",
+              "theta_deg",
+              "Delta_eV",
+              "epsilon_ratio_xy_z"
+            ],
+            "properties": {
+              "orientation": "string",
+              "theta_deg": "float, degrees",
+              "Delta_eV": "float, eV",
+              "epsilon_ratio_xy_z": "float"
+            }
+          }
+        },
+        "description": "Correlation table: dangling bond angle, energy difference between z and in-plane first absorption peaks, and dielectric anisotropy ratio."
+      }
+    ],
+    "notes": "All numeric comparisons are performed against hidden reference values from the paper's tables (I, II, IV, V) with tolerances that absorb systematic differences between DFT implementations. The solver must produce data for all six orientations: BCT(010), CUB(100), h-BN(0001), ZB(110), WUR(10-10), WUR(0001)."
+  },
+  "steps": [
+    {
+      "id": "structural_energies",
+      "output_file": "structural_energies.json",
+      "weight": 0.25,
+      "gold": [
+        {
+          "orientation": "WUR(10-10)",
+          "a_ang": 3.32,
+          "b_ang": 5.34,
+          "h_ang": 9.39,
+          "alpha_avg_deg": 112.7,
+          "theta_deg": 10,
+          "E_f_eV_per_A2": 0.058
+        },
+        {
+          "orientation": "BCT(010)",
+          "a_ang": 5.7,
+          "b_ang": 3.31,
+          "h_ang": 8.69,
+          "alpha_avg_deg": 117.9,
+          "theta_deg": 6,
+          "E_f_eV_per_A2": 0.049
+        },
+        {
+          "orientation": "ZB(110)",
+          "a_ang": 3.31,
+          "b_ang": 4.6,
+          "h_ang": 11.41,
+          "alpha_avg_deg": 111.8,
+          "theta_deg": 28,
+          "E_f_eV_per_A2": 0.067
+        },
+        {
+          "orientation": "CUB(100)",
+          "a_ang": 6.34,
+          "b_ang": 6.34,
+          "h_ang": 10.05,
+          "alpha_avg_deg": 129.8,
+          "theta_deg": 12,
+          "E_f_eV_per_A2": 0.078
+        },
+        {
+          "orientation": "h-BN(0001)",
+          "a_ang": 3.39,
+          "b_ang": 3.39,
+          "h_ang": 7.11,
+          "alpha_avg_deg": 109.5,
+          "theta_deg": 0,
+          "E_f_eV_per_A2": 0.049
+        },
+        {
+          "orientation": "WUR(0001)",
+          "a_ang": 6.62,
+          "b_ang": 6.62,
+          "h_ang": 8.11,
+          "alpha_avg_deg": 109.5,
+          "theta_deg": 0,
+          "E_f_eV_per_A2": 0.086
+        }
+      ],
+      "tolerances": {
+        "a_ang": {
+          "rel": 0.02,
+          "abs": 0.02
+        },
+        "b_ang": {
+          "rel": 0.02,
+          "abs": 0.02
+        },
+        "h_ang": {
+          "rel": 0.02,
+          "abs": 0.02
+        },
+        "alpha_avg_deg": {
+          "abs": 1.0
+        },
+        "theta_deg": {
+          "abs": 1.0
+        },
+        "E_f_eV_per_A2": {
+          "abs": 0.02
+        }
+      },
+      "fields": [
+        "a_ang",
+        "b_ang",
+        "h_ang",
+        "alpha_avg_deg",
+        "theta_deg",
+        "E_f_eV_per_A2"
+      ]
+    },
+    {
+      "id": "band_gaps",
+      "output_file": "band_gaps.json",
+      "weight": 0.25,
+      "gold": [
+        {
+          "orientation": "WUR(10-10)",
+          "E_g_film_eV": 2.25,
+          "E_g_bulk_eV": 2.2,
+          "delta_E_g_eV": 0.05
+        },
+        {
+          "orientation": "BCT(010)",
+          "E_g_film_eV": 2.37,
+          "E_g_bulk_eV": 2.2,
+          "delta_E_g_eV": 0.17
+        },
+        {
+          "orientation": "ZB(110)",
+          "E_g_film_eV": 2.31,
+          "E_g_bulk_eV": 2.09,
+          "delta_E_g_eV": 0.22
+        },
+        {
+          "orientation": "CUB(100)",
+          "E_g_film_eV": 2.71,
+          "E_g_bulk_eV": 2.68,
+          "delta_E_g_eV": 0.03
+        },
+        {
+          "orientation": "h-BN(0001)",
+          "E_g_film_eV": 2.66,
+          "E_g_bulk_eV": 2.31,
+          "delta_E_g_eV": 0.35
+        },
+        {
+          "orientation": "WUR(0001)",
+          "E_g_film_eV": 1.62,
+          "E_g_bulk_eV": 2.2,
+          "delta_E_g_eV": -0.58
+        }
+      ],
+      "tolerances": {
+        "E_g_film_eV": {
+          "abs": 0.15
+        },
+        "E_g_bulk_eV": {
+          "abs": 0.15
+        },
+        "delta_E_g_eV": {
+          "abs": 0.15
+        }
+      },
+      "fields": [
+        "E_g_film_eV",
+        "E_g_bulk_eV",
+        "delta_E_g_eV"
+      ]
+    },
+    {
+      "id": "dielectric_constants",
+      "output_file": "dielectric_constants.json",
+      "weight": 0.25,
+      "gold": [
+        {
+          "orientation": "WUR(10-10)",
+          "epsilon_inf_xx": 4.04,
+          "epsilon_inf_yy": 4.12,
+          "epsilon_inf_zz": 3.72
+        },
+        {
+          "orientation": "BCT(010)",
+          "epsilon_inf_xx": 4.09,
+          "epsilon_inf_yy": 4.09,
+          "epsilon_inf_zz": 3.69
+        },
+        {
+          "orientation": "ZB(110)",
+          "epsilon_inf_xx": 3.96,
+          "epsilon_inf_yy": 3.88,
+          "epsilon_inf_zz": 3.72
+        },
+        {
+          "orientation": "CUB(100)",
+          "epsilon_inf_xx": 3.46,
+          "epsilon_inf_yy": 3.46,
+          "epsilon_inf_zz": 3.19
+        },
+        {
+          "orientation": "h-BN(0001)",
+          "epsilon_inf_xx": 4.53,
+          "epsilon_inf_yy": 4.53,
+          "epsilon_inf_zz": 4.09
+        },
+        {
+          "orientation": "WUR(0001)",
+          "epsilon_inf_xx": 4.22,
+          "epsilon_inf_yy": 4.22,
+          "epsilon_inf_zz": 3.97
+        }
+      ],
+      "tolerances": {
+        "epsilon_inf_xx": {
+          "abs": 0.2
+        },
+        "epsilon_inf_yy": {
+          "abs": 0.2
+        },
+        "epsilon_inf_zz": {
+          "abs": 0.2
+        }
+      },
+      "fields": [
+        "epsilon_inf_xx",
+        "epsilon_inf_yy",
+        "epsilon_inf_zz"
+      ]
+    },
+    {
+      "id": "absorption_anisotropy",
+      "output_file": "absorption_anisotropy.json",
+      "weight": 0.25,
+      "gold": [
+        {
+          "orientation": "WUR(10-10)",
+          "theta_deg": 10,
+          "Delta_eV": -0.4,
+          "epsilon_ratio_xy_z": 1.0968
+        },
+        {
+          "orientation": "BCT(010)",
+          "theta_deg": 6,
+          "Delta_eV": -0.6,
+          "epsilon_ratio_xy_z": 1.1084
+        },
+        {
+          "orientation": "ZB(110)",
+          "theta_deg": 28,
+          "Delta_eV": -0.2,
+          "epsilon_ratio_xy_z": 1.0538
+        },
+        {
+          "orientation": "CUB(100)",
+          "theta_deg": 12,
+          "Delta_eV": -0.4,
+          "epsilon_ratio_xy_z": 1.0846
+        },
+        {
+          "orientation": "h-BN(0001)",
+          "theta_deg": 0,
+          "Delta_eV": -0.6,
+          "epsilon_ratio_xy_z": 1.1076
+        },
+        {
+          "orientation": "WUR(0001)",
+          "theta_deg": 0,
+          "Delta_eV": 0.0,
+          "epsilon_ratio_xy_z": 1.063
+        }
+      ],
+      "tolerances": {
+        "theta_deg": {
+          "abs": 1.0
+        },
+        "Delta_eV": {
+          "abs": 0.1
+        },
+        "epsilon_ratio_xy_z": {
+          "abs": 0.05
+        }
+      },
+      "fields": [
+        "theta_deg",
+        "Delta_eV",
+        "epsilon_ratio_xy_z"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recompute from raw artifacts is infeasible because the checker cannot rerun DFT relaxation. Symmetric tolerance on each reported value measures reproduction accuracy.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "relaxed_geometry.json": "exact_match",
+    "energy_differences.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold numeric values for structural parameters and energy differences",
+      "source_provenance": "Paper text: Bi-Bi 3.07 Å, Bi-As 2.73 Å, vertical Bi-As 2.68 Å, As-rest displacement 0.35 Å, Ga-As compression 0.03 Å; T4 vs H3 0.12 eV/trimer, c4x2 vs 2x2 0.06 eV/trimer.",
+      "generation_method": "Extracted directly from the paper's reported equilibrium geometry and total-energy comparison.",
+      "why_not_fabricated": "These values are the authoritative paper-reported results for the main claim."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "relaxed_geometry.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "d_BiBi": "float (Å)",
+            "d_BiAs": "float (Å)",
+            "dz_BiAs": "float (Å)",
+            "dz_As_rest": "float (Å)",
+            "delta_GaAs": "float (Å)"
+          }
+        },
+        "description": "Five structural parameters of the relaxed c(4×2) surface: Bi-Bi bond length, Bi-As bond length, vertical Bi-As separation, As rest atom upward displacement, and Ga-As bond compression beneath Bi trimers."
+      },
+      {
+        "file": "energy_differences.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "T4_vs_H3_diff_eV_per_trimer": "float (eV)",
+            "c4x2_vs_2x2_diff_eV_per_trimer": "float (eV)"
+          }
+        },
+        "description": "Two energy differences: (a) T4 vs H3 adsorption site preference per trimer, and (b) c(4×2) vs (2×2) reconstruction stability per trimer."
+      }
+    ],
+    "notes": "Removed the extraneous band_gap_eV field to align with the hidden checker that does not score it."
+  },
+  "steps": [
+    {
+      "id": "geometry",
+      "output_file": "relaxed_geometry.json",
+      "kind": "numeric_compare",
+      "weight": 0.5,
+      "fields": [
+        {
+          "field": "d_BiBi",
+          "gold": 3.07,
+          "tolerance": 0.02
+        },
+        {
+          "field": "d_BiAs",
+          "gold": 2.73,
+          "tolerance": 0.02
+        },
+        {
+          "field": "dz_BiAs",
+          "gold": 2.68,
+          "tolerance": 0.02
+        },
+        {
+          "field": "dz_As_rest",
+          "gold": 0.35,
+          "tolerance": 0.02
+        },
+        {
+          "field": "delta_GaAs",
+          "gold": 0.03,
+          "tolerance": 0.02
+        }
+      ]
+    },
+    {
+      "id": "energy",
+      "output_file": "energy_differences.json",
+      "kind": "numeric_compare",
+      "weight": 0.5,
+      "fields": [
+        {
+          "field": "T4_vs_H3_diff_eV_per_trimer",
+          "gold": 0.12,
+          "tolerance": 0.02
+        },
+        {
+          "field": "c4x2_vs_2x2_diff_eV_per_trimer",
+          "gold": 0.06,
+          "tolerance": 0.02
+        }
+      ]
+    }
+  ]
+}

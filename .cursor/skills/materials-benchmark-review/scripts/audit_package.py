@@ -924,6 +924,7 @@ def checker_contract_analysis(
         "dynamic_checks_required": [
             {
                 "check": name,
+                "lane": "quality_results",
                 "status": "REQUIRED_NOT_RUN",
                 "reason": "static analysis cannot prove runtime behavior",
             }

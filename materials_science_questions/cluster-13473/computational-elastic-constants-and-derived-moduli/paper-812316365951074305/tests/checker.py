@@ -1,25 +1,19 @@
 import os
 import json
 import csv
-
-# === author imports / helpers ===
-import csv
 import numpy as np
 from math import sqrt, pi
 
-def stiffness_from_e_g(E, G):
-    nu = E/(2*G) - 1
-    K = E/(3*(1-2*nu))
-    C11 = K + 4*G/3
-    C12 = K - 2*G/3
-    C44 = G
-    return C11, C12, C44, nu
+# === Reference table for Step 1 (MD elastic constants) ===
+REFERENCE_SYSTEMS = {
+    "silica":                   {"E": 88.7, "G": 41.0},
+    "polyimide":                {"E": 4.2,  "G": 1.5},
+    "silica_composite":         {"E": 3.4,  "G": 1.2},
+    "hydroxylated_composite":   {"E": 3.3,  "G": 1.2},
+    "phenoxybenzene_composite": {"E": 2.2,  "G": 0.8},
+    "functionalized_composite": {"E": 4.0,  "G": 1.5},
+}
 
-def eshelby_sphere(nu):
-    S1111 = (7-5*nu)/(15*(1-nu))
-    S1122 = (5*nu-1)/(15*(1-nu))
-    S2323 = (4-5*nu)/(15*(1-nu))
-    return S1111, S1122, S2323
 
 def stiffness_voigt_from_iso(E, nu):
     G = E/(2*(1+nu))
@@ -33,8 +27,35 @@ def stiffness_voigt_from_iso(E, nu):
     C[3,3]=C[4,4]=C[5,5]=C44
     return C
 
+def eshelby_sphere(nu):
+    S1111 = (7-5*nu)/(15*(1-nu))
+    S1122 = (5*nu-1)/(15*(1-nu))
+    S2323 = (4-5*nu)/(15*(1-nu))
+    return S1111, S1122, S2323
+
+def mori_tanaka_two_phase(E_m, G_m, E_p, G_p, c_p):
+    nu_m = E_m/(2*G_m)-1
+    nu_p = E_p/(2*G_p)-1
+    C_m = stiffness_voigt_from_iso(E_m, nu_m)
+    C_p = stiffness_voigt_from_iso(E_p, nu_p)
+    I = np.eye(6)
+    S1111, S1122, S2323 = eshelby_sphere(nu_m)
+    S = np.zeros((6,6))
+    S[0,0]=S[1,1]=S[2,2]=S1111
+    S[0,1]=S[0,2]=S[1,0]=S[1,2]=S[2,0]=S[2,1]=S1122
+    S[3,3]=S[4,4]=S[5,5]=S2323
+    C_m_inv = np.linalg.inv(C_m)
+    T_p = np.linalg.inv(I + S @ C_m_inv @ (C_p - C_m))
+    c_m = 1 - c_p
+    C_eff = (c_m*C_m + c_p*C_p@T_p) @ np.linalg.inv(c_m*I + c_p*T_p)
+    C11 = C_eff[0,0]
+    C12 = C_eff[0,1]
+    G_eff = C_eff[3,3]
+    K_eff = (C11 + 2*C12)/3
+    E_eff = 9*K_eff*G_eff/(3*K_eff + G_eff)
+    return E_eff, G_eff
+
 def composite_moduli_effective_interface(r_p, t, vf_p_given, E_p, G_p, E_m, G_m, E_i, G_i, nu_i):
-    # volume fractions
     V_p = 4.0/3.0 * np.pi * r_p**3
     V_total = V_p / vf_p_given
     r_outer = r_p + t
@@ -44,38 +65,33 @@ def composite_moduli_effective_interface(r_p, t, vf_p_given, E_p, G_p, E_m, G_m,
     vf_m = 1 - vf_p - vf_i
     if vf_m < 0:
         vf_m = 0
-    # stiffness matrices
-    C_p = stiffness_voigt_from_iso(E_p, (E_p/(2*G_p)-1))
-    C_m = stiffness_voigt_from_iso(E_m, (E_m/(2*G_m)-1))
     nu_m = E_m/(2*G_m)-1
+    C_p = stiffness_voigt_from_iso(E_p, E_p/(2*G_p)-1)
+    C_m = stiffness_voigt_from_iso(E_m, nu_m)
+    C_i = stiffness_voigt_from_iso(E_i, nu_i)
+    I = np.eye(6)
     S1111, S1122, S2323 = eshelby_sphere(nu_m)
     S = np.zeros((6,6))
     S[0,0]=S[1,1]=S[2,2]=S1111
     S[0,1]=S[0,2]=S[1,0]=S[1,2]=S[2,0]=S[2,1]=S1122
     S[3,3]=S[4,4]=S[5,5]=S2323
-    # Eshelby tensor for spherical inclusion
-    I_mat = np.eye(6)
     C_m_inv = np.linalg.inv(C_m)
-    # T^p
-    T_p = np.linalg.inv(I_mat + S @ C_m_inv @ (C_p - C_m))
-    # interface stiffness
-    C_i = stiffness_voigt_from_iso(E_i, nu_i)
-    # c^p + c^i
+    T_p = np.linalg.inv(I + S @ C_m_inv @ (C_p - C_m))
+    # T_pi computing
     cp_ci = vf_p + vf_i
-    # term1: S + (C_i - C_m)^-1 C_m
     try:
         C_i_minus_Cm_inv = np.linalg.inv(C_i - C_m)
     except np.linalg.LinAlgError:
         return 0.0, 0.0
     term_i = np.linalg.inv(S + C_i_minus_Cm_inv @ C_m)
-    # term_p: S + (C_p - C_m)^-1 C_m
-    C_p_minus_Cm_inv = np.linalg.inv(C_p - C_m)
+    try:
+        C_p_minus_Cm_inv = np.linalg.inv(C_p - C_m)
+    except np.linalg.LinAlgError:
+        return 0.0, 0.0
     term_p = np.linalg.inv(S + C_p_minus_Cm_inv @ C_m)
-    # T^pi
-    T_pi = I_mat - S @ ( (vf_p/cp_ci)*term_p + (vf_i/cp_ci)*term_i )
+    T_pi = I - S @ ( (vf_p/cp_ci)*term_p + (vf_i/cp_ci)*term_i )
     # composite stiffness
-    C_comp = C_m + ( cp_ci * (C_i - C_m) @ T_pi + vf_p * (C_p - C_i) @ T_p ) @ np.linalg.inv( vf_m * I_mat + cp_ci * T_pi )
-    # extract isotropic moduli
+    C_comp = C_m + ( cp_ci * (C_i - C_m) @ T_pi + vf_p * (C_p - C_i) @ T_p ) @ np.linalg.inv( vf_m * I + cp_ci * T_pi )
     C11 = C_comp[0,0]
     C12 = C_comp[0,1]
     G_c = C_comp[3,3]
@@ -84,12 +100,11 @@ def composite_moduli_effective_interface(r_p, t, vf_p_given, E_p, G_p, E_m, G_m,
     return E_c, G_c
 
 
+# ====== contract gate (unchanged) ======
 import os as _ff_os
 import json as _ff_json
 
-
 def _ff_validate_output_contract():
-    """Return a list of shape violations against grading_spec['output_contract']."""
     spec_path = "/tests/grading_spec.json"
     if not _ff_os.path.exists(spec_path):
         return []
@@ -112,7 +127,7 @@ def _ff_validate_output_contract():
         if fmt == "json":
             try:
                 data = _ff_json.load(open(path))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 violations.append(base + ": invalid JSON (" + str(exc) + ")")
                 continue
             required = schema.get("required", {})
@@ -129,7 +144,7 @@ def _ff_validate_output_contract():
                     cols = set((_ff_csv.reader(_f, delimiter=delim).__next__() or []))
             except StopIteration:
                 cols = set()
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 violations.append(base + ": cannot read table (" + str(exc) + ")")
                 continue
             required_cols = schema.get("required_columns", []) or []
@@ -139,9 +154,7 @@ def _ff_validate_output_contract():
                     violations.append(base + ": missing table column '" + str(name) + "'")
     return violations
 
-
 def _ff_contract_gate():
-    """Zero the reward and exit if the submission violates the output_contract shape."""
     violations = _ff_validate_output_contract()
     if not violations:
         return
@@ -160,7 +173,7 @@ def load_artifact(path):
         try:
             with open(path) as f:
                 return json.load(f)
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
     if path.endswith(".csv") or path.endswith(".tsv"):
         delim = "\t" if path.endswith(".tsv") else ","
@@ -171,137 +184,167 @@ def load_artifact(path):
 
 
 def prepare(outputs_dir, spec):
-    return {"gold": spec.get("gold", {})}
+    # no gold needed
+    return {}
 
 
-# === block: score_0 (check id='step2_elastic_constants') ===
+# === block: score_0 (step2_elastic_constants) ===
 def score_0(artifact, step, ctx):
     rows = artifact
-    gold_data = ctx["gold"]["systems"]
     if len(rows) != 6:
         return 0.0
-    tolerance = 0.20
+    tolerance = 1e-4   # essentially exact match
     correct = 0
     for row in rows:
         sys = row["system"].strip()
-        if sys in gold_data:
+        if sys in REFERENCE_SYSTEMS:
             try:
                 E = float(row["E"])
                 G = float(row["G"])
             except:
                 continue
-            gold_E = gold_data[sys]["E"]
-            gold_G = gold_data[sys]["G"]
-            if abs(E - gold_E) / gold_E <= tolerance and abs(G - gold_G) / gold_G <= tolerance:
+            ref_E = REFERENCE_SYSTEMS[sys]["E"]
+            ref_G = REFERENCE_SYSTEMS[sys]["G"]
+            if abs(E - ref_E) <= tolerance and abs(G - ref_G) <= tolerance:
                 correct += 1
     return correct / 6.0
 
 
-# === block: score_1 (check id='step3_mori_tanaka_rve') ===
+# === block: score_1 (step3_mori_tanaka_rve) ===
 def score_1(artifact, step, ctx):
     rows = artifact
-    gold_data = ctx["gold"]["mori_tanaka_rve"]
     if len(rows) != 4:
         return 0.0
-    tolerance = 0.10
-    correct = 0
-    for row in rows:
-        comp = row["composite"].strip()
-        if comp in gold_data:
-            try:
-                E = float(row["E_MT"])
-                G = float(row["G_MT"])
-            except:
-                continue
-            gold_E = gold_data[comp]["E"]
-            gold_G = gold_data[comp]["G"]
-            if abs(E - gold_E) / gold_E <= tolerance and abs(G - gold_G) / gold_G <= tolerance:
-                correct += 1
-    return correct / 4.0
-
-
-# === block: score_2 (check id='step4_effective_interface') ===
-def score_2(artifact, step, ctx):
-    rows = artifact
-    gold_data = ctx["gold"]["interface"]
-    if len(rows) != 4:
+    # load pure moduli from the agent's elastic_constants
+    elastic_path = "/app/outputs/elastic_constants_systems.csv"
+    if not os.path.exists(elastic_path):
         return 0.0
-    tolerance = 0.30
-    correct = 0
-    for row in rows:
-        comp = row["composite_type"].strip()
-        if comp in gold_data:
-            try:
-                E = float(row["E_interface"])
-                G = float(row["G_interface"])
-            except:
-                continue
-            gold_E = gold_data[comp]["E"]
-            gold_G = gold_data[comp]["G"]
-            if abs(E - gold_E) / gold_E <= tolerance and abs(G - gold_G) / gold_G <= tolerance:
-                correct += 1
-    return correct / 4.0
-
-
-# === block: score_3 (check id='step5_moduli_vs_radius') ===
-def score_3(artifact, step, ctx):
-    # score width_weight
-    # Extract raw data from other artifacts? We need elastic_constants and interface from previous outputs. 
-    # We will load those files from /app/outputs. The checker has access to output_dir.
-    # However, our scorer only receives the artifact of this step. We'll have to load the other CSVs manually.
-    # We can use artifact parameter but also access the files via context or by reading from outputs_dir, but prepare does not receive path. 
-    # The main checker may provide context with artifacts loaded? In the given pattern, the scorer is passed artifact and step and ctx. But ctx is the prepared data from grading_spec only. 
-    # So we need to load the other CSVs from /app/outputs inside the scorer. That's fine.
-    import os, csv
-    output_dir = "/app/outputs"
-    elastic_path = os.path.join(output_dir, "elastic_constants_systems.csv")
-    interface_path = os.path.join(output_dir, "effective_interface_properties.csv")
-
-    # load pure phase moduli
-    def load_pure_moduli(path):
-        data = {}
-        if not os.path.exists(path):
-            return data
-        with open(path, newline='') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                data[row["system"].strip()] = {"E": float(row["E"]), "G": float(row["G"])}
-        return data
-
-    def load_interface(path):
-        data = {}
-        if not os.path.exists(path):
-            return data
-        with open(path, newline='') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                data[row["composite_type"].strip()] = {"E": float(row["E_interface"]), "G": float(row["G_interface"])}
-        return data
-
-    pure = load_pure_moduli(elastic_path)
+    with open(elastic_path, newline='') as f:
+        elastic_rows = list(csv.DictReader(f))
+    pure = {}
+    for r in elastic_rows:
+        pure[r["system"].strip()] = {"E": float(r["E"]), "G": float(r["G"])}
     if "silica" not in pure or "polyimide" not in pure:
         return 0.0
     E_s = pure["silica"]["E"]
     G_s = pure["silica"]["G"]
     E_m = pure["polyimide"]["E"]
     G_m = pure["polyimide"]["G"]
-    nu_m = E_m/(2*G_m)-1
-    interface = load_interface(interface_path)
+    c_p = 0.017
+    # Compute expected Mori-Tanaka
+    E_exp, G_exp = mori_tanaka_two_phase(E_m, G_m, E_s, G_s, c_p)
+    # Compare each composite row (they are all the same MT prediction)
+    tolerance = 0.01  # 1%
+    correct = 0
+    for row in rows:
+        try:
+            E = float(row["E_MT"])
+            G = float(row["G_MT"])
+        except:
+            continue
+        if abs(E - E_exp)/E_exp <= tolerance and abs(G - G_exp)/G_exp <= tolerance:
+            correct += 1
+    return correct / 4.0
 
+
+# === block: score_2 (step4_effective_interface) ===
+def score_2(artifact, step, ctx):
     rows = artifact
+    if len(rows) != 4:
+        return 0.0
+    # load composite MD moduli from agent
+    elastic_path = "/app/outputs/elastic_constants_systems.csv"
+    if not os.path.exists(elastic_path):
+        return 0.0
+    with open(elastic_path, newline='') as f:
+        elastic_rows = list(csv.DictReader(f))
+    pure = {}
+    comp = {}
+    for r in elastic_rows:
+        sys = r["system"].strip()
+        e = float(r["E"])
+        g = float(r["G"])
+        if sys == "silica":
+            pure["silica"] = {"E": e, "G": g}
+        elif sys == "polyimide":
+            pure["polyimide"] = {"E": e, "G": g}
+        else:
+            comp[sys] = {"E": e, "G": g}
+    if "silica" not in pure or "polyimide" not in pure:
+        return 0.0
+    E_s = pure["silica"]["E"]
+    G_s = pure["silica"]["G"]
+    E_m = pure["polyimide"]["E"]
+    G_m = pure["polyimide"]["G"]
     composites = ["silica_composite", "hydroxylated_composite", "phenoxybenzene_composite", "functionalized_composite"]
-    # separate rows by model_type
+    tolerance = 0.01
+    correct = 0
+    for row in rows:
+        ctype = row["composite_type"].strip()
+        if ctype not in composites or ctype not in comp:
+            continue
+        try:
+            Ei = float(row["E_interface"])
+            Gi = float(row["G_interface"])
+        except:
+            continue
+        target_E = comp[ctype]["E"]
+        target_G = comp[ctype]["G"]
+        nu_i = 0.4
+        rp = 6.0
+        t = 12.0
+        vf = 0.017
+        E_pred, G_pred = composite_moduli_effective_interface(rp, t, vf, E_s, G_s, E_m, G_m, Ei, Gi, nu_i)
+        if E_pred <= 0 or G_pred <= 0:
+            continue
+        err_E = abs(E_pred - target_E)/target_E
+        err_G = abs(G_pred - target_G)/target_G
+        if err_E <= tolerance and err_G <= tolerance:
+            correct += 1
+    return correct / 4.0
+
+
+# === block: score_3 (step5_moduli_vs_radius) ===
+def score_3(artifact, step, ctx):
+    rows = artifact
+    # load pure & interface from agent
+    elastic_path = "/app/outputs/elastic_constants_systems.csv"
+    interface_path = "/app/outputs/effective_interface_properties.csv"
+    if not os.path.exists(elastic_path) or not os.path.exists(interface_path):
+        return 0.0
+
+    with open(elastic_path, newline='') as f:
+        elastic_rows = list(csv.DictReader(f))
+    pure = {"silica": None, "polyimide": None}
+    for r in elastic_rows:
+        sys = r["system"].strip()
+        if sys in pure:
+            pure[sys] = {"E": float(r["E"]), "G": float(r["G"])}
+    if pure["silica"] is None or pure["polyimide"] is None:
+        return 0.0
+    E_s = pure["silica"]["E"]
+    G_s = pure["silica"]["G"]
+    E_m = pure["polyimide"]["E"]
+    G_m = pure["polyimide"]["G"]
+
+    with open(interface_path, newline='') as f:
+        int_rows = list(csv.DictReader(f))
+    interfaces = {}
+    for r in int_rows:
+        interfaces[r["composite_type"].strip()] = {"E": float(r["E_interface"]), "G": float(r["G_interface"])}
+
+    composites = ["silica_composite", "hydroxylated_composite", "phenoxybenzene_composite", "functionalized_composite"]
     ei_rows = [r for r in rows if r["model_type"].strip() == "Effective-Interface"]
     mt_rows = [r for r in rows if r["model_type"].strip() == "Mori-Tanaka"]
 
-    # internal consistency: recompute EI moduli from interface properties
+    # 1) EI internal consistency
     score_consistency = 0.0
     if ei_rows:
         total_points = 0
         consistent_points = 0
         for r in ei_rows:
             comp = r["composite_type"].strip()
-            if comp not in composites or comp not in interface:
+            if comp not in composites or comp not in interfaces:
                 continue
             try:
                 radius = float(r["radius_A"])
@@ -309,8 +352,8 @@ def score_3(artifact, step, ctx):
                 G_sub = float(r["G"])
             except:
                 continue
-            Ei = interface[comp]["E"]
-            Gi = interface[comp]["G"]
+            Ei = interfaces[comp]["E"]
+            Gi = interfaces[comp]["G"]
             nu_i = 0.4
             t = 12.0
             vf_p = 0.05
@@ -325,54 +368,29 @@ def score_3(artifact, step, ctx):
         if total_points > 0:
             score_consistency = consistent_points / total_points
 
-    # gold curve comparison
-    gold_curves = ctx["gold"]["radius_curves"]
-    gold_radii = gold_curves["radii_A"]
-    curves_gold = gold_curves["curves"]
-    tol_curve = 0.20
-    score_gold = 0.0
-    if ei_rows:
-        matched = 0
-        total = 0
-        for comp in composites:
-            if comp not in curves_gold:
+    # 2) MT correctness
+    score_mt = 0.0
+    if mt_rows:
+        c_p = 0.05
+        E_mt_exp, G_mt_exp = mori_tanaka_two_phase(E_m, G_m, E_s, G_s, c_p)
+        total_mt = 0
+        ok_mt = 0
+        for r in mt_rows:
+            try:
+                Emt = float(r["E"])
+                Gmt = float(r["G"])
+            except:
                 continue
-            gdata = curves_gold[comp]
-            for i, gr in enumerate(gold_radii):
-                # find nearest radius in submitted rows for this composite
-                comp_rows = [r for r in ei_rows if r["composite_type"].strip() == comp]
-                if not comp_rows:
-                    continue
-                try:
-                    comp_radii = [float(r["radius_A"]) for r in comp_rows]
-                except:
-                    continue
-                # find closest
-                diffs = [abs(r - gr) for r in comp_radii]
-                if min(diffs) > 1.0:
-                    continue
-                idx = diffs.index(min(diffs))
-                try:
-                    E_val = float(comp_rows[idx]["E"])
-                    G_val = float(comp_rows[idx]["G"])
-                except:
-                    continue
-                gold_E = gdata["E"][i]
-                gold_G = gdata["G"][i]
-                if abs(E_val - gold_E) / gold_E <= tol_curve and abs(G_val - gold_G) / gold_G <= tol_curve:
-                    matched += 1
-                total += 1
-        if total > 0:
-            score_gold = matched / total
+            if abs(Emt - E_mt_exp)/E_mt_exp <= 0.02 and abs(Gmt - G_mt_exp)/G_mt_exp <= 0.02:
+                ok_mt += 1
+            total_mt += 1
+        if total_mt > 0:
+            score_mt = ok_mt / total_mt
 
-    # convergence to Mori-Tanaka at large radii
+    # 3) Convergence at large radii (EI vs MT)
     conv_points = 0
     conv_ok = 0
     if ei_rows and mt_rows:
-        # compute expected MT moduli for 5% Vf using pure phase constants
-        # (same as we'd get from Mori-Tanaka model; we can compute using same function but without interface)
-        # We'll compute using the Mori-Tanaka formula directly.
-        # For simplicity, compare each composite's EI modulus at radius 1000 and 5000 with the MT row
         for comp in composites:
             mt_comp_rows = [r for r in mt_rows if r["composite_type"].strip() == comp]
             if not mt_comp_rows:
@@ -382,24 +400,27 @@ def score_3(artifact, step, ctx):
                 mt_G = float(mt_comp_rows[0]["G"])
             except:
                 continue
-            # get EI rows for this comp
             ei_comp = [r for r in ei_rows if r["composite_type"].strip() == comp]
+            if not ei_comp:
+                continue
             for target_radius in [1000, 5000]:
-                # find nearest
                 radii = [float(r["radius_A"]) for r in ei_comp]
                 diffs = [abs(r - target_radius) for r in radii]
-                if min(diffs) > 500: # within 500
+                if min(diffs) > 500:
                     continue
-                idx = diffs.index(min(diffs))
-                E_val = float(ei_comp[idx]["E"])
-                G_val = float(ei_comp[idx]["G"])
+                idx = np.argmin(diffs)
+                try:
+                    E_val = float(ei_comp[idx]["E"])
+                    G_val = float(ei_comp[idx]["G"])
+                except:
+                    continue
                 if mt_E > 0:
-                    if abs(E_val - mt_E) / mt_E <= 0.05 and abs(G_val - mt_G) / mt_G <= 0.05:
+                    if abs(E_val - mt_E)/mt_E <= 0.05 and abs(G_val - mt_G)/mt_G <= 0.05:
                         conv_ok += 1
                     conv_points += 1
     score_convergence = conv_ok / conv_points if conv_points > 0 else 0.0
 
-    # monotonic increase check
+    # 4) Monotonic increase
     monotonic_points = 0
     monotonic_violations = 0
     if ei_rows:
@@ -424,31 +445,25 @@ def score_3(artifact, step, ctx):
                 prev_G = G
     score_monotonic = 1.0 - (monotonic_violations / monotonic_points) if monotonic_points > 0 else 0.0
 
-    # ordering among composites at the highest radius
+    # 5) Ordering among composites at the largest common radius
     ordering_score = 0.0
     if ei_rows:
-        # at maximum common radius, check functionalized > silica_composite >= hydroxylated > phenoxybenzene
-        # pick the largest radius common to all composites
-        max_radius = 0
         radii_by_comp = {}
         for comp in composites:
             comp_rows = [r for r in ei_rows if r["composite_type"].strip() == comp]
             if not comp_rows:
                 continue
             radii = [float(r["radius_A"]) for r in comp_rows]
-            max_r = max(radii)
-            radii_by_comp[comp] = max_r
+            radii_by_comp[comp] = max(radii)
         if len(radii_by_comp) == 4:
-            # use minimum max_radius to have common
             common_r = min(radii_by_comp.values())
             vals = {}
             for comp in composites:
                 comp_rows = [r for r in ei_rows if r["composite_type"].strip() == comp]
-                # find row with radius closest to common_r
                 radii = [float(r["radius_A"]) for r in comp_rows]
-                idx = min(range(len(radii)), key=lambda i: abs(radii[i]-common_r))
+                idx = np.argmin([abs(r - common_r) for r in radii])
                 vals[comp] = {"E": float(comp_rows[idx]["E"]), "G": float(comp_rows[idx]["G"])}
-            # check ordering
+            # expected order: functionalized >= silica_composite >= hydroxylated >= phenoxybenzene
             ok = 0
             total = 0
             if vals["functionalized_composite"]["E"] >= vals["silica_composite"]["E"] >= vals["hydroxylated_composite"]["E"] >= vals["phenoxybenzene_composite"]["E"]:
@@ -459,8 +474,8 @@ def score_3(artifact, step, ctx):
             total += 1
             ordering_score = ok / total if total > 0 else 0.0
 
-    # combine sub-scores with weights
-    final_score = 0.5 * score_consistency + 0.3 * score_gold + 0.1 * score_convergence + 0.05 * score_monotonic + 0.05 * ordering_score
+    # Combine sub-scores (weights reflect importance)
+    final_score = 0.5 * score_consistency + 0.2 * score_mt + 0.15 * score_convergence + 0.1 * score_monotonic + 0.05 * ordering_score
     return min(max(final_score, 0.0), 1.0)
 
 
@@ -502,7 +517,7 @@ def main():
         else:
             try:
                 score = float(fn(artifact, step, ctx))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 score = 0.0
                 breakdown.setdefault("_errors", {})[sid] = repr(exc)
         score = max(0.0, min(1.0, score))

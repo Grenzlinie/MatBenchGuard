@@ -1,0 +1,90 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Re-inline computation of effective constants from raw stiffness tensor and direct component comparison; all quantities directly verifiable against paper gold.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "stiffness_matrix.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "C11": "float",
+            "C22": "float",
+            "C33": "float",
+            "C12": "float",
+            "C13": "float",
+            "C23": "float",
+            "C44": "float",
+            "C55": "float",
+            "C66": "float"
+          }
+        },
+        "description": "The 6x6 effective stiffness tensor in Voigt notation. Each of the nine independent components is a floating-point number in GPa."
+      },
+      {
+        "file": "effective_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "E": "float",
+            "G": "float",
+            "nu": "float"
+          }
+        },
+        "description": "Effective isotropic elastic constants: Young's modulus E (GPa), shear modulus G (GPa), and Poisson's ratio ν (dimensionless)."
+      }
+    ],
+    "notes": "The checker compares the stiffness matrix components and derived isotropic constants against hidden gold values from the paper using relative tolerances (hidden). The agent must implement the full homogenization procedure; the stiffness matrix step is load-bearing to ensure the computation was performed."
+  },
+  "steps": [
+    {
+      "id": "stiffness_matrix",
+      "output_file": "stiffness_matrix.json",
+      "weight": 0.5,
+      "description": "Validate stiffness matrix components against paper gold with 5% relative tolerance.",
+      "kind": "rubric",
+      "gold": {
+        "C11": 81.4226,
+        "C22": 81.3415,
+        "C33": 81.4071,
+        "C12": 41.919,
+        "C13": 41.9349,
+        "C23": 41.9196,
+        "C44": 19.7113,
+        "C55": 19.7368,
+        "C66": 19.7123
+      },
+      "relative_tolerance": 0.05
+    },
+    {
+      "id": "effective_constants",
+      "output_file": "effective_constants.json",
+      "weight": 0.5,
+      "description": "Recompute effective isotropic constants (E, G, nu) from stiffness matrix and compare to paper gold.",
+      "kind": "rubric",
+      "gold": {
+        "E": 52.85,
+        "G": 19.72,
+        "nu": 0.3401
+      },
+      "relative_tolerance_E_G": 0.05,
+      "absolute_tolerance_nu": 0.02
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference stiffness matrix and effective constants from the paper.",
+      "source_provenance": "Paper Table 3 and the printed stiffness matrix in Section 4.",
+      "generation_method": "extracted directly from the paper text",
+      "why_not_fabricated": "the values are the exact numbers reported in the paper for the same composite system and method."
+    }
+  ]
+}

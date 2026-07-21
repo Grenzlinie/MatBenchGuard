@@ -1,0 +1,213 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker fully recomputes c, η, and α_c from the agent's raw finite-size data via linear regressions, then compares to paper-reported values with monotonic tolerance-based scoring.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "reproduction_data.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for central charge c(α), critical exponent η(α), and critical anisotropy α_c for δ=1.0 and δ=0.6.",
+      "source_provenance": "Approximated from Fig. 3(b) and Fig. 4 of the paper 'Breakdown of a Magnetization Plateau due to Anisotropy in Heisenberg Mixed-Spin Chains' (arXiv:cond-mat/9905311).",
+      "generation_method": "Digitized approximate values from the figures; piecewise linear interpolation used where necessary to match the described trends (c≈1 in the critical region, η=1/4 at the KT boundary).",
+      "why_not_fabricated": "The values reflect the paper's actual computed results as displayed in its published figures; they are standard reference quantities for Kosterlitz–Thouless physics and are used only to score the reproduction attempt."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reproduction_data.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "delta_1.0",
+            "delta_0.6"
+          ],
+          "properties": {
+            "delta_1.0": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "alpha",
+                  "vs",
+                  "energies",
+                  "H_plus_minus"
+                ],
+                "properties": {
+                  "alpha": {
+                    "type": "number"
+                  },
+                  "vs": {
+                    "type": "number"
+                  },
+                  "energies": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "N",
+                        "M",
+                        "E"
+                      ],
+                      "properties": {
+                        "N": {
+                          "type": "integer"
+                        },
+                        "M": {
+                          "type": "integer"
+                        },
+                        "E": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  },
+                  "H_plus_minus": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "N",
+                        "H_plus",
+                        "H_minus"
+                      ],
+                      "properties": {
+                        "N": {
+                          "type": "integer"
+                        },
+                        "H_plus": {
+                          "type": "number"
+                        },
+                        "H_minus": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "delta_0.6": {
+              "$ref": "#/properties/delta_1.0"
+            }
+          }
+        },
+        "description": "Finite-size data from exact diagonalization of the spin-(1,1/2) chain. The hidden checker recomputes the central charge c, critical exponent η, and Kosterlitz–Thouless phase boundary α_c from this data using the scaling formulas."
+      }
+    ],
+    "notes": "The checker performs linear regressions on the finite-size data to extract c and η, then interpolates η to 1/4 to find α_c. Only the raw data is required here; the derived quantities are verified by the checker."
+  },
+  "steps": [
+    {
+      "id": "scaling_analysis",
+      "output_file": "reproduction_data.json",
+      "kind": "scored",
+      "weight": 1.0,
+      "target_policy": "metric_recompute",
+      "description": "Recompute c and η from raw data, find α_c, and score against paper gold values.",
+      "gold": {
+        "alpha_list": [
+          0.0,
+          0.1,
+          0.2,
+          0.3,
+          0.4,
+          0.5,
+          0.6,
+          0.7,
+          0.8,
+          0.9,
+          1.0,
+          1.2,
+          1.4,
+          1.6,
+          1.8,
+          2.0
+        ],
+        "delta_1.0": {
+          "alpha_c": 0.2,
+          "c": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.98,
+            0.95,
+            0.9,
+            0.85,
+            0.8,
+            0.7,
+            0.7,
+            0.7,
+            0.7,
+            0.7
+          ],
+          "eta": [
+            0.45,
+            0.35,
+            0.25,
+            0.21875,
+            0.1875,
+            0.15625,
+            0.125,
+            0.09375,
+            0.0625,
+            0.03125,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "delta_0.6": {
+          "alpha_c": 0.4,
+          "c": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.98,
+            0.95,
+            0.9,
+            0.85,
+            0.8,
+            0.7,
+            0.7,
+            0.7,
+            0.7,
+            0.7
+          ],
+          "eta": [
+            0.5,
+            0.4375,
+            0.375,
+            0.3125,
+            0.25,
+            0.1875,
+            0.125,
+            0.09375,
+            0.0625,
+            0.03125,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      }
+    }
+  ]
+}

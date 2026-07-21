@@ -1,0 +1,28 @@
+[
+  {
+    "id": "st_simulation",
+    "title": "Star-triangle simulation and correlation length calculation",
+    "role": "process",
+    "action": "Implement the star-triangle iterative method for the 2D random Ising model on a diagonal strip of odd width L (L = 5, 7, 9, 11, 13, 15, 17, 19, 21) and length K ≥ 1024, with random ferromagnetic bonds (taking values J1, J2 with equal probability) at the self-dual critical point defined by tanh(J1/kBT) = exp(-2J2/kBT). For each (L, dilution ratio ρ = J1/J2 = 2, 4, optionally 1, 10), generate at least 10^4 independent disorder realizations. For each sample, apply successive ST transformations until convergence (approximately L² iterations) to obtain asymptotic surface couplings. Then compute the inverse surface correlation length 1/ξ_L using the product formula over a separation r = K/2 of neighbouring surface spins. Record per-sample ξ_L values so that disorder-averaged statistics can be computed later. Log progress to a file for evidence.",
+    "output_file": "",
+    "evidence": "simulation_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Runs the main simulation pipeline: generates disorder configurations, applies ST iterations, and collects per-sample inverse correlation lengths. The resulting ξ_L sample set is used in the next step to compute averaged ratios.",
+    "output_schema": ""
+  },
+  {
+    "id": "export_ratios",
+    "title": "Export correlation length ratios for finite-size scaling",
+    "role": "scored",
+    "action": "From the collected per-sample ξ_L values, compute the typical correlation length ξ_L^typ = disorder average of ξ_L, and the average correlation length ξ_L^(1) defined via the disorder average of the correlation function moment (using the first moment of the distribution of 1/ξ_L, i.e., the inverse of the average of 1/ξ_L, compatible with the cumulant expansion up to first order). Then compute the dimensionless ratios: ratio_typ = (π/2) * ξ_L^typ / l and ratio_avg = (π/2) * ξ_L^(1) / l, where l = (L-1)/2. Write a CSV file with columns L, l, rho, xi_typ, xi_avg, ratio_typ, ratio_avg for every combination of L and ρ that was simulated.",
+    "output_file": "step_01_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Table of computed correlation length ratios for different strip widths and dilution parameters. The checker will process this file to verify that the extrapolated ratios converge to the universal value and exhibit the expected finite-size correction patterns (linear O(1/l) for typical, logarithmic O(1/ln l) for average).",
+    "output_schema": "Columns: L (int), l (int), rho (int), xi_typ (float), xi_avg (float), ratio_typ (float), ratio_avg (float). One row per (L,rho)."
+  }
+]

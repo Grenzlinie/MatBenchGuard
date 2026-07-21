@@ -1,0 +1,163 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Direct DFT recomputation infeasible in verifier; compare agent-reported quantities to paper gold with tolerances and structural trend checks.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for all 14 required systems (adsorption energies, band gaps, charge transfers, distances, HOMO/LUMO) from paper Tables 2 and 3",
+      "source_provenance": "paper 812702953231089666, Table 2 (no EF) and Table 3 (EF=1e-2 and 2e-2 a.u.)",
+      "generation_method": "extracted manually from the published paper",
+      "why_not_fabricated": "the gold values are the paper's own reported results, essential for comparison"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "system",
+              "E_ads",
+              "Eg",
+              "delta_Eg_percent",
+              "QT",
+              "HOMO",
+              "LUMO",
+              "d"
+            ],
+            "properties": {
+              "system": {
+                "type": "string"
+              },
+              "E_ads": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "units": "kcal/mol"
+              },
+              "Eg": {
+                "type": "number",
+                "units": "eV"
+              },
+              "delta_Eg_percent": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "QT": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "units": "e"
+              },
+              "HOMO": {
+                "type": "number",
+                "units": "eV"
+              },
+              "LUMO": {
+                "type": "number",
+                "units": "eV"
+              },
+              "d": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "units": "Å"
+              }
+            }
+          },
+          "required_systems": [
+            "coronene",
+            "Al-coronene",
+            "A1_EF0",
+            "T1_EF0",
+            "G1_EF0",
+            "C1_EF0",
+            "A1_EF1e-2",
+            "T1_EF1e-2",
+            "G1_EF1e-2",
+            "C1_EF1e-2",
+            "A1_EF2e-2",
+            "T1_EF2e-2",
+            "G1_EF2e-2",
+            "C1_EF2e-2"
+          ]
+        },
+        "description": "The single scored artifact containing the reproduced adsorption energies, band gaps, charge transfers, HOMO/LUMO energies, and interaction distances for all required systems. The checker compares each numeric field to hidden paper gold values using threshold‑or‑better semantics: meeting or exceeding the reference performance earns full credit, and partial credit decreases only when the result is worse. For E_ads lower (more negative) is better; for Eg lower is better; for |QT| higher is better; for |ΔE_g%| higher is better; trends and ordering are also checked. Missing systems or fields result in zero credit for the corresponding checks."
+      }
+    ],
+    "notes": "The checker verifies that the agent's reported E_ads values become more negative under applied electric fields, that the band gap decreases relative to Al-coronene, and that the relative ordering among nucleobases matches the paper's trends. Tolerances are sized to accommodate toolchain differences (different DFT code but same functional/basis)."
+  },
+  "steps": [
+    {
+      "id": "systems_present",
+      "output_file": "results.json",
+      "kind": "custom",
+      "weight": 0.05,
+      "description": "Verify presence of all 14 required systems with correct keys."
+    },
+    {
+      "id": "E_ads_proximity",
+      "output_file": "results.json",
+      "kind": "custom",
+      "weight": 0.25,
+      "description": "Compare E_ads for 12 complex systems to paper gold; threshold_or_better: more negative is better."
+    },
+    {
+      "id": "Eg_proximity",
+      "output_file": "results.json",
+      "kind": "custom",
+      "weight": 0.15,
+      "description": "Compare Eg for all 14 systems to paper gold; threshold_or_better: lower is better."
+    },
+    {
+      "id": "QT_proximity",
+      "output_file": "results.json",
+      "kind": "custom",
+      "weight": 0.15,
+      "description": "Compare absolute charge transfer |QT| for 12 complex systems to gold; threshold_or_better: higher is better."
+    },
+    {
+      "id": "delta_Eg_percent_proximity",
+      "output_file": "results.json",
+      "kind": "custom",
+      "weight": 0.1,
+      "description": "Compare |ΔE_g%| for 12 complex systems to gold; higher absolute change is better."
+    },
+    {
+      "id": "d_proximity",
+      "output_file": "results.json",
+      "kind": "custom",
+      "weight": 0.1,
+      "description": "Compare interaction distance d for 12 complex systems to gold; closeness within tolerance."
+    },
+    {
+      "id": "homo_lumo_sanity",
+      "output_file": "results.json",
+      "kind": "custom",
+      "weight": 0.1,
+      "description": "Check HOMO < LUMO for all 14 systems."
+    },
+    {
+      "id": "trends",
+      "output_file": "results.json",
+      "kind": "custom",
+      "weight": 0.1,
+      "description": "Verify monotonic trend of E_ads with field strength, relative ordering among nucleobases, and band gap reduction upon adsorption."
+    }
+  ]
+}

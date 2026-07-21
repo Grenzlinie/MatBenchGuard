@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The target f(h) values are reported by the agent; the checker compares them to hidden gold derived from a high-precision reference evaluation of the paper's formula. Recomputing the full integral in the checker is infeasible (it would require implementing the same numerical integration which is the agent's task). Structural monotonicity is also enforced.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "step_01_scaling_function.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold f(h) values for h=0.1, 0.5, 1.0 derived from high-precision evaluation of the paper's universal scaling function formula (19) using sum over n up to 100 and adaptive quadrature with tolerance 1e-10.",
+      "source_provenance": "paper's equation (19) and author's reimplementation",
+      "generation_method": "Independent numerical evaluation of the analytical expression from the paper with truncation at n=100 and integration tolerance 1e-10.",
+      "why_not_fabricated": "Values are computed from the same formula as the paper; they are not fabricated but are the expected result of a correct numerical implementation."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_scaling_function.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "h_values",
+            "f_values"
+          ],
+          "properties": {
+            "h_values": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "f_values": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "description": "The numerical values of the universal scaling function f(h) for h=0.1, 0.5, 1.0."
+      }
+    ],
+    "notes": "The hidden checker compares the reported f_values against a high-precision gold reference derived from independent numerical evaluation of the same formula, with a relative tolerance of approximately 1e-2. The agent must write results in the specified JSON schema."
+  },
+  "steps": [
+    {
+      "id": "scaling_values_numeric",
+      "output_file": "step_01_scaling_function.json",
+      "kind": "numeric",
+      "weight": 0.8,
+      "gold_values": [
+        0.285,
+        0.192,
+        0.135
+      ],
+      "h_expected": [
+        0.1,
+        0.5,
+        1.0
+      ],
+      "tolerance_relative": 0.01,
+      "description": "Check that reported f(h) values are within 1% relative error of the gold reference."
+    },
+    {
+      "id": "scaling_monotonicity",
+      "output_file": "step_01_scaling_function.json",
+      "kind": "structural",
+      "weight": 0.2,
+      "description": "Check that f(h) decreases monotonically with increasing h: f(0.1) > f(0.5) > f(1.0)."
+    }
+  ]
+}

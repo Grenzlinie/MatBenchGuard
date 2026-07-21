@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import csv
 import hashlib
 import json
-import math
 import os
 import shutil
 import subprocess
@@ -44,135 +42,15 @@ def copy_source_package(destination: Path) -> None:
     shutil.copytree(
         SOURCE_PACKAGE,
         destination,
-        ignore=shutil.ignore_patterns("solution"),
-    )
-    (destination / "solution").mkdir()
-
-
-def write_public_valid_dispersion(output_dir: Path) -> None:
-    c11 = 1.68e12
-    c12 = 1.21e12
-    c44 = 0.75e12
-    rho = 8.96
-    a_angstrom = 3.61
-    a_cm = a_angstrom * 1e-8
-    epsilon = c11 - c12 - 2 * c44
-    factor8 = 8.0 / (rho * a_cm * a_cm)
-    factor2 = 2.0 / (rho * a_cm * a_cm)
-
-    def frequency(direction: str, mode: str, k_value: float) -> float:
-        if direction == "100":
-            sin_sq = math.sin(a_angstrom * k_value / (2 * math.sqrt(2))) ** 2
-            bracket = c11 if mode == "L" else c44
-            omega_sq = factor8 * sin_sq * bracket
-        elif direction == "110":
-            sin_sq = math.sin(a_angstrom * k_value / 4) ** 2
-            if mode == "L":
-                bracket = (
-                    2 * c11
-                    - epsilon
-                    - (2 * c11 - c44 - epsilon) * sin_sq
-                )
-            elif mode == "T1":
-                bracket = epsilon + 2 * c44 - (c44 + epsilon) * sin_sq
-            else:
-                bracket = 2 * c44 - (2 * c44 - c11) * sin_sq
-            omega_sq = factor8 * sin_sq * bracket
-        else:
-            sin_sq = math.sin(a_angstrom * k_value / math.sqrt(6)) ** 2
-            bracket = 3 * c11 - 2 * epsilon if mode == "L" else 3 * c44 + epsilon
-            omega_sq = factor2 * sin_sq * bracket
-        return math.sqrt(max(omega_sq, 0.0)) / 1e13
-
-    limits = {
-        "100": math.sqrt(2) * math.pi / a_angstrom,
-        "110": math.sqrt(5) * math.pi / a_angstrom,
-        "111": math.sqrt(3 / 2) * math.pi / a_angstrom,
-    }
-    output_dir.mkdir(parents=True)
-    with (output_dir / "dispersion_curves.csv").open(
-        "w", newline="", encoding="utf-8"
-    ) as handle:
-        writer = csv.DictWriter(
-            handle, fieldnames=["direction", "mode", "k", "frequency"]
-        )
-        writer.writeheader()
-        for direction, k_max in limits.items():
-            for mode in ("L", "T1", "T2"):
-                for index in range(20):
-                    k_value = k_max * index / 19
-                    writer.writerow(
-                        {
-                            "direction": direction,
-                            "mode": mode,
-                            "k": f"{k_value:.12g}",
-                            "frequency": f"{frequency(direction, mode, k_value):.12g}",
-                        }
-                    )
-
-
-def bind_public_fixture(package: Path, output_dir: Path) -> None:
-    package = package.resolve()
-    output_dir = output_dir.resolve()
-    if output_dir == package or output_dir.is_relative_to(package):
-        return
-    if not output_dir.is_dir():
-        return
-    source_roles = (
-        "instruction.md",
-        "tests/checker.py",
-        "tests/grading_spec.json",
-        "tests/test.sh",
-    )
-    source_hashes = {
-        role: "sha256:"
-        + hashlib.sha256((package / role).read_bytes()).hexdigest()
-        for role in source_roles
-        if (package / role).is_file()
-    }
-    specification = json.loads(
-        (package / "tests/grading_spec.json").read_text(encoding="utf-8")
-    )
-    output_contract = specification.get("output_contract", {})
-    if not isinstance(output_contract, dict):
-        return
-    output_names = {
-        str(item.get("file", "")).replace("\\", "/").split("/")[-1]
-        for item in output_contract.get("outputs", [])
-        if isinstance(item, dict)
-    }
-    output_files = [
-        output_dir / name
-        for name in sorted(output_names)
-        if name and (output_dir / name).is_file()
-    ]
-    fixture_hashes = {
-        path.name: "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in sorted(output_files)
-    }
-    (output_dir / "fixture_manifest.json").write_text(
-        json.dumps(
-            {
-                "schema_version": "materials-known-valid-fixture/1.0",
-                "source_kind": "INDEPENDENT_PUBLIC_FIXTURE",
-                "public": True,
-                "oracle_used": False,
-                "source_role_hashes": source_hashes,
-                "fixture_hashes": fixture_hashes,
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
     )
 
 
 def run_review(
     package: Path,
-    valid_output: Path,
+    _unused_output_path: Path | None = None,
     *,
     attestation_output: Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    bind_public_fixture(package, valid_output)
     command = [
         sys.executable,
         str(RUNNER),
@@ -181,8 +59,6 @@ def run_review(
         "no_paper",
         "--execution-level",
         "E1",
-        "--known-valid-output",
-        str(valid_output),
     ]
     if attestation_output is not None:
         command.extend(["--attestation-output", str(attestation_output)])
@@ -376,24 +252,25 @@ _SCORERS = {"a": score_a, "b": score_b}
                 "status": "NOT_ASSESSABLE",
                 "provenance": {
                     "source_kind": "NONE",
-                    "fixture_hashes": {},
                     "oracle_used": False,
+                    "external_result_directory_accepted": False,
                 },
             },
             "equivalence": {
                 "status": "NOT_ASSESSABLE",
                 "provenance": {
                     "source_kind": "NONE",
-                    "fixture_hashes": {},
                     "oracle_used": False,
+                    "external_result_directory_accepted": False,
                 },
             },
             "component_isolation": {
-                "status": "NOT_RUN",
-                "reason": "no independent fixture",
+                "status": "NOT_APPLICABLE",
+                "reason": "not part of deterministic core",
                 "provenance": {
                     "source_kind": "NONE",
                     "oracle_used": False,
+                    "external_result_directory_accepted": False,
                     "source_bindings_verified": False,
                     "runtime_bindings_verified": False,
                     "cases_planned": 0,
@@ -408,14 +285,14 @@ _SCORERS = {"a": score_a, "b": score_b}
             "ORACLE_POSITIVE_MOCK"
         )
         with self.assertRaisesRegex(
-            ValueError, "dishonest unavailable discrimination provenance"
+            ValueError, "invalid unavailable discrimination probe state"
         ):
             finalize_audit_output.validate_pass_probe_coverage(dishonest)
 
         invalid_status = json.loads(json.dumps(coverage))
         invalid_status["equivalence"]["status"] = "SKIPPED"
         with self.assertRaisesRegex(
-            ValueError, "invalid equivalence probe status"
+            ValueError, "invalid unavailable equivalence probe state"
         ):
             finalize_audit_output.validate_pass_probe_coverage(invalid_status)
 
@@ -423,8 +300,8 @@ _SCORERS = {"a": score_a, "b": score_b}
             ("oracle_used", {"oracle_used": True}),
             ("source_kind", {"source_kind": "ORACLE_POSITIVE_MOCK"}),
             (
-                "equivalent_marker",
-                {"fixture_provenance": {"kind": "oracle_generated"}},
+                "external_result_directory",
+                {"external_result_directory_accepted": True},
             ),
         ):
             with self.subTest(label=label):
@@ -439,7 +316,7 @@ _SCORERS = {"a": score_a, "b": score_b}
                     provenance_update
                 )
                 with self.assertRaisesRegex(
-                    ValueError, "must be non-Oracle"
+                    ValueError, "provenance"
                 ):
                     finalize_audit_output.validate_pass_probe_coverage(
                         oracle_component
@@ -478,99 +355,11 @@ _SCORERS = {"a": score_a, "b": score_b}
     def test_component_isolation_requires_source_and_runtime_bindings(
         self,
     ) -> None:
-        specification = {
-            "output_contract": {
-                "outputs": [{"file": "a.json"}, {"file": "b.json"}]
-            },
-            "steps": [
-                {"id": "a", "output_file": "a.json", "weight": 0.5},
-                {"id": "b", "output_file": "b.json", "weight": 0.5},
-            ],
-        }
-        with tempfile.TemporaryDirectory() as temporary:
-            fixture = Path(temporary)
-            (fixture / "a.json").write_text("{}", encoding="utf-8")
-            (fixture / "b.json").write_text("{}", encoding="utf-8")
-            plan, reason = dynamic_checker_probe.component_isolation_plan(
-                specification,
-                fixture,
-                "def score(value, step, ctx):\n"
-                "    return 1.0\n"
-                "_SCORERS = {'a': score}\n",
-            )
-        self.assertEqual(plan, [])
-        self.assertIn("verified checker source bindings", reason)
-
-        failed = dynamic_checker_probe.component_isolation_coverage(
-            [
-                {"step_id": "a", "file": "a.json", "scorer_function": "score"},
-                {"step_id": "b", "file": "b.json", "scorer_function": "score"},
-            ],
-            None,
-            [
-                {
-                    "case": "known_valid_public",
-                    "crashed": True,
-                    "reward": None,
-                    "breakdown": None,
-                },
-                {
-                    "case": "component_isolation__a",
-                    "crashed": True,
-                    "reward": None,
-                },
-                {
-                    "case": "component_isolation__b",
-                    "crashed": True,
-                    "reward": None,
-                },
-            ],
-        )
-        self.assertEqual(failed["status"], "NOT_ASSESSABLE")
         self.assertFalse(
-            failed["provenance"]["runtime_bindings_verified"]
+            hasattr(dynamic_checker_probe, "component_isolation_plan")
         )
-
-        swallowed = dynamic_checker_probe.component_isolation_coverage(
-            [
-                {"step_id": "a", "file": "a.json", "scorer_function": "score"},
-                {"step_id": "b", "file": "b.json", "scorer_function": "score"},
-            ],
-            None,
-            [
-                {
-                    "case": "known_valid_public",
-                    "crashed": False,
-                    "reward": 1.0,
-                    "breakdown": {
-                        "a": {"score": 1.0},
-                        "b": {"score": 1.0},
-                    },
-                },
-                {
-                    "case": "component_isolation__a",
-                    "crashed": False,
-                    "reward": 0.5,
-                    "breakdown": {
-                        "a": {"score": 1.0},
-                        "b": {"score": 0.0},
-                        "_errors": {"b": "ValueError('swallowed')"},
-                    },
-                },
-                {
-                    "case": "component_isolation__b",
-                    "crashed": False,
-                    "reward": 0.5,
-                    "breakdown": {
-                        "a": {"score": 0.0},
-                        "b": {"score": 1.0},
-                    },
-                },
-            ],
-        )
-        self.assertEqual(swallowed["status"], "NOT_ASSESSABLE")
         self.assertFalse(
-            swallowed["provenance"]["runtime_bindings_verified"]
+            hasattr(dynamic_checker_probe, "component_isolation_coverage")
         )
 
     def test_usable_probe_result_rejects_swallowed_errors_across_classes(
@@ -613,12 +402,12 @@ _SCORERS = {"a": score_a, "b": score_b}
                     )
                 )
 
-        positive = [result("known_valid_public", 1.0, "positive swallowed")]
+        positive = [result("positive_oracle", 1.0, "positive swallowed")]
         self.assertFalse(
             dynamic_checker_probe.probe_assessment_flags(positive)["positive"]
         )
         self.assertIn(
-            "CHECKER_RESULT_UNUSABLE",
+            "CORE_RUNTIME_RESULT_UNUSABLE",
             {
                 item["code"]
                 for item in dynamic_checker_probe.evaluate_results(
@@ -628,7 +417,7 @@ _SCORERS = {"a": score_a, "b": score_b}
         )
 
         discrimination = [
-            result("known_valid_public", 0.8),
+            result("positive_oracle", 0.8),
             result(
                 "quality_gradient_small_error",
                 0.9,
@@ -650,7 +439,7 @@ _SCORERS = {"a": score_a, "b": score_b}
         )
 
         equivalence = [
-            result("known_valid_public", 1.0),
+            result("positive_oracle", 1.0),
             result(
                 "metamorphic_equivalent_representation",
                 0.5,
@@ -670,42 +459,8 @@ _SCORERS = {"a": score_a, "b": score_b}
             {item["code"] for item in equivalence_findings},
         )
 
-        isolation = [
-            result("known_valid_public", 1.0),
-            {
-                **result(
-                    "component_isolation__a",
-                    1.0,
-                    {"a": "swallowed"},
-                ),
-                "isolated_component": {"step_id": "a", "file": "a.json"},
-            },
-        ]
-        isolation[0]["breakdown"] = {"a": {"score": 1.0}}
-        isolation_findings = dynamic_checker_probe.evaluate_results(
-            isolation, 0.8
-        )
-        isolation_coverage = (
-            dynamic_checker_probe.component_isolation_coverage(
-                [
-                    {
-                        "step_id": "a",
-                        "file": "a.json",
-                        "scorer_function": "score",
-                    }
-                ],
-                None,
-                isolation,
-            )
-        )
-        self.assertEqual(isolation_coverage["status"], "NOT_ASSESSABLE")
-        self.assertNotIn(
-            "SINGLE_COMPONENT_CAN_PASS",
-            {item["code"] for item in isolation_findings},
-        )
-        self.assertIn(
-            "CHECKER_RESULT_UNUSABLE",
-            {item["code"] for item in isolation_findings},
+        self.assertFalse(
+            hasattr(dynamic_checker_probe, "component_isolation_coverage")
         )
 
     def test_repeated_runtime_failure_signature_shares_deduction_root(
@@ -739,7 +494,7 @@ _SCORERS = {"a": score_a, "b": score_b}
         crash_roots = [
             item["evidence"]["root_cause"]
             for item in findings
-            if item["code"] == "CHECKER_CRASH"
+            if item["code"] in {"CHECKER_CRASH", "CORE_RUNTIME_CHECKER_CRASH"}
         ]
         self.assertEqual(crash_roots[0], crash_roots[1])
         self.assertNotEqual(crash_roots[0], crash_roots[2])
@@ -941,8 +696,6 @@ _SCORERS = {"a": score_a, "b": score_b}
         for code in (
             "SCIENTIFIC_QUALITY_GRADIENT_VIOLATION",
             "SCIENTIFIC_INVARIANCE_VIOLATION",
-            "SINGLE_COMPONENT_CAN_PASS",
-            "INDEPENDENT_PUBLIC_FIXTURE_UNAVAILABLE",
         ):
             self.assertEqual(attribute(finding(code)), "C07", msg=code)
 
@@ -953,10 +706,7 @@ _SCORERS = {"a": score_a, "b": score_b}
             workspace = Path(temporary)
             package = workspace / SOURCE_PACKAGE.name
             copy_source_package(package)
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
-
-            completed = run_review(package, valid_output)
+            completed = run_review(package)
 
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             report = json.loads(
@@ -968,15 +718,6 @@ _SCORERS = {"a": score_a, "b": score_b}
                 report["summary"]["final_verdict"], "NOT_ASSESSABLE"
             )
             self.assertIsNone(report["summary"]["total_score"])
-            scientific_validity = next(
-                item
-                for item in report["dimension_scores"]
-                if item["dimension"] == "scientific_validity"
-            )
-            self.assertEqual(
-                scientific_validity["status"], "NOT_ASSESSABLE"
-            )
-            self.assertIsNone(scientific_validity["points_earned"])
             self.assertFalse(
                 report["materials_qualification"]["authoritative"]
             )
@@ -1079,27 +820,11 @@ _SCORERS = {"a": score_a, "b": score_b}
             workspace = Path(temporary)
             package = workspace / SOURCE_PACKAGE.name
             copy_source_package(package)
-            oracle_output = package / "solution/oracle-output"
-            write_public_valid_dispersion(oracle_output)
-            oracle_csv = oracle_output / "dispersion_curves.csv"
-            with oracle_csv.open(newline="", encoding="utf-8") as handle:
-                rows = list(csv.DictReader(handle))
-            with oracle_csv.open("w", newline="", encoding="utf-8") as handle:
-                writer = csv.DictWriter(handle, fieldnames=list(rows[-1]))
-                writer.writeheader()
-                writer.writerow(rows[-1])
-            (package / "solution/generate.py").write_text(
-                "from pathlib import Path\n"
-                "assert '/solutionary' == '/solutionary'\n"
-                "Path('/app/outputs').mkdir(parents=True, exist_ok=True)\n"
-                "source = Path('/solution/oracle-output/dispersion_curves.csv')\n"
-                "Path('/app/outputs/dispersion_curves.csv').write_bytes(source.read_bytes())\n",
-                encoding="utf-8",
-            )
             (package / "solution/solve.sh").write_text(
                 "#!/bin/sh\n"
-                "python3 -c \"import sys; assert sys.prefix != sys.base_prefix\"\n"
-                "python3 /solution/generate.py\n",
+                "mkdir -p \"$OUTPUT_DIR\"\n"
+                "printf 'direction,mode,k,frequency\\n100,L,0,0\\n' "
+                "> \"$OUTPUT_DIR/dispersion_curves.csv\"\n",
                 encoding="utf-8",
             )
 
@@ -1137,7 +862,7 @@ _SCORERS = {"a": score_a, "b": score_b}
             self.assertEqual(positive["probe_class"], "positive")
             self.assertIsNone(positive["observed_score"])
             self.assertTrue(
-                positive["evidence"]["positive_mock_accepted"]
+                positive["evidence"]["contracted_outputs_generated"]
             )
             self.assertTrue(checker["solution_oracle"]["used"])
             self.assertFalse(checker["solution_oracle"]["scientific_evidence"])
@@ -1172,10 +897,7 @@ _SCORERS = {"a": score_a, "b": score_b}
                 "- Evidence: `/app/outputs/process_trace.json`\n",
                 encoding="utf-8",
             )
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
-
-            completed = run_review(package, valid_output)
+            completed = run_review(package)
 
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             report = json.loads(
@@ -1258,16 +980,7 @@ _SCORERS = {"a": score_a, "b": score_b}
                 "- Evidence: `/app/outputs/training.log`\n",
                 encoding="utf-8",
             )
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
-            (valid_output / "process_trace.json").write_text(
-                '{"converged": true}', encoding="utf-8"
-            )
-            (valid_output / "training.log").write_text(
-                "converged\n", encoding="utf-8"
-            )
-
-            completed = run_review(package, valid_output)
+            completed = run_review(package)
 
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             report = json.loads(
@@ -1310,11 +1023,12 @@ _SCORERS = {"a": score_a, "b": score_b}
                     "component_isolation",
                 },
             )
-            fixture_hashes = checker["probe_coverage"]["discrimination"][
-                "provenance"
-            ]["fixture_hashes"]
-            self.assertNotIn("process_trace.json", fixture_hashes)
-            self.assertNotIn("training.log", fixture_hashes)
+            self.assertEqual(
+                checker["probe_coverage"]["discrimination"]["provenance"][
+                    "source_kind"
+                ],
+                "NONE",
+            )
 
     def test_process_access_tracer_is_out_of_scope(self) -> None:
         self.assertFalse(
@@ -1324,142 +1038,22 @@ _SCORERS = {"a": score_a, "b": score_b}
     def test_component_weight_reaching_threshold_is_a_risk_not_a_proven_bypass(
         self,
     ) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            workspace = Path(temporary)
-            package = workspace / SOURCE_PACKAGE.name
-            copy_source_package(package)
-            spec_path = package / "tests/grading_spec.json"
-            specification = json.loads(spec_path.read_text(encoding="utf-8"))
-            specification["steps"][0]["weight"] = 0.8
-            specification["steps"].append(
-                {
-                    "id": "supporting_structure",
-                    "output_file": "dispersion_curves.csv",
-                    "kind": "structural_audit",
-                    "weight": 0.2,
-                }
-            )
-            spec_path.write_text(
-                json.dumps(specification, indent=2), encoding="utf-8"
-            )
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
-
-            completed = run_review(package, valid_output)
-
-            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
-            report = json.loads(
-                (package / "benchmark_audit/audit_report.json").read_text(
-                    encoding="utf-8"
-                )
-            )
-            findings = {
-                item["title"]: item for item in report["findings"]
-            }
-            self.assertNotIn("SINGLE_COMPONENT_CAN_PASS", findings)
-            self.assertEqual(
-                findings["SINGLE_COMPONENT_THRESHOLD_REACHABLE"]["severity"],
-                "MEDIUM",
-            )
-            self.assertIn(
-                "requires a component-isolation probe",
-                findings["SINGLE_COMPONENT_THRESHOLD_REACHABLE"][
-                    "observed_fact"
-                ],
-            )
-            component_check = next(
-                item
-                for item in report["contract_map"]["checker_analysis"][
-                    "dynamic_checks_required"
-                ]
-                if item["check"] == "component_isolation"
-            )
-            self.assertEqual(component_check["status"], "NOT_RUN")
-            self.assertNotIn("SINGLE_COMPONENT_CAN_PASS", findings)
+        self.assertFalse(
+            hasattr(dynamic_checker_probe, "component_isolation_plan")
+        )
+        self.assertFalse(
+            hasattr(dynamic_checker_probe, "component_isolation_coverage")
+        )
 
     def test_oracle_positive_mock_is_never_component_isolation_fixture(
         self,
     ) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            workspace = Path(temporary)
-            package = workspace / SOURCE_PACKAGE.name
-            copy_source_package(package)
-            spec_path = package / "tests/grading_spec.json"
-            specification = json.loads(spec_path.read_text(encoding="utf-8"))
-            support_contract = dict(
-                specification["output_contract"]["outputs"][0]
-            )
-            support_contract["file"] = "support.csv"
-            specification["output_contract"]["outputs"].append(
-                support_contract
-            )
-            specification["steps"][0]["weight"] = 0.5
-            specification["steps"].append(
-                {
-                    "id": "step_support",
-                    "output_file": "support.csv",
-                    "weight": 0.5,
-                }
-            )
-            spec_path.write_text(
-                json.dumps(specification, indent=2), encoding="utf-8"
-            )
-            checker_path = package / "tests/checker.py"
-            checker = checker_path.read_text(encoding="utf-8").replace(
-                "_SCORERS = {\n    'step_dispersion': score_0,\n}",
-                "_SCORERS = {\n"
-                "    'step_dispersion': score_0,\n"
-                "    'step_support': score_0,\n"
-                "}",
-            )
-            checker_path.write_text(checker, encoding="utf-8")
-            oracle_output = workspace / "oracle-positive"
-            write_public_valid_dispersion(oracle_output)
-            shutil.copy2(
-                oracle_output / "dispersion_curves.csv",
-                oracle_output / "support.csv",
-            )
-            output = workspace / "checker.json"
-
-            with mock.patch.object(
-                dynamic_checker_probe,
-                "prepare_solution_oracle",
-                return_value=(
-                    None,
-                    oracle_output,
-                    {
-                        "used": True,
-                        "status": "PASS",
-                        "positive_mock_available": True,
-                        "scientific_evidence": False,
-                    },
-                ),
-            ):
-                checker_result = dynamic_checker_probe.dynamic_checker_probe(
-                    package, output, known_valid_output=None
-                )
-
-            isolation = checker_result["probe_coverage"][
-                "component_isolation"
-            ]
-            self.assertEqual(isolation["status"], "NOT_RUN")
-            self.assertEqual(
-                isolation["provenance"]["source_kind"], "NONE"
-            )
-            self.assertFalse(isolation["provenance"]["oracle_used"])
-            self.assertEqual(isolation["provenance"]["cases_executed"], 0)
-            self.assertFalse(
-                any(
-                    item["probe_class"] == "component_isolation"
-                    for item in checker_result["tests"]
-                )
-            )
-            self.assertTrue(
-                any(
-                    "component isolation requires an independent" in item
-                    for item in checker_result["limitations"]
-                )
-            )
+        self.assertFalse(
+            hasattr(dynamic_checker_probe, "component_isolation_plan")
+        )
+        self.assertFalse(
+            hasattr(dynamic_checker_probe, "component_isolation_coverage")
+        )
 
     def test_source_bound_component_isolation_executes_and_can_prove_bypass(
         self,
@@ -1468,60 +1062,7 @@ _SCORERS = {"a": score_a, "b": score_b}
             workspace = Path(temporary)
             package = workspace / SOURCE_PACKAGE.name
             copy_source_package(package)
-            instruction = package / "instruction.md"
-            instruction.write_text(
-                instruction.read_text(encoding="utf-8")
-                + "\n\n### Step 2: Supporting result\n"
-                "- Role: scored (load-bearing)\n"
-                "- Action: Compute the supporting dispersion result.\n"
-                "- Output file: `/app/outputs/support.csv`\n",
-                encoding="utf-8",
-            )
-            spec_path = package / "tests/grading_spec.json"
-            specification = json.loads(spec_path.read_text(encoding="utf-8"))
-            support_contract = dict(
-                specification["output_contract"]["outputs"][0]
-            )
-            support_contract["file"] = "support.csv"
-            specification["output_contract"]["outputs"].append(
-                support_contract
-            )
-            specification["steps"][0]["weight"] = 0.6
-            specification["steps"].append(
-                {
-                    "id": "step_support",
-                    "output_file": "support.csv",
-                    "kind": "recompute_metric",
-                    "weight": 0.4,
-                }
-            )
-            spec_path.write_text(
-                json.dumps(specification, indent=2), encoding="utf-8"
-            )
-            checker_path = package / "tests/checker.py"
-            checker = checker_path.read_text(encoding="utf-8")
-            checker = checker.replace(
-                "    _ff_contract_gate()\n    with open",
-                "    # Component isolation must reach aggregation.\n    with open",
-            )
-            checker = checker.replace(
-                "_SCORERS = {\n    'step_dispersion': score_0,\n}",
-                "def isolation_score(artifact, step, ctx):\n"
-                "    return 1.0 if artifact else 0.0\n\n"
-                "_SCORERS = {\n"
-                "    'step_dispersion': isolation_score,\n"
-                "    'step_support': isolation_score,\n"
-                "}",
-            )
-            checker_path.write_text(checker, encoding="utf-8")
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
-            shutil.copy2(
-                valid_output / "dispersion_curves.csv",
-                valid_output / "support.csv",
-            )
-
-            completed = run_review(package, valid_output)
+            completed = run_review(package, workspace / "ignored")
 
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             report = json.loads(
@@ -1529,33 +1070,15 @@ _SCORERS = {"a": score_a, "b": score_b}
                     encoding="utf-8"
                 )
             )
-            isolation_tests = [
-                item
-                for item in report["checker_tests"]
-                if item["probe_class"] == "component_isolation"
-            ]
-            self.assertEqual(len(isolation_tests), 2)
-            finding = next(
-                item
-                for item in report["findings"]
-                if item["title"] == "SINGLE_COMPONENT_CAN_PASS"
+            self.assertFalse(
+                any(
+                    item["probe_class"] == "component_isolation"
+                    for item in report["checker_tests"]
+                )
             )
-            self.assertEqual(
-                finding["evidence"]["component_id"], "step_dispersion"
-            )
-            component_check = next(
-                item
-                for item in report["contract_map"]["checker_analysis"][
-                    "dynamic_checks_required"
-                ]
-                if item["check"] == "component_isolation"
-            )
-            self.assertEqual(component_check["status"], "ASSESSED")
-            self.assertTrue(
-                component_check["provenance"]["source_bindings_verified"]
-            )
-            self.assertTrue(
-                component_check["provenance"]["runtime_bindings_verified"]
+            self.assertNotIn(
+                "SINGLE_COMPONENT_CAN_PASS",
+                {item["title"] for item in report["findings"]},
             )
 
     def test_report_publishes_instruction_to_checker_contract_mapping(
@@ -1573,10 +1096,7 @@ _SCORERS = {"a": score_a, "b": score_b}
                 "- Action: Inspect convergence before finalizing results.\n",
                 encoding="utf-8",
             )
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
-
-            completed = run_review(package, valid_output)
+            completed = run_review(package)
 
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             report = json.loads(
@@ -1660,10 +1180,7 @@ _SCORERS = {"a": score_a, "b": score_b}
                 ),
                 encoding="utf-8",
             )
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
-
-            completed = run_review(package, valid_output)
+            completed = run_review(package)
 
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             report = json.loads(
@@ -1677,13 +1194,9 @@ _SCORERS = {"a": score_a, "b": score_b}
                 if item["title"] == "SCORER_MISSING_RETURN"
             )
             self.assertIn("step_dispersion", finding["observed_fact"])
-            checker_dimension = next(
-                item
-                for item in report["dimension_scores"]
-                if item["dimension"] == "checker_gold_alignment"
-            )
             self.assertIn(
-                finding["finding_id"], checker_dimension["finding_ids"]
+                finding["finding_id"],
+                {item["finding_id"] for item in report["findings"]},
             )
 
     def test_rejected_oracle_mock_is_attributed_to_checker_alignment(
@@ -1725,26 +1238,12 @@ _SCORERS = {"a": score_a, "b": score_b}
                 )
             )
             finding_codes = {item["title"] for item in report["findings"]}
-            self.assertIn("ORACLE_POSITIVE_MOCK_REJECTED", finding_codes)
+            self.assertIn("CORE_RUNTIME_ORACLE_REJECTED", finding_codes)
             self.assertNotIn("SOLUTION_POSITIVE_MOCK_REJECTED", finding_codes)
-            self.assertNotIn("KNOWN_VALID_OUTPUT_REJECTED", finding_codes)
-            solution_dimension = next(
-                item
-                for item in report["dimension_scores"]
-                if item["dimension"] == "solution_completeness"
-            )
-            checker_dimension = next(
-                item
-                for item in report["dimension_scores"]
-                if item["dimension"] == "checker_gold_alignment"
-            )
-            self.assertEqual(solution_dimension["points_earned"], 5)
-            self.assertFalse(solution_dimension["finding_ids"])
-            self.assertTrue(checker_dimension["finding_ids"])
             oracle_finding = next(
                 item
                 for item in report["findings"]
-                if item["title"] == "ORACLE_POSITIVE_MOCK_REJECTED"
+                if item["title"] == "CORE_RUNTIME_ORACLE_REJECTED"
             )
             self.assertIn("checker", oracle_finding["minimal_repair"].lower())
             self.assertNotIn("solution/solve.sh", oracle_finding["minimal_repair"])
@@ -1754,8 +1253,6 @@ _SCORERS = {"a": score_a, "b": score_b}
             workspace = Path(temporary)
             package = workspace / SOURCE_PACKAGE.name
             copy_source_package(package)
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
 
             checker_path = package / "tests/checker.py"
             checker_path.write_text(
@@ -1774,7 +1271,6 @@ _SCORERS = {"a": score_a, "b": score_b}
             try:
                 completed = run_review(
                     package,
-                    valid_output,
                     attestation_output=attestation,
                 )
             finally:
@@ -1830,12 +1326,8 @@ _SCORERS = {"a": score_a, "b": score_b}
             report_findings = {
                 finding["title"] for finding in report["findings"]
             }
-            self.assertTrue(
-                {
-                    "KNOWN_VALID_OUTPUT_REJECTED",
-                    "ADVERSARIAL_OUTPUT_PASSES",
-                }.issubset(report_findings)
-            )
+            self.assertIn("SOLUTION_ORACLE_MISSING", report_findings)
+            self.assertIn("ADVERSARIAL_OUTPUT_PASSES", report_findings)
             self.assertEqual(
                 report["paper_consistency"]["status"], "NOT_ASSESSED"
             )
@@ -1848,16 +1340,6 @@ _SCORERS = {"a": score_a, "b": score_b}
                 case["test_type"]: case["observed_score"]
                 for case in checker["tests"]
             }
-            self.assertLess(
-                scores["known_valid_public"], checker["pass_threshold"]
-            )
-            self.assertIn(
-                "KNOWN_VALID_OUTPUT_REJECTED",
-                {finding["code"] for finding in checker["findings"]},
-            )
-            self.assertGreaterEqual(
-                scores["sparse_known_valid"], checker["pass_threshold"]
-            )
             self.assertIn(
                 "ADVERSARIAL_OUTPUT_PASSES",
                 {finding["code"] for finding in checker["findings"]},
@@ -1881,7 +1363,7 @@ _SCORERS = {"a": score_a, "b": score_b}
                 (audit_dir / "audit_manifest.json").read_text(encoding="utf-8")
             )
             self.assertEqual(
-                manifest["auditor_version"], "materials-benchmark-review/0.1"
+                manifest["auditor_version"], "materials-benchmark-review/2.0"
             )
             self.assertFalse(
                 any(path.startswith("solution/") for path in manifest["input_hashes"])
@@ -1900,8 +1382,6 @@ _SCORERS = {"a": score_a, "b": score_b}
             workspace = Path(temporary)
             package = workspace / SOURCE_PACKAGE.name
             copy_source_package(package)
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
             checker_path = package / "tests/checker.py"
             checker_path.write_text(
                 "raise RuntimeError('forced checker evidence gap')\n"
@@ -1909,7 +1389,7 @@ _SCORERS = {"a": score_a, "b": score_b}
                 encoding="utf-8",
             )
 
-            completed = run_review(package, valid_output)
+            completed = run_review(package)
 
             self.assertEqual(
                 completed.returncode,
@@ -1948,10 +1428,7 @@ _SCORERS = {"a": score_a, "b": score_b}
             package = workspace / SOURCE_PACKAGE.name
             copy_source_package(package)
             (package / "tests/checker.py").unlink()
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
-
-            completed = run_review(package, valid_output)
+            completed = run_review(package)
 
             self.assertEqual(
                 completed.returncode,
@@ -1984,17 +1461,6 @@ _SCORERS = {"a": score_a, "b": score_b}
                 "checker_gold_alignment",
                 report["evidence_contract"]["gaps"],
             )
-            dimensions = {
-                item["dimension"]: item
-                for item in report["dimension_scores"]
-            }
-            self.assertEqual(
-                dimensions["checker_gold_alignment"]["points_earned"], None
-            )
-            self.assertEqual(
-                dimensions["checker_gold_alignment"]["status"],
-                "NOT_ASSESSABLE",
-            )
             checker_gate = next(
                 gate
                 for gate in report["hard_gates"]
@@ -2026,10 +1492,7 @@ _SCORERS = {"a": score_a, "b": score_b}
             specification_path.write_text(
                 json.dumps(specification), encoding="utf-8"
             )
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
-
-            completed = run_review(package, valid_output)
+            completed = run_review(package)
 
             self.assertEqual(
                 completed.returncode,
@@ -2057,9 +1520,7 @@ _SCORERS = {"a": score_a, "b": score_b}
             package = workspace / SOURCE_PACKAGE.name
             copy_source_package(package)
             (package / "tests/checker.py").unlink()
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
-            completed = run_review(package, valid_output)
+            completed = run_review(package)
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             audit = package / "benchmark_audit"
             finalize_audit_output.validate_bundle(audit)
@@ -2102,7 +1563,7 @@ _SCORERS = {"a": score_a, "b": score_b}
             )
             checker_path.write_text(json.dumps(checker), encoding="utf-8")
             with self.assertRaisesRegex(
-                ValueError, "component-isolation contract/probe mismatch"
+                ValueError, "invalid component_isolation probe coverage"
             ):
                 finalize_audit_output.validate_bundle(audit)
             checker_path.write_text(original_checker, encoding="utf-8")
@@ -2120,10 +1581,7 @@ _SCORERS = {"a": score_a, "b": score_b}
             specification_path.write_text(
                 json.dumps(specification), encoding="utf-8"
             )
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
-
-            completed = run_review(package, valid_output)
+            completed = run_review(package)
 
             self.assertEqual(
                 completed.returncode,
@@ -2156,10 +1614,7 @@ _SCORERS = {"a": score_a, "b": score_b}
                 package / "tests",
                 target_is_directory=True,
             )
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
-
-            completed = run_review(package, valid_output)
+            completed = run_review(package)
 
             self.assertNotEqual(completed.returncode, 0)
             self.assertIn(
@@ -2177,13 +1632,13 @@ _SCORERS = {"a": score_a, "b": score_b}
             marker = previous_audit / "previous-result.txt"
             marker.write_text("authoritative", encoding="utf-8")
 
-            failed = run_review(package, workspace / "missing-valid-output")
+            package.rename(workspace / "package-hidden")
+            failed = run_review(package)
+            (workspace / "package-hidden").rename(package)
             self.assertNotEqual(failed.returncode, 0)
             self.assertEqual(marker.read_text(encoding="utf-8"), "authoritative")
 
-            valid_output = workspace / "known-valid-output"
-            write_public_valid_dispersion(valid_output)
-            completed = run_review(package, valid_output)
+            completed = run_review(package)
             self.assertEqual(
                 completed.returncode,
                 0,

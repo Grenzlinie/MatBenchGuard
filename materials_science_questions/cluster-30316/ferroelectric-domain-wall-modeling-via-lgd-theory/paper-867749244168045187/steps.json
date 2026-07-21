@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_simulate",
+    "title": "Run agent-based simulations of the 1D active polar particle model",
+    "role": "process",
+    "action": "Implement the 1D agent-based model as described in the paper: active Brownian particles with a truncated Lennard-Jones potential for steric repulsion/adhesion and an asymmetric aligning polarity interaction potential (including the characteristic CIL coupling). Use Glauber spin‑flip dynamics for polarities. Set the interaction parameters α = 0.59 and β = 0.31 (adopted from the paper's experimental calibration). Run simulations for a range of Péclet numbers Pe and cohesive strengths γ to probe cluster size distributions, and for varying train sizes N to track polarity autocorrelation. Produce aggregated simulation data required by the downstream scored analysis steps.",
+    "output_file": "",
+    "evidence": "simulation_log.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Executes the core agent-based simulation. The generated data are used by subsequent scored steps. A log file records basic progress.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_cluster_scaling",
+    "title": "Compute cluster size scaling data",
+    "role": "scored",
+    "action": "From the simulation results, extract steady-state average cluster size statistics for a set of (Pe, gamma) combinations at fixed α/β ≈ 2. Compute the mean and standard deviation of cluster size for each condition.",
+    "output_file": "cluster_size_scaling.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing mean cluster sizes used to verify the scaling law ⟨s_c⟩ ∝ (Pe/γ)^{-1}.",
+    "output_schema": "Columns: Pe (float), gamma (float), alpha (float), beta (float), mean_cluster_size (float), std_cluster_size (float)."
+  },
+  {
+    "id": "step_03_polarity_scaling",
+    "title": "Compute polarity autocorrelation scaling data",
+    "role": "scored",
+    "action": "From simulation trajectories at fixed Pe, gamma, and α/β ≈ 2, compute the polarity persistence time τ_p for a series of train sizes N (ranging from 3 to 100).",
+    "output_file": "polarity_autocorrelation_scaling.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the polarity persistence time for each train size, used to verify τ_p ∝ N².",
+    "output_schema": "Columns: N (int), tau_p (float, in simulation time units τ)."
+  },
+  {
+    "id": "step_04_phase_diagram",
+    "title": "Construct phase diagram from simulation",
+    "role": "scored",
+    "action": "Scan a grid of (α/β ratio, Pe/γ value) combinations. For each point, classify the steady-state regime as dispersed, microphase, or clustered based on a quantitative criterion (e.g., cluster size distribution shape or polar order parameter threshold).",
+    "output_file": "phase_diagram_simulation.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file mapping parameter combinations to thermodynamic regimes, used to verify the phase diagram behavior expected from the model.",
+    "output_schema": "Columns: alpha_beta_ratio (float), Pe_gamma (float), regime (string, one of: dispersed, microphase, clustered)."
+  }
+]

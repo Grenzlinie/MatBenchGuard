@@ -1,0 +1,103 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recompute from raw tight-binding/Green's function/Kubo transport traces is infeasible in the verifier; we compare reported exchange couplings and MR against paper-derived reference values with sign/magnitude tolerances and threshold conditions.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference exchange coupling constants and MR behavioral thresholds from the source paper.",
+      "source_provenance": "DFT results for Ni: J_like=8.0e-3 eV, J_unlike=-1.2e-2 eV; Mn: J_like=-5.2e-1 eV, J_unlike=+3.7e-2 eV. Transport: Ni MR < 10%, Mn MR > 100% at some concentration, Mn mixed conductance vanishes.",
+      "generation_method": "Extracted from the paper text and figures as the quantitative validation of the tight-binding model.",
+      "why_not_fabricated": "Values are directly quoted from the paper's own DFT and transport claims; they serve as the ground truth for sign/magnitude and regime characterization."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_j_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "Ni",
+            "Mn"
+          ],
+          "items": {
+            "Ni": {
+              "J_like": "number (eV)",
+              "J_unlike": "number (eV)"
+            },
+            "Mn": {
+              "J_like": "number (eV)",
+              "J_unlike": "number (eV)"
+            }
+          }
+        },
+        "description": "Exchange coupling constants for Ni and Mn on a (6,6) CNT at D=3a, for like and unlike sublattice configurations."
+      },
+      {
+        "file": "step_02_mr_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "impurity",
+            "concentration",
+            "Gamma_up",
+            "Gamma_down",
+            "Gamma_mixed",
+            "MR"
+          ],
+          "units": {
+            "MR": "dimensionless",
+            "conductances": "same arbitrary units"
+          }
+        },
+        "description": "Spin-resolved conductances and magnetoresistance MR for Ni and Mn as functions of impurity concentration. MR computed as (Γ̄−Γ)/Γ; conductances (Gamma_up, Gamma_down, Gamma_mixed) in consistent arbitrary units."
+      }
+    ],
+    "notes": "The scoring checks that the exchange coupling signs and magnitudes are consistent with the paper-reported reference values, and that the MR data meets the thresholds for frustration (Ni MR low, Mn MR high with vanishing mixed conductance)."
+  },
+  "target_policies": {
+    "step_01_j_values.json": "reference_match",
+    "step_02_mr_data.csv": "threshold_or_better"
+  },
+  "steps": [
+    {
+      "id": "step_02_j_values",
+      "output_file": "step_01_j_values.json",
+      "kind": "json_field",
+      "weight": 0.4,
+      "target": {
+        "Ni": {
+          "J_like": 0.008,
+          "J_unlike": -0.012
+        },
+        "Mn": {
+          "J_like": -0.52,
+          "J_unlike": 0.037
+        }
+      },
+      "tolerance_factor": 2.0,
+      "sub_weights": {
+        "Ni_sign": 0.15,
+        "Mn_sign": 0.15,
+        "Ni_magnitude": 0.1,
+        "Mn_magnitude": 0.1
+      }
+    },
+    {
+      "id": "step_04_transport_mr",
+      "output_file": "step_02_mr_data.csv",
+      "kind": "custom",
+      "weight": 0.6,
+      "threshold_ni_mr_max": 0.1,
+      "threshold_mn_mr_min": 1.0,
+      "tolerance_zero_mixed": 0.0001
+    }
+  ]
+}

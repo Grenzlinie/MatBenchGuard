@@ -1,0 +1,93 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes expected values from the same analytic formulas and hidden parameters, then compares agent's reported numbers within tolerance.",
+  "pass_threshold": 0.8,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference parameters used to compute expected drag coefficients, channel velocities, and active free velocity.",
+      "source_provenance": "Derived from the physical model parameters (K, gamma1, alpha4, r_core, r_max, d, zeta) as defined in the paper's minimal model.",
+      "generation_method": "Hardcoded as typical values; the expected outputs are computed directly from the analytic formulas in the paper (Eqs. 33, 35, 46, 49, 64, 69).",
+      "why_not_fabricated": "These parameters are consistent with the paper's model and produce realistic values; they are not random."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "analytic_drag_coefficients.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "D1": "number",
+            "D1_prime": "number"
+          }
+        },
+        "description": "The translational drag coefficients D1 (for +1/2 defect) and D1′ (for −1/2 defect) computed from the minimal model. Numeric values; units are consistent with the input parameters (K, γ1, α4, r_core, r_max)."
+      },
+      {
+        "file": "channel_velocities.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "alpha4",
+            "u_plus_half",
+            "u_minus_half"
+          ],
+          "units": {
+            "alpha4": "input units (viscosity)",
+            "u_plus_half": "velocity units (distance/time)",
+            "u_minus_half": "velocity units (distance/time)"
+          }
+        },
+        "description": "CSV table of defect velocities in a planar channel for different values of the isotropic flow viscosity α4. Columns are alpha4 (float), u_plus_half (velocity of +1/2 defect), u_minus_half (velocity of −1/2 defect)."
+      },
+      {
+        "file": "active_free_velocity.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "u_free": "number"
+          }
+        },
+        "description": "The steady-state free-propulsion velocity of an active +1/2 defect, computed from the analytic model. Numeric value; units consistent with inputs."
+      }
+    ],
+    "notes": "All three scored artifacts are obtained by evaluating explicit analytic formulas from the minimal model. The checker will independently recompute the expected values using the same formulas and parameters from /app/inputs/parameters.json, and compare with the agent's submitted numbers within appropriate numeric tolerances. The load-bearing requirement is not strictly enforced because there are no mandatory process steps; the agent must implement the formulas correctly to pass."
+  },
+  "steps": [
+    {
+      "id": "drag_coefficients",
+      "output_file": "analytic_drag_coefficients.json",
+      "kind": "numeric",
+      "weight": 0.4,
+      "tolerance_abs": 0.0001,
+      "target_policy": "reference_match"
+    },
+    {
+      "id": "channel_velocities",
+      "output_file": "channel_velocities.csv",
+      "kind": "vector",
+      "weight": 0.4,
+      "tolerance_abs": 0.0001,
+      "target_policy": "reference_match",
+      "trend": "u_plus_half > u_minus_half"
+    },
+    {
+      "id": "active_free_velocity",
+      "output_file": "active_free_velocity.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "tolerance_abs": 0.0001,
+      "target_policy": "reference_match"
+    }
+  ]
+}

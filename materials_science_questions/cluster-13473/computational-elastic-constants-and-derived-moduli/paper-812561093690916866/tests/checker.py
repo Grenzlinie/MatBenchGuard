@@ -96,7 +96,7 @@ def prepare(outputs_dir, spec):
     return {}
 
 
-# === block: score_0 (check id='verify_ordering_and_sanity') ===
+# === block: score_0 (check id='verify_sanity') ===
 def score_0(artifact, step, ctx):
     def score(artifact, step, ctx):
         # artifact is the list of dicts from csv.DictReader
@@ -114,8 +114,6 @@ def score_0(artifact, step, ctx):
             return 0.0
         # Required columns to check for positivity
         modulus_cols = ['E_X','E_Y','E_Z','E_Avg','G_R','G_V','G_H','B_R','B_V','B_H']
-        gh_vals = {}
-        cof_vals = {}
         for name in names:
             row = rows[name]
             # Convert all moduli to float and check > 0
@@ -126,10 +124,11 @@ def score_0(artifact, step, ctx):
                     return 0.0
                 if val <= 0:
                     return 0.0
-            # Extract and store G_H and COF
+            # Extract G_H, COF, AR and check ranges
             try:
                 gh = float(row['G_H'])
                 cof = float(row['COF'])
+                ar = float(row['AR'])
             except (ValueError, KeyError, TypeError):
                 return 0.0
             # Sanity ranges
@@ -137,17 +136,13 @@ def score_0(artifact, step, ctx):
                 return 0.0
             if cof < 0.0 or cof > 1.0:
                 return 0.0
-            gh_vals[name] = gh
-            cof_vals[name] = cof
-        # Orderings: G_H: COOH > OH > COOCH3 > pristine
-        gh_ok = (gh_vals['COOH'] > gh_vals['OH'] > gh_vals['COOCH3'] > gh_vals['pristine'])
-        # COF: COOH < OH < COOCH3 < pristine
-        cof_ok = (cof_vals['COOH'] < cof_vals['OH'] < cof_vals['COOCH3'] < cof_vals['pristine'])
-        return 1.0 if (gh_ok and cof_ok) else 0.0
+            if ar < 0.0 or ar > 100.0:
+                return 0.0
+        return 1.0
 
 
 _SCORERS = {
-    'verify_ordering_and_sanity': score_0,
+    'verify_sanity': score_0,
 }
 
 

@@ -1,0 +1,116 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Full recompute from raw artifacts not feasible because only derived diffusion/planarity CSV provided; no raw MSD/trajectories included in output contract. Therefore compare reported values to paper-derived thresholds (D low at T≤800 K, D high at T≥1000 K; planarity high at T≤1000 K, low at T≥1100 K) with monotonic trend checks.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-derived acceptable ranges for diffusion coefficient and planarity ratio at various temperatures.",
+      "source_provenance": "Paper text: 'melting starts above 900 K', diffusion coefficients from MSD plots are very low at 300-800 K and rise above 0.01 Å²/ps at 1000-1400 K; nanofilms stable up to 1000 K (planarity ratio high) and collapse above 1100 K (ratio < 2.0). Quantitative thresholds derived by combining paper description with typical simulation values.",
+      "generation_method": "Upper/lower bounds set with generous margins to accommodate different implementations while ensuring the expected physical regime is reproduced. The reference solver writes specific numbers that satisfy these bounds exactly.",
+      "why_not_fabricated": "Thresholds are grounded in the paper’s qualitative conclusions (low D at low T, high D above melting onset; planarity collapse above 1000 K) and match the regime of the reference solve.sh values, which are themselves plausible MD simulation results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "nanowire_diffusion.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "assembly",
+            "temperature",
+            "diffusion_coefficient"
+          ],
+          "units": {
+            "temperature": "K",
+            "diffusion_coefficient": "Å^2/ps"
+          }
+        },
+        "description": "Diffusion coefficients for the four nanowire assemblies (5x55, 10x55, 5x147, 10x147) at each temperature. Melting onset is indicated when D exceeds a system-dependent threshold."
+      },
+      {
+        "file": "nanofilm_planarity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "assembly",
+            "temperature",
+            "planarity_ratio"
+          ],
+          "units": {
+            "temperature": "K",
+            "planarity_ratio": "dimensionless"
+          }
+        },
+        "description": "Planarity ratio (in-plane diameter / thickness) for the two nanofilm assemblies (5x5 of 55-atom clusters, 5x5 of 147-atom clusters) at each temperature. A ratio >= 2.0 indicates a stable film morphology."
+      }
+    ],
+    "notes": "The agent must run the full MD pipeline; the checker compares the reported D and planarity ratio values against hidden paper-derived thresholds, using threshold_or_better policy. No exact gold values are given in the public contract."
+  },
+  "steps": [
+    {
+      "id": "step4_nanowire_diff",
+      "output_file": "nanowire_diffusion.csv",
+      "kind": "evaluate_diffusion",
+      "weight": 0.5,
+      "params": {
+        "assemblies": [
+          "5x55",
+          "10x55",
+          "5x147",
+          "10x147"
+        ],
+        "temperatures": [
+          300,
+          600,
+          800,
+          900,
+          1000,
+          1100,
+          1200,
+          1300,
+          1400
+        ],
+        "low_T_max": 0.02,
+        "high_T_min": 0.005,
+        "very_high_T": 1400,
+        "monotonic_reference_T_low": 800,
+        "monotonic_reference_T_high": 1400
+      }
+    },
+    {
+      "id": "step5_nanofilm_planarity",
+      "output_file": "nanofilm_planarity.csv",
+      "kind": "evaluate_planarity",
+      "weight": 0.5,
+      "params": {
+        "assemblies": [
+          "5x55_5x5",
+          "5x147_5x5"
+        ],
+        "temperatures": [
+          300,
+          600,
+          800,
+          900,
+          1000,
+          1100,
+          1200,
+          1300,
+          1400
+        ],
+        "stable_min": 1.5,
+        "collapse_max": 2.0,
+        "stable_range_max_T": 1000,
+        "collapse_range_min_T": 1100
+      }
+    }
+  ]
+}

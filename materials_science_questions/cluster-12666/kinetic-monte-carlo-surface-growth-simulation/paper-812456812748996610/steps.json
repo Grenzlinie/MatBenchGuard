@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step0",
+    "title": "Re-implement the kinetic Monte Carlo algorithm",
+    "role": "process",
+    "action": "Re-implement the multisite kinetic Monte Carlo algorithm for ethylene hydrogenation on Pd(100). Construct a periodic grid of surface sites (atop, bridge, hollow) with periodic boundary conditions. Define species objects for H, C2H4, C2H5 with site-specific zero-coverage binding energies (Table 1: H 47.3/58.3/62.9 kcal/mol for atop/bridge/hollow; C2H4 7/14 kcal/mol atop/bridge; C2H5 31/17.9 kcal/mol atop/bridge) and reaction radii (H 1.39 Å, C2H4 2.0 Å, C2H5 2.0 Å). Implement scenario builder: for each pair of occupied sites, check distance less than sum of reaction radii; determine product sites using intermediate and reflection site rules; disallow if intermediate occupied. Compute coverage-dependent binding energies using the Radial Function (RF) interaction model with given parameters (Fig. 6 interaction constants ζ, ε, γ for all adsorbate pairs). Compute activation barriers using the modified BOC relations anchored to DFT zero-coverage values: forward barriers for hydrogenation steps (C2H4+H→C2H5 ~16.5 kcal/mol, C2H5+H→C2H6 ~16 kcal/mol) adjusted by BOC. Use preexponential factors and sticking coefficients (Fig. 1): H2 dissociative adsorption s0=0.1; C2H4 adsorption s0=1; surface reactions preexponential 10^13 s⁻¹ except C2H4 desorption 10^9 s⁻¹. Implement variable time-step KMC with Δt_v = -ln(RN)/Σr_i and equilibrate fast processes via Metropolis steps. The implementation will be used in later steps.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step1",
+    "title": "Simulate temperature-dependent turnover frequencies",
+    "role": "scored",
+    "action": "Run the KMC simulation at six temperatures (248, 273, 298, 336, 386, 436 K) while holding H2 partial pressure at 100 Torr and C2H4 partial pressure at 25 Torr. Record the steady-state ethane turnover frequency (TOF) in molecules per site per second. Output a CSV file with the results.",
+    "output_file": "arrhenius_tof.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Temperature-dependent turnover frequencies used to construct the Arrhenius plot.",
+    "output_schema": "Columns: Temperature (K), TurnoverFrequency (s⁻¹). Six rows, one per temperature."
+  },
+  {
+    "id": "step2",
+    "title": "Fit Arrhenius law and report apparent activation energy",
+    "role": "scored",
+    "action": "Fit the Arrhenius equation ln(TOF) = -Ea/(R*T) + constant to the data from step1 using linear regression. Output a single number representing the apparent activation energy Ea in kcal/mol.",
+    "output_file": "activation_energy_kcal.txt",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Apparent activation energy derived from the Arrhenius fit.",
+    "output_schema": "A single floating-point number representing Ea in kcal/mol."
+  },
+  {
+    "id": "step3",
+    "title": "Simulate kinetic order data",
+    "role": "scored",
+    "action": "Run the KMC simulation at 298 K while varying H2 partial pressure (50, 100, 150 Torr) at fixed C2H4 = 25 Torr, and varying C2H4 partial pressure (10, 25, 50 Torr) at fixed H2 = 100 Torr. For each condition record the steady-state TOF. Output a CSV file with the results.",
+    "output_file": "orders_simulation.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "TOF data used to determine the reaction orders with respect to H₂ and C₂H₄.",
+    "output_schema": "Columns: experiment_label (string, e.g. 'H2_50', 'C2H4_10'), Pressure_Torr (float), TurnoverFrequency_s-1 (float). At least 6 rows covering the prescribed pressure variations."
+  }
+]

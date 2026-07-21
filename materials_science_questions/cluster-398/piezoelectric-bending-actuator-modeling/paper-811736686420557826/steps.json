@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step-0",
+    "title": "Load physical parameters",
+    "role": "process",
+    "action": "Read the provided material and geometric parameters (aluminum plate and PVDF piezoelectric sheets) from the task instructions and store them for computation.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "This step makes the exact geometric and material constants available for subsequent computation; no output artifact is required.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-1",
+    "title": "Compute natural frequencies and mode shapes",
+    "role": "process",
+    "action": "For the simply supported plate and the composite plate (with piezoelectric coverage), compute the natural frequencies of the odd modes (1,1), (1,3), (3,1), (3,3) and the normalized mode shapes φ_{m1m2}(x,y) using analytical formulas. Save the computed frequencies to a text file.",
+    "output_file": "",
+    "evidence": "frequencies.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Produces the modal basis and composite-plate natural frequencies required for Galerkin discretization.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-2",
+    "title": "Build state‑space model via Galerkin discretization",
+    "role": "process",
+    "action": "Carry out Galerkin projection of the coupled plate–piezo PDE onto the mode shapes, incorporating piezoelectric coupling terms and the circuit equations for the absorber and sensor. Assemble mass, stiffness, and coupling matrices, and form a state‑space representation truncated to modes (1,1), (1,3), (3,1), (3,3). Verify that the assembled system reproduces the composite-plate natural frequencies when electrical terms are removed and save a verification JSON summarizing the check.",
+    "output_file": "",
+    "evidence": "system_verification.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Implements the core electromechanical model that subsequent steps query for frequency responses.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-3",
+    "title": "Baseline frequency‑response curves (Fig. 4b)",
+    "role": "scored",
+    "action": "Using the state‑space model, sweep the dimensionless excitation frequency ω/ω_n1 and compute the steady‑state dimensionless centre displacement amplitude u_c*(ω/ω_n1) for three configurations: passive absorber ζ_a=0.001, passive absorber ζ_a=0.01, and active absorber (ζ_a=0.001, K=5000, K_s=100, 1/(R₁C₂)=10⁶). Write the results to a CSV file with columns: case, freq_ratio, amplitude.",
+    "output_file": "fig4b_frequency_response.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Main baseline comparison: verifies that the active absorber achieves deeper attenuation than the passive absorber near the first resonance. The checker will recompute the maximum amplitude in the resonance region and compare to the paper‑reported values.",
+    "output_schema": "case:string (one of 'passive_zeta0.001', 'passive_zeta0.01', 'active_zeta0.001'), freq_ratio:float (dimensionless frequency omega/omega_n1), amplitude:float (dimensionless centre displacement u_c*)"
+  },
+  {
+    "id": "step-4",
+    "title": "Uncontrolled‑mode response (Fig. 8) – mode (1,3)",
+    "role": "scored",
+    "action": "With the absorber tuned to the fundamental composite-plate frequency ω_c1, compute the frequency response near the (1,3) resonance for five sets of control/sensor gains (K=5000, K_s=100; K=5000, K_s=1000; K=5000, K_s=3000; K=5000, K_s=6000; K=8000, K_s=100). Extract the steady‑state amplitude of the generalized coordinate for mode (1,3), convert to dimensionless centre displacement, and write a CSV file with columns: case, freq_ratio, amplitude.",
+    "output_file": "fig8_frequency_response.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Demonstrates that an active absorber tuned to the primary mode can also reduce vibration of a higher uncontrolled mode, with sensor gain controlling the degree of attenuation. The checker recomputes the maximum amplitude in the resonance region.",
+    "output_schema": "case:string (one of 'K5000_Ks100', 'K5000_Ks1000', 'K5000_Ks3000', 'K5000_Ks6000', 'K8000_Ks100'), freq_ratio:float, amplitude:float"
+  },
+  {
+    "id": "step-5",
+    "title": "Cross‑tuning response (Fig. 9) – mode (1,1) while absorber tuned to mode (1,3)",
+    "role": "scored",
+    "action": "Set the absorber natural frequency to ω_c(1,3) ≈ 4.705 ω_n1 and sweep excitation frequencies around the fundamental resonance. Record the dimensionless centre displacement of mode (1,1) for three gain combinations (K=5000, K_s=100; K=5000, K_s=6000; K=8000, K_s=100). Output a CSV file with columns: case, freq_ratio, amplitude.",
+    "output_file": "fig9_frequency_response.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Evaluates the dual-mode capability: an absorber tuned to a higher mode can still partially suppress the fundamental mode. The checker recomputes the maximum amplitude in the resonance region.",
+    "output_schema": "case:string (one of 'K5000_Ks100', 'K5000_Ks6000', 'K8000_Ks100'), freq_ratio:float, amplitude:float"
+  }
+]

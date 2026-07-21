@@ -1,0 +1,91 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes ZT from transport CSV to cross-check consistency with the temperature-dependent ZT CSV, then evaluates the ZT ratio values against paper-reported gold and verifies the qualitative trend.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "electronic_transport.csv": "metric_recompute",
+    "temperature_dependence_ZT.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for ZT_H/ZT_W ratio at T=300 K and T=1000 K.",
+      "source_provenance": "Paper text: 'the maximum value of ZT obtained … is about 1.1 times larger … at room temperature' and 'The maxima of Max(ZT-H)/Max(ZT-W) … about 1.18 at T=1000 K' (Section 3, Fig. 6).",
+      "generation_method": "Extracted directly from the paper's reported numbers.",
+      "why_not_fabricated": "These are the paper's own reported values for the ZT ratio."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "electronic_transport.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "n_cm3",
+            "sigma_H_Sm",
+            "sigma_W_Sm",
+            "S_H_uVK",
+            "S_W_uVK",
+            "kappa_e_H_WmK",
+            "kappa_e_W_WmK",
+            "P_H_uWmK2",
+            "P_W_uWmK2"
+          ]
+        },
+        "description": "Electronic transport properties vs carrier concentration at 300 K for both phases. The checker will recompute ZT from these values and cross-check consistency with the T=300 K row of temperature_dependence_ZT.csv."
+      },
+      {
+        "file": "temperature_dependence_ZT.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_K",
+            "ZT_H",
+            "ZT_W",
+            "ratio_ZT_HW"
+          ]
+        },
+        "description": "ZT values and ratio for H and W phases as a function of temperature at optimal doping. The checker will compare the ratio_ZT_HW values at T=300 K and T=1000 K against hidden reference values, and verify the qualitative temperature trend."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "step_03_transport_t300",
+      "output_file": "electronic_transport.csv",
+      "kind": "recompute_consistency",
+      "weight": 0.1,
+      "description": "Cross-check internal consistency: recompute ZT from electronic_transport.csv at T=300 K using given κ_ph and compare to the corresponding row in temperature_dependence_ZT.csv.",
+      "parameters": {
+        "doping_n_H": 6.5e+18,
+        "doping_n_W": 7.1e+18,
+        "kappa_ph_H": 10.1,
+        "kappa_ph_W": 8.3,
+        "T_K": 300,
+        "zt_tolerance_rel": 1e-05
+      }
+    },
+    {
+      "id": "step_05_zt_and_phase_comparison",
+      "output_file": "temperature_dependence_ZT.csv",
+      "kind": "reference_match",
+      "weight": 0.9,
+      "description": "Evaluate ZT ratio at T=300 K and T=1000 K against paper gold values (1.1 and 1.18) with relative tolerance 0.10, and verify qualitative trend (ratio>1, first decrease then increase).",
+      "parameters": {
+        "gold_ratio_300K": 1.1,
+        "gold_ratio_1000K": 1.18,
+        "tolerance_relative": 0.1,
+        "trend_check": true,
+        "ratio_threshold_min": 1.0
+      }
+    }
+  ]
+}

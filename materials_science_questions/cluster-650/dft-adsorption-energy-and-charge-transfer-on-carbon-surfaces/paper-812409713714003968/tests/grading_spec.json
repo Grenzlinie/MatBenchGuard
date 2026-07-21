@@ -1,0 +1,314 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Headline quantities are adsorption energies and diffusion barriers; cannot fully recompute from raw artifacts within verifier sandbox as they require expensive DFT simulations. Result-level comparison with paper-reported values using tolerance ±0.03 eV is appropriate.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "adsorption_energies.csv": "reference_match",
+    "diffusion_barriers.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference adsorption energies and diffusion barriers from paper Tables 1 and 2",
+      "source_provenance": "Paper Surface Science 532-535 (2003) 898-904, Tables 1 and 2",
+      "generation_method": "Copied directly from the paper tables; values are published in the original article.",
+      "why_not_fabricated": "Values are from a published peer-reviewed paper and represent the actual computed results reported by the authors."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adsorption_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cluster",
+            "facet",
+            "site",
+            "energy_eV"
+          ],
+          "units": {
+            "energy_eV": "eV, relative to most stable site per cluster"
+          }
+        },
+        "description": "Table of all distinct adsorption sites with their computed adsorption energies."
+      },
+      {
+        "file": "diffusion_barriers.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cluster",
+            "process",
+            "barrier_eV"
+          ],
+          "units": {
+            "barrier_eV": "eV"
+          }
+        },
+        "description": "Table of energy barriers for the most important diffusion processes."
+      }
+    ],
+    "notes": "The checker compares each row's energy value to hidden reference values from the original paper with an absolute tolerance of ±0.03 eV, and also verifies the relative ordering of site energies within each cluster (e.g., (100) sites more stable than (111) sites)."
+  },
+  "steps": [
+    {
+      "id": "adsorption_values",
+      "output_file": "adsorption_energies.csv",
+      "weight": 0.45,
+      "kind": "reference_match",
+      "tolerance": 0.03,
+      "gold_rows": [
+        {
+          "cluster": "TO38",
+          "facet": "(1 0 0)",
+          "site": "center",
+          "energy_eV": 0.0
+        },
+        {
+          "cluster": "TO38",
+          "facet": "(1 1 1)",
+          "site": "fcc (sites B)",
+          "energy_eV": 0.26
+        },
+        {
+          "cluster": "TO38",
+          "facet": "(1 1 1)",
+          "site": "hcp (sites A)",
+          "energy_eV": 0.26
+        },
+        {
+          "cluster": "Ih55",
+          "facet": "(1 1 1)",
+          "site": "fcc (sites B)",
+          "energy_eV": 0.0
+        },
+        {
+          "cluster": "Ih55",
+          "facet": "(1 1 1)",
+          "site": "hcp (sites A)",
+          "energy_eV": 0.02
+        },
+        {
+          "cluster": "Dh75",
+          "facet": "truncation",
+          "site": "truncation",
+          "energy_eV": 0.0
+        },
+        {
+          "cluster": "Dh75",
+          "facet": "(1 0 0)",
+          "site": "center",
+          "energy_eV": 0.02
+        },
+        {
+          "cluster": "Dh75",
+          "facet": "(1 1 1)",
+          "site": "fcc (sites D)",
+          "energy_eV": 0.25
+        },
+        {
+          "cluster": "Dh75",
+          "facet": "(1 1 1)",
+          "site": "fcc (sites B)",
+          "energy_eV": 0.27
+        },
+        {
+          "cluster": "Dh75",
+          "facet": "(1 1 1)",
+          "site": "hcp (sites E)",
+          "energy_eV": 0.28
+        },
+        {
+          "cluster": "Dh75",
+          "facet": "(1 1 1)",
+          "site": "hcp (sites C)",
+          "energy_eV": 0.26
+        },
+        {
+          "cluster": "Dh75",
+          "facet": "(1 1 1)",
+          "site": "hcp (sites A)",
+          "energy_eV": 0.27
+        }
+      ]
+    },
+    {
+      "id": "adsorption_ordering",
+      "output_file": "adsorption_energies.csv",
+      "weight": 0.05,
+      "kind": "ordering_check",
+      "ordering_constraints": [
+        {
+          "cluster": "TO38",
+          "lower_energy": {
+            "facet": "(1 0 0)",
+            "site": "center"
+          },
+          "higher_energy": {
+            "facet": "(1 1 1)",
+            "site": "fcc (sites B)"
+          }
+        },
+        {
+          "cluster": "TO38",
+          "lower_energy": {
+            "facet": "(1 0 0)",
+            "site": "center"
+          },
+          "higher_energy": {
+            "facet": "(1 1 1)",
+            "site": "hcp (sites A)"
+          }
+        },
+        {
+          "cluster": "Ih55",
+          "lower_energy": {
+            "facet": "(1 1 1)",
+            "site": "fcc (sites B)"
+          },
+          "higher_energy": {
+            "facet": "(1 1 1)",
+            "site": "hcp (sites A)"
+          }
+        },
+        {
+          "cluster": "Dh75",
+          "lower_energy": {
+            "facet": "truncation",
+            "site": "truncation"
+          },
+          "higher_energy": {
+            "facet": "(1 0 0)",
+            "site": "center"
+          }
+        },
+        {
+          "cluster": "Dh75",
+          "lower_energy": {
+            "facet": "(1 0 0)",
+            "site": "center"
+          },
+          "higher_energy": {
+            "facet": "(1 1 1)",
+            "site": "fcc (sites D)"
+          }
+        },
+        {
+          "cluster": "Dh75",
+          "lower_energy": {
+            "facet": "(1 0 0)",
+            "site": "center"
+          },
+          "higher_energy": {
+            "facet": "(1 1 1)",
+            "site": "fcc (sites B)"
+          }
+        },
+        {
+          "cluster": "Dh75",
+          "lower_energy": {
+            "facet": "(1 0 0)",
+            "site": "center"
+          },
+          "higher_energy": {
+            "facet": "(1 1 1)",
+            "site": "hcp (sites E)"
+          }
+        },
+        {
+          "cluster": "Dh75",
+          "lower_energy": {
+            "facet": "(1 0 0)",
+            "site": "center"
+          },
+          "higher_energy": {
+            "facet": "(1 1 1)",
+            "site": "hcp (sites C)"
+          }
+        },
+        {
+          "cluster": "Dh75",
+          "lower_energy": {
+            "facet": "(1 0 0)",
+            "site": "center"
+          },
+          "higher_energy": {
+            "facet": "(1 1 1)",
+            "site": "hcp (sites A)"
+          }
+        }
+      ]
+    },
+    {
+      "id": "barrier_values",
+      "output_file": "diffusion_barriers.csv",
+      "weight": 0.5,
+      "kind": "reference_match",
+      "tolerance": 0.03,
+      "gold_rows": [
+        {
+          "cluster": "TO38",
+          "process": "j(1 1 1)",
+          "barrier_eV": 0.18
+        },
+        {
+          "cluster": "TO38",
+          "process": "j(1 1 1)/(1 1 1)",
+          "barrier_eV": 0.31
+        },
+        {
+          "cluster": "TO38",
+          "process": "j(1 1 1)/(1 0 0)",
+          "barrier_eV": 0.37
+        },
+        {
+          "cluster": "Ih55",
+          "process": "j(1 1 1)",
+          "barrier_eV": 0.12
+        },
+        {
+          "cluster": "Ih55",
+          "process": "j(1 1 1)/(1 1 1)",
+          "barrier_eV": 0.27
+        },
+        {
+          "cluster": "Ih55",
+          "process": "ex(1 1 1)/(1 1 1)",
+          "barrier_eV": 0.54
+        },
+        {
+          "cluster": "Dh75",
+          "process": "j(1 1 1)",
+          "barrier_eV": 0.18
+        },
+        {
+          "cluster": "Dh75",
+          "process": "j(1 1 1)/(1 1 1)",
+          "barrier_eV": 0.29
+        },
+        {
+          "cluster": "Dh75",
+          "process": "j(1 1 1)/(1 0 0)",
+          "barrier_eV": 0.33
+        },
+        {
+          "cluster": "Dh75",
+          "process": "j(1 1 1)/R",
+          "barrier_eV": 0.3
+        },
+        {
+          "cluster": "Dh75",
+          "process": "ex(1 1 1)/(1 1 1)",
+          "barrier_eV": 1.4
+        }
+      ]
+    }
+  ]
+}

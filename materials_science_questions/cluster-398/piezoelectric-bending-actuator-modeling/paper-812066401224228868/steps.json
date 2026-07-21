@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_bulk_bands",
+    "title": "Compute bulk SH wave band edges",
+    "role": "scored",
+    "action": "Implement the transfer matrix T for shear horizontal (SH) waves in a piezoelectric superlattice composed of hexagonal 6mm crystals, with c-axis along x₃, superlattice normal along x₁, and propagation along x₂. Use the provided material parameters of CdS and ZnO and assume equal layer thicknesses (h = h'). Compute the bulk band edges for the first two bands: for a range of reduced wavenumber k∥D from 0 to π (at least 100 evenly spaced points), scan frequency ω to find the boundaries where bulk waves propagate (i.e., |cos(k₁D)| ≤ 1). Record the lower and upper band edges as dimensionless frequencies Ω = ω·D / (2π·C_t(CdS)), where C_t(CdS) = √(C₄₄(CdS)/ρ(CdS)).",
+    "output_file": "bulk_band_edges.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the band-edge frequencies of the first two bulk SH bands for the CdS-ZnO superlattice with equal layer thicknesses.",
+    "output_schema": "Columns: k_parallel_D (float), band1_lower (float, dimensionless Ω), band1_upper (float, dimensionless Ω), band2_lower (float, dimensionless Ω), band2_upper (float, dimensionless Ω)."
+  },
+  {
+    "id": "step_surface_velocities",
+    "title": "Compute surface wave phase velocities",
+    "role": "scored",
+    "action": "Using the same transfer matrix and superlattice parameters, compute the eigenvectors corresponding to eigenvalues with a positive imaginary part (decaying into the bulk). Solve the surface wave dispersion relations: for a CdS top layer compute surface wave frequencies below the lowest bulk band for both non-metallized (3×3 determinant) and metallized (2×2 determinant) boundary conditions; for a ZnO top layer compute only the metallized case (the non-metallized case is too close to the bulk band to distinguish). Evaluate at the selected k∥D values [0.1, 0.5, 1.0, 2.0, 5.0, 10.0] and convert frequencies to phase velocities in units of C_t(CdS) = √(C₄₄(CdS)/ρ(CdS)). If a mode does not exist at a given k∥D, leave the corresponding entry as NaN.",
+    "output_file": "surface_phase_velocities.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with surface wave phase velocities (in units of C_t(CdS)) for selected k∥D values and different surface terminations.",
+    "output_schema": "Columns: k_parallel_D (float), velocity_CdS_nonmetal (float), velocity_CdS_metal (float), velocity_ZnO_metal (float). Use NaN when a mode does not exist."
+  },
+  {
+    "id": "step_effective_constants",
+    "title": "Compute effective medium constants",
+    "role": "scored",
+    "action": "Using the material parameters of CdS and ZnO and the equal layer thickness fraction x = 0.5, compute the long-wavelength effective constants from the averaging rules for orthorhombic 2mm symmetry with normal along x₁, specialized to 6mm (C55 = C44, ε22 = ε11).  \n1. Elastic constant: C₄₄^eff is the thickness-weighted arithmetic average: C₄₄^eff = x · C₄₄(CdS) + (1−x) · C₄₄(ZnO).  \n2. Piezoelectric and dielectric constants: For each material, compute 𝒟' = C₄₄·ε₁₁ + (e₁₅)². Then compute the thickness-weighted averages of the three combinations:  \n   A = < e₁₅ / 𝒟' > = x·e₁₅(CdS)/𝒟'(CdS) + (1−x)·e₁₅(ZnO)/𝒟'(ZnO),  \n   B = < ε₁₁ / 𝒟' > = x·ε₁₁(CdS)/𝒟'(CdS) + (1−x)·ε₁₁(ZnO)/𝒟'(ZnO),  \n   C = < C₄₄ / 𝒟' > = x·C₄₄(CdS)/𝒟'(CdS) + (1−x)·C₄₄(ZnO)/𝒟'(ZnO).  \n   Obtain the effective 𝒟'^eff = C₄₄^eff / C, then e₁₅^eff = A · 𝒟'^eff, ε₁₁^eff = B · 𝒟'^eff.  \nAll units: C₄₄ in 10^10 N/m², e₁₅ in C/m², ε₁₁ in 10⁻¹¹ F/m. Output the results in a JSON file.",
+    "output_file": "effective_constants.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file with the effective piezoelectric, elastic, and dielectric constants in the long-wavelength limit.",
+    "output_schema": "JSON object with keys: \"C44_eff\" (float, unit 10^10 N/m²), \"e15_eff\" (float, unit C/m²), \"epsilon11_eff\" (float, unit 10⁻¹¹ F/m)."
+  }
+]

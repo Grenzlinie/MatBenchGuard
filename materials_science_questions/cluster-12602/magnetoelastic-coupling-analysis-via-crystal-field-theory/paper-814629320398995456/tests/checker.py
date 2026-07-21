@@ -105,9 +105,12 @@ def score_0(artifact, step, ctx):
     if len(temps) < 3: return 0.0
     idx = max(range(len(cms)), key=lambda i: cms[i])
     t_peak = temps[idx]
-    target_T = step.get('target_T', 11.0); tol_T = step.get('tol_T', 1.5)
+    cm_peak = cms[idx]
+    target_T = 11.0; tol_T = 1.5
+    target_mag = 1.5; tol_mag = 0.3
     sT = max(0.0, 1.0 - abs(t_peak - target_T) / (2 * tol_T))
-    return sT
+    sM = max(0.0, 1.0 - abs(cm_peak - target_mag) / (2 * tol_mag))
+    return 0.5 * sT + 0.5 * sM
 
 
 # === block: score_1 (check id='suscept') ===
@@ -122,7 +125,7 @@ def score_1(artifact, step, ctx):
     slope, _ = np.linalg.lstsq(A, chi, rcond=None)[0]
     if slope <= 0: return 0.0
     p_eff = (8.0 / slope) ** 0.5
-    target = step.get('target_p_eff', 3.58); tol = step.get('tol_p_eff', 0.18)
+    target = 3.58; tol = 0.18
     return max(0.0, 1.0 - abs(p_eff - target) / (2 * tol))
 
 
@@ -140,16 +143,26 @@ def score_2(artifact, step, ctx):
     delta44 = (c44_100 - c44[i44]) / c44_100 if c44_100 != 0 else 0
     delta12 = (c12_100 - c12[i12]) / c12_100 if c12_100 != 0 else 0
     # c44
-    tt_arg = step.get('c44_T_target', 20.0); tt_tol = step.get('c44_T_tol', 3.0); dt_arg = step.get('c44_delta_target', 0.025); dt_tol = step.get('c44_delta_tol', 0.005)
+    tt_arg = 20.0; tt_tol = 3.0; dt_arg = 0.025; dt_tol = 0.005
     sT44 = max(0.0, 1.0 - abs(t44 - tt_arg) / (2 * tt_tol))
     sD44 = max(0.0, 1.0 - abs(delta44 - dt_arg) / (2 * dt_tol))
+    # shoulder check: after the c44 minimum there must be a recovery forming a shoulder
+    shoulder_ratio = 0.0
+    if i44 < len(c44) - 2:
+        # maximum value occurring after the minimum temperature
+        post_c44 = c44[i44:]
+        post_T = T[i44:]
+        max_idx = int(np.argmax(post_c44))
+        shoulder_ratio = (post_c44[max_idx] - c44[i44]) / c44_100 if c44_100 != 0 else 0
+    shoulder_thresh = 0.003   # minimal relative rise that constitutes a shoulder
+    sShoulder = 1.0 if shoulder_ratio >= shoulder_thresh else 0.0
+    sC44 = (sT44 + sD44 + sShoulder) / 3.0
     # c12
-    tt_arg2 = step.get('c12_T_target', 15.0); tt_tol2 = step.get('c12_T_tol', 3.0); dt_arg2 = step.get('c12_delta_target', 0.015); dt_tol2 = step.get('c12_delta_tol', 0.003)
+    tt_arg2 = 15.0; tt_tol2 = 3.0; dt_arg2 = 0.015; dt_tol2 = 0.003
     sT12 = max(0.0, 1.0 - abs(t12 - tt_arg2) / (2 * tt_tol2))
     sD12 = max(0.0, 1.0 - abs(delta12 - dt_arg2) / (2 * dt_tol2))
-    sc44 = 0.5 * sT44 + 0.5 * sD44
-    sc12 = 0.5 * sT12 + 0.5 * sD12
-    return 0.5 * sc44 + 0.5 * sc12
+    sC12 = 0.5 * sT12 + 0.5 * sD12
+    return 0.5 * sC44 + 0.5 * sC12
 
 
 _SCORERS = {

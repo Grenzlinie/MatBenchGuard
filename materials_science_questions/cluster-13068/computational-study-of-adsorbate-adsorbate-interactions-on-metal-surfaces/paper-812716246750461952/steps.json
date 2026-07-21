@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_phase_shifts",
+    "title": "Compute scattering phase shifts",
+    "role": "process",
+    "action": "Compute scattering phase shifts δ_m(k) as a function of relative momentum k and angular momentum m by solving the two-body radial Schrödinger equation numerically using the Numerov method with the Silvera H–H triplet potential (given analytically).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Numerical phase shifts required for the effective interaction.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_fpp",
+    "title": "Construct effective interaction f_pp'",
+    "role": "process",
+    "action": "Construct the two-body coupling function f_pp'(k) from the computed phase shifts using the relation f_pp' = -4/(M A) Σ_m δ_m(k). Produce an interpolated function or table for use in subsequent integration.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Interpolated effective interaction kernel needed for the Δμ integral.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_mu2d_vs_t",
+    "title": "Compute 2D chemical potential μ_2D for fixed surface density",
+    "role": "scored",
+    "action": "Compute the total 2D chemical potential μ_2D for a surface density n_s = 1e13 cm^{-2} as a function of temperature T. For T > T_KT: compute the ideal 2D Bose gas chemical potential μ⁰_2D, occupation numbers n⁰_p, energy derivatives, and the interaction shift Δμ via the VC expression using numerical Romberg integration with the f_pp' function. For T = 0 K use Schick's formula with scattering length a = 0.727 Å. For 0 < T < T_KT, linearly interpolate between the T=0 value and the VC value at T_KT.",
+    "output_file": "mu_vs_T.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "2D chemical potential as function of temperature, verifying the VC calculation.",
+    "output_schema": "Columns: T (K), mu_2D (K). At least 50 rows covering T = 0.01 to 0.50 K."
+  },
+  {
+    "id": "step_04_ns_vs_t",
+    "title": "Determine surface density n_s(T) from equilibrium",
+    "role": "scored",
+    "action": "For each gas density n_gas ∈ {1e17, 1e18, 1e19} cm^{-3} and for both single‑type H↓ and a 50:50 mixture of spin states, solve the equilibrium condition μ_G(n_gas,T) = E_a + μ_2D(n_s,T) to obtain the film density n_s as a function of temperature T. Use classical ideal‑gas μ_G = k_B T ln(n_gas λ^3), adsorption energy E_a = 0.9 K, and the full μ_2D function from step 3 (including low‑T interpolation). For the mixture, replace f_pp' by 2 f_pp' in Δμ.",
+    "output_file": "ns_vs_T.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Surface density curves at fixed gas densities for mixture and single‑type H↓.",
+    "output_schema": "Columns: n_gas (cm^{-3}), component (mixture or single), T (K), n_s (cm^{-2}). At least 50 temperature points per curve."
+  },
+  {
+    "id": "step_05_kt_temperatures",
+    "title": "Locate KT superfluid transition temperatures",
+    "role": "scored",
+    "action": "For n_gas = 1e18 cm^{-3}, find the temperature T_KT at which the n_s(T) curve from step 4 satisfies the KT condition n_s λ^2 = 4 (or equivalently n_s = 2 M k_B T_KT / (π ħ^2)). Report T_KT for both mixture and single‑type H↓.",
+    "output_file": "KT_temperatures.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "KT transition temperatures at n_gas = 1e18 cm^{-3}.",
+    "output_schema": "JSON object with keys 'mixture' and 'single', values in Kelvin."
+  }
+]

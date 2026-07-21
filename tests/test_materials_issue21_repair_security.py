@@ -55,7 +55,6 @@ def bind_plan(package: Path, plan: dict[str, Any]) -> dict[str, Any]:
         "paper_mode": "no_paper",
         "execution_level": "E1",
         "core_contract_digest": digest,
-        "fixture_hashes": {},
         "assessment_hashes": {},
     }
     for item in plan["evidence"]:
@@ -570,73 +569,26 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 2)
             self.assertIn("causal", completed.stderr)
 
-    def test_fixture_hash_must_match_source_audit(self) -> None:
+    def test_removed_fixture_fields_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(workspace)
-            fixture = workspace / "known-valid-output"
-            fixture.write_text("independent fixture\n", encoding="utf-8")
-            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
-            plan["known_valid_output"] = str(fixture)
-            plan["source_audit"]["fixture_hashes"] = {
-                "known_valid_output": "sha256:" + "0" * 64
-            }
-            path = workspace / "fixture.json"
-            write_plan(path, plan)
-
-            completed = run_repair(package, path, runner)
-
-            self.assertEqual(completed.returncode, 3)
-            self.assertEqual(
-                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
-            )
-
-    def test_plan_cannot_authorize_arbitrary_fixture(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            workspace = Path(temporary)
-            package, report, finding_id, runner = initial_repair_context(workspace)
-            fixture = workspace / "arbitrary-fixture"
-            fixture.write_text("plan-selected\n", encoding="utf-8")
-            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
-            plan["known_valid_output"] = str(fixture)
-            plan["source_audit"]["fixture_hashes"] = {
-                "known_valid_output": repair_module().sha256_path(fixture)
-            }
-            path = workspace / "arbitrary-fixture.json"
-            write_plan(path, plan)
-
-            completed = run_repair(package, path, runner)
-
-            self.assertEqual(completed.returncode, 3)
-            self.assertEqual(
-                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
-            )
-
-    def test_manifest_cannot_authorize_arbitrary_fixture(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            workspace = Path(temporary)
-            package, report, finding_id, runner = initial_repair_context(workspace)
-            fixture = workspace / "manifest-selected-fixture"
-            fixture.write_text("manifest-selected\n", encoding="utf-8")
-            fixture_hash = repair_module().sha256_path(fixture)
-            manifest_path = package / "benchmark_audit/audit_manifest.json"
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            manifest["fixture_hashes"] = {"known_valid_output": fixture_hash}
-            write_plan(manifest_path, manifest)
-            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
-            plan["known_valid_output"] = str(fixture)
-            plan["source_audit"]["fixture_hashes"] = {
-                "known_valid_output": fixture_hash
-            }
-            path = workspace / "manifest-fixture.json"
-            write_plan(path, plan)
-
-            completed = run_repair(package, path, runner)
-
-            self.assertEqual(completed.returncode, 3)
-            self.assertEqual(
-                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
-            )
+            removed = repair_module().REMOVED_FIXTURE_FIELDS
+            self.assertTrue(removed)
+            for field in removed:
+                with self.subTest(field=field):
+                    plan = bind_plan(
+                        package, safe_plan(report["audit_id"], finding_id)
+                    )
+                    plan[field] = {"removed": True}
+                    path = workspace / f"{field}.json"
+                    write_plan(path, plan)
+                    completed = run_repair(package, path, runner)
+                    self.assertEqual(completed.returncode, 3)
+                    self.assertEqual(
+                        json.loads(completed.stdout)["status"],
+                        "BLOCKED_EVIDENCE",
+                    )
 
     def test_unrelated_paper_quote_cannot_set_gold_value(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -978,10 +930,8 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
             path = workspace / "mutated-test-shell.json"
             write_plan(path, plan)
             completed = run_repair(package, path, runner)
-            self.assertEqual(completed.returncode, 3)
-            self.assertEqual(
-                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
-            )
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn("input changed since review", completed.stderr)
 
     def test_failed_history_bundle_is_complete_and_enforced(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -43,9 +43,24 @@ from d1_d2_contract import (  # noqa: E402
 from deterministic_contract import (  # noqa: E402
     CHECK_IDS,
     DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES,
+    DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION,
+    finding_lane,
     is_deterministic_repair_plan,
     validate_deterministic_contract,
     validate_deterministic_plan_binding,
+)
+from artifact_schema import (  # noqa: E402
+    AUDIT_ATTESTATION_SCHEMA_VERSION,
+    AUDIT_MANIFEST_SCHEMA_VERSION,
+    AUDIT_REPORT_SCHEMA_VERSION,
+    DISPOSITION_SCHEMA_VERSION,
+    DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION,
+    DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION,
+    AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
+    SCORING_SCHEMA_VERSION,
+    IMPLEMENTATION_HASH_SCHEMA_VERSION,
+    IMPLEMENTATION_MANIFEST_SCHEMA_VERSION,
+    require_schema,
 )
 from d5_package_completeness import validate_auto_fix_operation  # noqa: E402
 from d3_d4_checker import auto_fix_operation_error  # noqa: E402
@@ -102,6 +117,9 @@ GENERATED_TOP_LEVEL = {
     ".benchmark_repair_tmp",
 }
 EVIDENCE_SOURCE_PREFIX = "benchmark_audit:"
+REMOVED_FIXTURE_FIELDS = frozenset(
+    {"known_valid_output", "fixture_hashes", "repair_reaudit_lineage"}
+)
 METADATA_ROOTS = {
     "manifest.json",
     "resources.json",
@@ -111,7 +129,9 @@ METADATA_ROOTS = {
 }
 REQUIRED_AUDIT_EXECUTION_LEVEL = "E1"
 CORE_CONTRACT_SCHEMA = "materials-core-contract/1.0"
-CURRENT_SCORING_VERSION = "materials-review-scoring/1.1"
+CURRENT_SCORING_VERSION = SCORING_SCHEMA_VERSION
+MINIMUM_REPAIR_SCORE = 60.0
+PUBLICATION_SCORE = 80.0
 HARD_GATE_CODES = (
     "NON_MATERIALS_TASK",
     "SCIENTIFIC_TARGET_INVALID",
@@ -175,6 +195,26 @@ PRECISION_RULES = {
     ),
     "harbor_path": ("official_contract", "existing_path_code", "replacement"),
 }
+ASSISTED_SOURCE_KINDS = frozenset(
+    {
+        "PACKAGE_PAPER",
+        "PACKAGE_DIRECT_SOURCE",
+        "AUTHORITATIVE_PRIMARY_WEB",
+    }
+)
+WEB_SOURCE_KIND = "AUTHORITATIVE_PRIMARY_WEB"
+WEB_AUTHORITIES = frozenset(
+    {
+        "OFFICIAL_STANDARD",
+        "OFFICIAL_SOFTWARE_DOCUMENTATION",
+        "PEER_REVIEWED_PRIMARY",
+        "AUTHORITATIVE_PRIMARY",
+    }
+)
+DIRECT_SOURCE_ROOTS = frozenset(
+    {"data", "direct_sources", "inputs", "reference", "references", "resources", "sources"}
+)
+DIRECT_SOURCE_FILES = frozenset({"instruction.md", "resources.json"})
 
 
 class PolicyStop(Exception):
@@ -188,6 +228,30 @@ class PolicyStop(Exception):
 
 def read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def reject_removed_fixture_fields(value: Any, *, context: str) -> None:
+    """Reject pre-split fixture lineage instead of silently ignoring it."""
+
+    found: set[str] = set()
+
+    def visit(node: Any) -> None:
+        if isinstance(node, dict):
+            for key, child in node.items():
+                if key in REMOVED_FIXTURE_FIELDS:
+                    found.add(key)
+                visit(child)
+        elif isinstance(node, list):
+            for child in node:
+                visit(child)
+
+    visit(value)
+    if found:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"{context} contains removed fixture fields: "
+            + ", ".join(sorted(found)),
+        )
 
 
 def write_json(path: Path, value: Any) -> None:
@@ -271,7 +335,7 @@ def collect_review_implementation_hashes() -> dict[str, Any]:
     if (
         not isinstance(manifest, dict)
         or manifest.get("schema_version")
-        != "materials-review-implementation-files/1.0"
+        != IMPLEMENTATION_MANIFEST_SCHEMA_VERSION
         or not isinstance(files_list, list)
         or files_list != sorted(set(files_list))
         or REVIEW_IMPLEMENTATION_FILES_MANIFEST not in files_list
@@ -294,7 +358,7 @@ def collect_review_implementation_hashes() -> dict[str, Any]:
         files, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
     return {
-        "schema_version": "materials-review-implementation/1.0",
+        "schema_version": IMPLEMENTATION_HASH_SCHEMA_VERSION,
         "root": ".cursor/skills/materials-benchmark-review",
         "files": files,
         "aggregate_hash": "sha256:" + hashlib.sha256(payload).hexdigest(),
@@ -602,8 +666,6 @@ def validate_external_plan(root: Path, plan_path: Path) -> dict[str, Any]:
             "repair plan must use schema_version 0.1 or the deterministic "
             "repair-plan schema"
         )
-    if "source_audit" not in plan and isinstance(plan.get("audit_binding"), dict):
-        plan["source_audit"] = plan["audit_binding"]
     if not isinstance(plan.get("audit_id"), str) or not plan["audit_id"]:
         raise ValueError("repair plan requires audit_id")
     if isinstance(plan.get("findings"), list):
@@ -629,12 +691,8 @@ def validate_external_plan(root: Path, plan_path: Path) -> dict[str, Any]:
 def external_binding_hashes(
     root: Path, plan: dict[str, Any], authoritative_manifest: dict[str, Any]
 ) -> tuple[dict[str, str], dict[str, str]]:
-    fixture_hashes: dict[str, str] = {}
     assessment_hashes: dict[str, str] = {}
-    for key, target in (
-        ("known_valid_output", fixture_hashes),
-        ("agent_assessment", assessment_hashes),
-    ):
+    for key, target in (("agent_assessment", assessment_hashes),):
         raw = plan.get(key)
         if raw is None:
             continue
@@ -672,24 +730,16 @@ def external_binding_hashes(
             normalized[name] = raw_hash
         return normalized
 
-    expected_fixtures = normalize(
-        authoritative_manifest.get("fixture_hashes"), "fixture_hashes"
-    )
     expected_assessments = normalize(
         authoritative_manifest.get("assessment_hashes"), "assessment_hashes"
     )
-    if expected_fixtures != fixture_hashes:
-        raise PolicyStop(
-            "BLOCKED_EVIDENCE",
-            "authoritative audit fixture hashes do not bind the supplied fixture",
-        )
     if expected_assessments != assessment_hashes:
         raise PolicyStop(
             "BLOCKED_EVIDENCE",
             "authoritative audit assessment hashes do not bind the supplied "
             "assessment",
         )
-    return fixture_hashes, assessment_hashes
+    return {}, assessment_hashes
 
 
 def authenticate_audit_bundle(
@@ -700,6 +750,15 @@ def authenticate_audit_bundle(
     audit: Path | None = None,
 ) -> None:
     audit = audit or (root / "benchmark_audit")
+    report = require_schema(
+        report, AUDIT_REPORT_SCHEMA_VERSION, "authoritative audit report"
+    )
+    manifest = require_schema(
+        manifest, AUDIT_MANIFEST_SCHEMA_VERSION, "authoritative audit manifest"
+    )
+    disposition = require_schema(
+        disposition, DISPOSITION_SCHEMA_VERSION, "audit disposition"
+    )
     audit_id = manifest.get("audit_id")
     if (
         not isinstance(audit_id, str)
@@ -716,7 +775,16 @@ def authenticate_audit_bundle(
             "BLOCKED_EVIDENCE",
             "authoritative audit lacks authenticated output hashes",
         )
-    required = {"audit_report.json", "disposition.json"}
+    required = {
+        "audit_report.json",
+        "disposition.json",
+        "corpus_index_entry.json",
+        "checker_tests.json",
+        "resource_checks.json",
+        "deterministic_core/report.json",
+        "deterministic_core/probe_results.json",
+        "agent_quality/assessment.json",
+    }
     if not required.issubset(output_hashes):
         raise PolicyStop(
             "BLOCKED_EVIDENCE",
@@ -743,6 +811,42 @@ def authenticate_audit_bundle(
                 "BLOCKED_EVIDENCE",
                 f"authoritative audit output is tampered or stale: {relative}",
             )
+    for relative, expected_schema in {
+        "deterministic_core/report.json": DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION,
+        "deterministic_core/probe_results.json": (
+            DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION
+        ),
+        "agent_quality/assessment.json": AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
+    }.items():
+        artifact = require_schema(
+            read_json(audit / relative), expected_schema, relative
+        )
+        if relative == "deterministic_core/report.json" and report.get(
+            "deterministic_core"
+        ) != artifact:
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "deterministic core artifact differs from audit report",
+            )
+        if relative == "deterministic_core/probe_results.json" and report.get(
+            "deterministic_core", {}
+        ).get("probe_results") != artifact:
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "deterministic probe artifact differs from audit report",
+            )
+        if relative == "agent_quality/assessment.json" and report.get(
+            "agent_quality"
+        ) != artifact:
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "agent quality artifact differs from audit report",
+            )
+    if report.get("summary", {}).get("scoring_version") != CURRENT_SCORING_VERSION:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "authoritative audit uses an unsupported scoring schema",
+        )
     try:
         current_implementation = collect_review_implementation_hashes()
     except (OSError, ValueError) as exc:
@@ -779,6 +883,8 @@ def validate_audit_attestation(
     try:
         attestation = read_json(resolved)
         manifest = read_json(audit / "audit_manifest.json")
+        report = read_json(audit / "audit_report.json")
+        disposition = read_json(audit / "disposition.json")
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         raise PolicyStop(
             "BLOCKED_EVIDENCE",
@@ -789,14 +895,57 @@ def validate_audit_attestation(
             "BLOCKED_EVIDENCE",
             "source-audit attestation and manifest must be objects",
         )
+    reject_removed_fixture_fields(attestation, context="source-audit attestation")
+    reject_removed_fixture_fields(manifest, context="source-audit manifest")
+    reject_removed_fixture_fields(report, context="source-audit report")
+    reject_removed_fixture_fields(
+        disposition, context="source-audit disposition"
+    )
+    manifest = require_schema(
+        manifest, AUDIT_MANIFEST_SCHEMA_VERSION, "source-audit manifest"
+    )
+    report = require_schema(
+        report, AUDIT_REPORT_SCHEMA_VERSION, "source-audit report"
+    )
     try:
+        artifact_paths = {
+            "audit_report.json": audit / "audit_report.json",
+            "deterministic_core/report.json": audit
+            / "deterministic_core/report.json",
+            "deterministic_core/probe_results.json": audit
+            / "deterministic_core/probe_results.json",
+            "agent_quality/assessment.json": audit
+            / "agent_quality/assessment.json",
+        }
+        artifact_hashes = {
+            relative: sha256_file(path)
+            for relative, path in artifact_paths.items()
+            if path.is_file() and not path.is_symlink()
+        }
         payload = {
             "audit_id": manifest.get("audit_id"),
             "manifest_hash": sha256_file(audit / "audit_manifest.json"),
             "report_hash": sha256_file(audit / "audit_report.json"),
             "disposition_hash": sha256_file(audit / "disposition.json"),
-            "fixture_hashes": manifest.get("fixture_hashes", {}),
             "assessment_hashes": manifest.get("assessment_hashes", {}),
+            "artifact_hashes": artifact_hashes,
+            "output_hashes": manifest.get("output_hashes", {}),
+            "artifact_schema_versions": {
+                "audit_manifest": manifest.get("schema_version"),
+                "audit_bundle": manifest.get("bundle_schema_version"),
+                "audit_report": report.get("schema_version"),
+                "deterministic_core": report.get(
+                    "deterministic_core", {}
+                ).get("schema_version"),
+                "deterministic_probe_results": report.get(
+                    "deterministic_core", {}
+                ).get("probe_results", {}).get("schema_version"),
+                "agent_quality": report.get("agent_quality", {}).get(
+                    "schema_version"
+                ),
+                "scoring": report.get("summary", {}).get("scoring_version"),
+            },
+            "scoring_schema_version": CURRENT_SCORING_VERSION,
         }
     except OSError as exc:
         raise PolicyStop(
@@ -807,7 +956,7 @@ def validate_audit_attestation(
         payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
     expected = {
-        "schema_version": "materials-audit-attestation/1.0",
+        "schema_version": AUDIT_ATTESTATION_SCHEMA_VERSION,
         **payload,
         "bundle_digest": "sha256:" + hashlib.sha256(encoded).hexdigest(),
     }
@@ -826,12 +975,14 @@ def validate_source_audit_binding(
     finding: dict[str, Any],
     plan: dict[str, Any],
 ) -> dict[str, Any]:
+    reject_removed_fixture_fields(plan, context="repair plan")
     source_audit = plan.get("source_audit")
     if not isinstance(source_audit, dict):
         raise PolicyStop(
             "BLOCKED_EVIDENCE",
             "Repair requires a complete source-audit binding.",
         )
+    reject_removed_fixture_fields(source_audit, context="repair source-audit binding")
     expected_audit_id = report.get("audit_id")
     if (
         source_audit.get("audit_id") != expected_audit_id
@@ -920,15 +1071,29 @@ def validate_fresh_audit(
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     audit = source_audit_dir(root, plan)
     validate_audit_attestation(root, audit, attestation_path)
-    report = read_json(audit / "audit_report.json")
-    manifest = read_json(audit / "audit_manifest.json")
-    disposition = read_json(audit / "disposition.json")
+    report = require_schema(
+        read_json(audit / "audit_report.json"),
+        AUDIT_REPORT_SCHEMA_VERSION,
+        "authoritative audit report",
+    )
+    manifest = require_schema(
+        read_json(audit / "audit_manifest.json"),
+        AUDIT_MANIFEST_SCHEMA_VERSION,
+        "authoritative audit manifest",
+    )
+    disposition = require_schema(
+        read_json(audit / "disposition.json"),
+        DISPOSITION_SCHEMA_VERSION,
+        "authoritative audit disposition",
+    )
     authenticate_audit_bundle(
         root, report, manifest, disposition, audit=audit
     )
     report_configuration(report)
     if plan["audit_id"] != report.get("audit_id"):
         raise ValueError("stale audit: plan audit_id is not authoritative")
+    if plan.get("repair_class") != "ABANDON":
+        enforce_source_score_gate(report)
     route = disposition.get("route") or canonical_publish_route(report)
     if route != "REPAIR_QUEUE":
         raise ValueError("authoritative audit is not routed to REPAIR_QUEUE")
@@ -939,6 +1104,9 @@ def validate_fresh_audit(
     }
     if plan["finding_id"] not in findings:
         raise ValueError("repair plan finding_id is not open in the audit")
+    enforce_repair_lane_boundary(
+        plan, findings[plan["finding_id"]], report
+    )
     input_hashes = manifest.get("input_hashes")
     if not isinstance(input_hashes, dict):
         raise ValueError("audit manifest input_hashes must be an object")
@@ -961,6 +1129,205 @@ def validate_fresh_audit(
     return report, manifest, finding
 
 
+def authoritative_total_score(
+    report: dict[str, Any], *, context: str
+) -> float:
+    """Read the Review-owned C01-C07 total, failing closed on bad input."""
+
+    summary = report.get("summary")
+    raw = summary.get("total_score") if isinstance(summary, dict) else None
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"{context} is missing the authoritative C01-C07 total score.",
+        )
+    score = float(raw)
+    if not math.isfinite(score) or not 0 <= score <= 100:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"{context} has a non-finite or out-of-range total score.",
+        )
+    return score
+
+
+def enforce_source_score_gate(report: dict[str, Any]) -> float:
+    """A source audit below 60 is never eligible to enter Repair."""
+
+    score = authoritative_total_score(report, context="source audit")
+    if score < MINIMUM_REPAIR_SCORE:
+        raise PolicyStop(
+            "ABANDONED",
+            f"source audit total score {score:g} is below "
+            f"{MINIMUM_REPAIR_SCORE:g}; Repair is not eligible",
+        )
+    return score
+
+
+def is_agent_quality_finding(
+    finding: dict[str, Any], report: dict[str, Any]
+) -> bool:
+    quality_ids = (
+        report.get("agent_quality", {}).get("finding_ids", [])
+        if isinstance(report.get("agent_quality"), dict)
+        else []
+    )
+    return (
+        finding_lane(finding) in {"agent_quality", "quality_results"}
+        or finding.get("judgment_type") == "AGENT_JUDGMENT"
+        or finding.get("finding_id") in quality_ids
+    )
+
+
+def enforce_repair_lane_boundary(
+    plan_finding: dict[str, Any],
+    source_finding: dict[str, Any],
+    report: dict[str, Any],
+) -> None:
+    """Keep Agent-quality findings out of deterministic AUTO_FIX."""
+
+    quality_finding = is_agent_quality_finding(source_finding, report) or (
+        plan_finding.get("lane") in {"agent_quality", "quality_results"}
+        or plan_finding.get("judgment_type") == "AGENT_JUDGMENT"
+    )
+    if not quality_finding:
+        return
+    if plan_finding.get("repair_class") == "AUTO_FIX":
+        raise PolicyStop(
+            "POLICY_VIOLATION",
+            "Agent quality findings may not become deterministic AUTO_FIX",
+        )
+    if plan_finding.get("deterministic_check") is not None:
+        raise PolicyStop(
+            "POLICY_VIOLATION",
+            "Agent quality findings may not claim D1-D6 ownership",
+        )
+
+
+def validate_assisted_evidence_metadata(
+    item: dict[str, Any],
+    *,
+    source_kind: str,
+    source: str,
+) -> str:
+    """Validate the untrusted Agent evidence envelope.
+
+    The content hash and quote are checked by ``evidence_index`` for local
+    files.  This function checks the additional provenance required before an
+    Agent-authored semantic change can be considered.
+    """
+
+    exact_quote = item.get("exact_quote")
+    if not isinstance(exact_quote, str) or not exact_quote.strip():
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"assisted evidence for {source} requires exact_quote",
+        )
+    if "quote" in item and item.get("quote") != exact_quote:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"assisted evidence quote aliases conflict for {source}",
+        )
+    if source_kind not in ASSISTED_SOURCE_KINDS:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"unsupported assisted evidence source_kind: {source_kind}",
+        )
+    supplied_hash = item.get("source_hash")
+    if (
+        not isinstance(supplied_hash, str)
+        or re.fullmatch(r"sha256:[0-9a-fA-F]{64}", supplied_hash) is None
+    ):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"assisted evidence for {source} requires a valid source_hash",
+        )
+    for field in ("applicability", "derivation"):
+        value = item.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                f"assisted evidence for {source} requires {field}",
+            )
+    if "core_science_change" not in item:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"assisted evidence for {source} requires "
+            "core_science_change=false",
+        )
+    if item.get("core_science_change") is not False:
+        raise PolicyStop(
+            "POLICY_VIOLATION",
+            f"assisted evidence for {source} must declare "
+            "core_science_change=false",
+        )
+    if source_kind == WEB_SOURCE_KIND:
+        if not re.fullmatch(r"https://[^\s]+", source):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "authoritative web evidence requires an HTTPS URL",
+            )
+        if item.get("url") != source:
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "web evidence url must exactly match source",
+            )
+        retrieved_at = item.get("retrieved_at")
+        metadata = item.get("retrieval_metadata")
+        if not isinstance(retrieved_at, str) or not retrieved_at.strip():
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "web evidence requires retrieved_at metadata",
+            )
+        if not isinstance(metadata, dict) or not metadata:
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "web evidence requires retrieval_metadata",
+            )
+        metadata_time = metadata.get("retrieved_at")
+        if metadata_time is not None and metadata_time != retrieved_at:
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "web evidence retrieval timestamps conflict",
+            )
+        approval = item.get("approval")
+        if not isinstance(approval, dict):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "web evidence requires an explicit approval object",
+            )
+        if (
+            approval.get("approved") is not True
+            or approval.get("primary") is not True
+            or approval.get("authority") not in WEB_AUTHORITIES
+            or not isinstance(approval.get("reference"), str)
+            or not approval["reference"].strip()
+        ):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "web evidence approval must identify an authoritative primary "
+                "source and approval reference",
+            )
+        content_hash = metadata.get("content_hash")
+        if content_hash is not None and content_hash != supplied_hash:
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "web retrieval content_hash conflicts with source_hash",
+            )
+    return exact_quote
+
+
+def local_assisted_source_kind(relative: Path) -> str | None:
+    """Return the admissible Agent evidence kind for a package path."""
+
+    if relative.parts and relative.parts[0] == "paper":
+        return "PACKAGE_PAPER"
+    if relative.as_posix() in DIRECT_SOURCE_FILES:
+        return "PACKAGE_DIRECT_SOURCE"
+    if relative.parts and relative.parts[0] in DIRECT_SOURCE_ROOTS:
+        return "PACKAGE_DIRECT_SOURCE"
+    return None
+
+
 def evidence_index(
     root: Path,
     report: dict[str, Any],
@@ -968,6 +1335,7 @@ def evidence_index(
     plan: dict[str, Any],
 ) -> dict[str, dict[str, Any]]:
     raw = plan.get("evidence")
+    repair_class = plan.get("repair_class")
     if not isinstance(raw, list) or not raw:
         raise PolicyStop(
             "BLOCKED_EVIDENCE",
@@ -979,7 +1347,7 @@ def evidence_index(
             raise PolicyStop("BLOCKED_EVIDENCE", "Evidence items must be objects.")
         evidence_id = item.get("id")
         source = item.get("source")
-        quote = item.get("quote")
+        quote = item.get("exact_quote", item.get("quote"))
         if not all(isinstance(value, str) and value.strip() for value in (evidence_id, source, quote)):
             raise PolicyStop(
                 "BLOCKED_EVIDENCE",
@@ -989,12 +1357,30 @@ def evidence_index(
             raise PolicyStop(
                 "BLOCKED_EVIDENCE", f"Duplicate evidence id: {evidence_id}"
             )
-        if "://" in source or source.startswith(("file:", "http:", "https:")):
+        source_kind = item.get("source_kind")
+        if repair_class == "ASSISTED_FIX":
+            if not isinstance(source_kind, str):
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    f"assisted evidence {evidence_id} requires source_kind",
+                )
+            quote = validate_assisted_evidence_metadata(
+                item, source_kind=source_kind, source=source
+            )
+        if source_kind == WEB_SOURCE_KIND:
+            if repair_class != "ASSISTED_FIX":
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    "web evidence is only admissible for ASSISTED_FIX",
+                )
+            local = None
+            source_category = "authoritative_primary_web"
+        elif "://" in source or source.startswith(("file:", "http:", "https:")):
             raise PolicyStop(
                 "BLOCKED_EVIDENCE",
                 "Evidence sources must be local package files.",
             )
-        if source.startswith(EVIDENCE_SOURCE_PREFIX):
+        elif source.startswith(EVIDENCE_SOURCE_PREFIX):
             if source != f"{EVIDENCE_SOURCE_PREFIX}{plan['finding_id']}":
                 raise PolicyStop(
                     "BLOCKED_EVIDENCE",
@@ -1014,6 +1400,11 @@ def evidence_index(
                 source_category = "solution_oracle"
             elif top == "paper":
                 source_category = "paper"
+            elif (
+                source_kind == "PACKAGE_DIRECT_SOURCE"
+                and local_assisted_source_kind(relative) == "PACKAGE_DIRECT_SOURCE"
+            ):
+                source_category = "direct_source"
             elif top == "tests":
                 source_category = "checker_contract"
             elif relative.as_posix() == "instruction.md":
@@ -1022,24 +1413,25 @@ def evidence_index(
                 source_category = "metadata"
             else:
                 source_category = "unsupported"
-        if not local.is_file():
+        if local is not None and not local.is_file():
             raise PolicyStop(
                 "BLOCKED_EVIDENCE", f"Evidence source does not exist: {source}"
             )
-        if local.is_symlink() or (
+        if local is not None and (local.is_symlink() or (
             source_category != "audit_finding"
             and not local.resolve().is_relative_to(root.resolve())
-        ):
+        )):
             raise PolicyStop(
                 "BLOCKED_EVIDENCE",
                 f"Evidence source escapes the Harbor 题包: {source}",
             )
-        text = local.read_text(encoding="utf-8", errors="replace")
-        if quote not in text:
-            raise PolicyStop(
-                "BLOCKED_EVIDENCE",
-                f"Evidence quote is absent from {source}.",
-            )
+        if local is not None:
+            text = local.read_text(encoding="utf-8", errors="replace")
+            if quote not in text:
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    f"Evidence quote is absent from {source}.",
+                )
         supplied_hash = next(
             (
                 item.get(name)
@@ -1048,7 +1440,7 @@ def evidence_index(
             ),
             None,
         )
-        actual_hash = sha256_file(local)
+        actual_hash = sha256_file(local) if local is not None else None
         if source_category == "paper":
             # Review is always paper-grounded now (the only non-paper path is a
             # NON_MAT fail-fast that never enters Repair).  Paper evidence is
@@ -1064,7 +1456,38 @@ def evidence_index(
                     "BLOCKED_EVIDENCE",
                     "paper evidence must bind the source-audit-hashed paper file",
                 )
-        if supplied_hash != actual_hash:
+        if (
+            repair_class == "ASSISTED_FIX"
+            and source_category == "direct_source"
+        ):
+            input_hashes = manifest.get("input_hashes", {})
+            if (
+                not isinstance(input_hashes, dict)
+                or input_hashes.get(relative.as_posix()) != actual_hash
+            ):
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    "direct package evidence must bind the "
+                    "source-audit-hashed file",
+                )
+        if repair_class == "ASSISTED_FIX":
+            expected_kind = (
+                WEB_SOURCE_KIND
+                if source_category == "authoritative_primary_web"
+                else local_assisted_source_kind(relative)
+                if local is not None
+                else None
+            )
+            if source_kind != expected_kind:
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    f"assisted evidence source_kind does not match {source}",
+                )
+        if supplied_hash != actual_hash and not (
+            repair_class == "ASSISTED_FIX"
+            and source_category == "authoritative_primary_web"
+            and actual_hash is None
+        ):
             raise PolicyStop(
                 "BLOCKED_EVIDENCE",
                 f"Evidence hash does not match {source}.",
@@ -1077,7 +1500,12 @@ def evidence_index(
                 f"Evidence source category is false for {source}.",
             )
         normalized["source_category"] = source_category
-        normalized["source_hash"] = actual_hash
+        normalized["source_hash"] = (
+            actual_hash if actual_hash is not None else supplied_hash
+        )
+        normalized["quote"] = quote
+        if repair_class == "ASSISTED_FIX":
+            normalized["exact_quote"] = quote
         indexed[evidence_id] = normalized
     return indexed
 
@@ -1097,7 +1525,52 @@ def linked_evidence(
             "BLOCKED_EVIDENCE",
             f"Operation {operation.get('id')} links unknown evidence.",
         )
-    return [evidence[item] for item in evidence_ids]
+    linked = [evidence[item] for item in evidence_ids]
+    if any(
+        item.get("conflict") is True
+        or item.get("conflicting") is True
+        or item.get("conflicts_with")
+        for item in linked
+    ):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"Operation {operation.get('id')} links explicitly conflicting evidence.",
+        )
+    claims: set[str] = set()
+    for item in linked:
+        _, precision = normalized_precision(item)
+        if not precision:
+            continue
+        claim = {
+            key: precision.get(key)
+            for key in (
+                "key",
+                "field",
+                "value",
+                "replacement",
+                "type",
+                "unit",
+                "required",
+                "shape",
+                "dtype",
+                "axis_semantics",
+                "direction",
+                "mode",
+                "scoring_contract",
+                "mathematical_proof",
+            )
+            if precision.get(key) is not None
+        }
+        if claim:
+            claims.add(
+                json.dumps(claim, ensure_ascii=False, sort_keys=True, default=str)
+            )
+    if len(claims) > 1:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"Operation {operation.get('id')} links ambiguous evidence claims.",
+        )
+    return linked
 
 
 def precision_kind_for(operation: dict[str, Any]) -> str | None:
@@ -1208,6 +1681,8 @@ def validate_precision_matrix(
         == "tests/checker.py"
     ):
         expected = "scoring_contract"
+    if repair_class == "ASSISTED_FIX" and expected is None:
+        expected = "harbor_path"
     if expected is None:
         return
     if repair_class == "AUTO_FIX" and Path(str(operation["file"])).as_posix() != (
@@ -1221,6 +1696,12 @@ def validate_precision_matrix(
     for item in linked:
         kind, precision = normalized_precision(item)
         if kind != expected:
+            if repair_class == "ASSISTED_FIX":
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    f"Evidence precision does not match {expected} for "
+                    f"{operation.get('file')}.",
+                )
             continue
         valid.append(precision)
         valid_items.append(item)
@@ -1407,7 +1888,13 @@ def validate_precision_matrix(
         or item.get("kind") == expected
     ]
     if expected == "scientific_method" and any(
-        item.get("source_category") not in {"public_instruction", "paper"}
+        item.get("source_category")
+        not in {
+            "public_instruction",
+            "paper",
+            "direct_source",
+            "authoritative_primary_web",
+        }
         for item in method_items
     ):
         raise PolicyStop(
@@ -2118,13 +2605,20 @@ def validate_policy(
             )
         expected_precision = precision_kind_for(operation)
         allowed_categories = (
-            {"public_instruction", "paper"}
+            {
+                "public_instruction",
+                "paper",
+                "direct_source",
+                "authoritative_primary_web",
+            }
             if expected_precision == "scientific_method"
             else {
                 "audit_finding",
                 "public_instruction",
                 "checker_contract",
                 "paper",
+                "direct_source",
+                "authoritative_primary_web",
             }
         )
         if any(
@@ -2415,59 +2909,6 @@ def report_configuration(report: dict[str, Any]) -> tuple[str, str]:
     return paper_mode, execution_level
 
 
-def rebound_known_valid_fixture(
-    candidate: Path,
-    source: Path,
-    plan: dict[str, Any],
-) -> Path:
-    """Copy public fixture bytes and bind them to candidate quality sources."""
-
-    import dynamic_checker_probe as checker_probe
-
-    destination = candidate.parent / "re_audit_public_fixture"
-    if destination.exists():
-        shutil.rmtree(destination)
-    shutil.copytree(source, destination)
-    manifest_path = destination / checker_probe.FIXTURE_MANIFEST_NAME
-    parent_manifest_path = destination / "fixture_manifest.parent.json"
-    shutil.copy2(manifest_path, parent_manifest_path)
-    parent_manifest = read_json(parent_manifest_path)
-    manifest = dict(parent_manifest)
-    specification = read_json(candidate / "tests/grading_spec.json")
-    candidate_source_hashes = {
-        role: sha256_file(candidate / role)
-        for role in sorted(checker_probe.QUALITY_EVIDENCE_ROLES)
-        if (candidate / role).is_file()
-    }
-    current_fixture_hashes = checker_probe.fixture_hashes(
-        destination, specification
-    )
-    if parent_manifest.get("fixture_hashes") != current_fixture_hashes:
-        raise ValueError(
-            "repair re-audit fixture bytes differ from the source fixture"
-        )
-    parent_source_hashes = parent_manifest.get("source_role_hashes", {})
-    changed_roles = sorted(
-        role
-        for role in set(parent_source_hashes) | set(candidate_source_hashes)
-        if parent_source_hashes.get(role) != candidate_source_hashes.get(role)
-    )
-    manifest["source_role_hashes"] = candidate_source_hashes
-    manifest["fixture_hashes"] = current_fixture_hashes
-    manifest["repair_reaudit_lineage"] = {
-        "schema_version": "materials-repair-fixture-lineage/1.0",
-        "parent_manifest_file": parent_manifest_path.name,
-        "parent_manifest_hash": sha256_file(parent_manifest_path),
-        "parent_fixture_hashes": current_fixture_hashes,
-        "source_audit_id": plan.get("audit_id"),
-        "changed_source_roles": changed_roles,
-        "fixture_bytes_preserved": True,
-        "oracle_used": False,
-    }
-    write_json(manifest_path, manifest)
-    return destination
-
-
 def run_equal_depth_review(
     candidate: Path,
     report: dict[str, Any],
@@ -2502,10 +2943,7 @@ def run_equal_depth_review(
         raise ValueError(
             "E2/E3/E4 plans cannot enter an authoritative E1 repair re-audit"
         )
-    for key, flag in {
-        "known_valid_output": "--known-valid-output",
-        "agent_assessment": "--agent-assessment",
-    }.items():
+    for key, flag in {"agent_assessment": "--agent-assessment"}.items():
         raw = plan.get(key)
         if raw is None:
             continue
@@ -2514,8 +2952,6 @@ def run_equal_depth_review(
             raise ValueError(f"{key} must remain external to the candidate")
         if not external.exists():
             raise FileNotFoundError(f"{key} is missing: {external}")
-        if key == "known_valid_output":
-            external = rebound_known_valid_fixture(candidate, external, plan)
         command.extend([flag, str(external)])
     process = subprocess.run(
         command,
@@ -2620,6 +3056,19 @@ def reaudit_has_no_hard_gate(reaudit: dict[str, Any]) -> bool:
     )
 
 
+def unresolved_severe_finding_ids(
+    findings: Iterable[dict[str, Any]],
+) -> list[str]:
+    resolved = {"RESOLVED", "CLOSED", "FIXED"}
+    return [
+        str(item.get("finding_id") or "<missing-finding-id>")
+        for item in findings
+        if isinstance(item, dict)
+        and item.get("severity") in {"HIGH", "FATAL"}
+        and item.get("status", "OPEN") not in resolved
+    ]
+
+
 def validate_authoritative_pass(reaudit: dict[str, Any]) -> dict[str, Any]:
     """Validate every evidence obligation required for publication."""
 
@@ -2644,7 +3093,10 @@ def validate_authoritative_pass(reaudit: dict[str, Any]) -> dict[str, Any]:
         numeric_score = float(score)
     except (TypeError, ValueError, OverflowError):
         numeric_score = float("nan")
-    if not math.isfinite(numeric_score) or not 80 <= numeric_score <= 100:
+    if (
+        not math.isfinite(numeric_score)
+        or not PUBLICATION_SCORE <= numeric_score <= 100
+    ):
         raise ValueError("re-audit authoritative score is below 80 or non-finite")
     evidence_contract = reaudit.get("evidence_contract")
     if (
@@ -2685,6 +3137,13 @@ def validate_authoritative_pass(reaudit: dict[str, Any]) -> dict[str, Any]:
     if residual:
         raise ValueError(
             "re-audit has residual blocking findings: " + ", ".join(residual)
+        )
+    severe = unresolved_severe_finding_ids(
+        item for item in reaudit.get("findings", []) if isinstance(item, dict)
+    )
+    if severe:
+        raise ValueError(
+            "re-audit has unresolved severe findings: " + ", ".join(severe)
         )
     return {
         "authoritative_pass": True,
@@ -2944,7 +3403,6 @@ def control_failure_retryable(exc: Exception) -> bool:
     reason = str(exc).lower()
     deterministic_fragments = (
         "attestation",
-        "fixture lineage",
         "source-bound and immutable",
         "tampered or stale",
         "stale audit",
@@ -3460,7 +3918,6 @@ def build_fplan(plan: dict[str, Any], finding: dict[str, Any]) -> dict[str, Any]
         "source_audit": plan.get("source_audit"),
         "core_contract_digest": plan.get("core_contract_digest"),
         "package_identity": plan.get("package_identity"),
-        "known_valid_output": plan.get("known_valid_output"),
         "agent_assessment": plan.get("agent_assessment"),
         "source_audit_dir": plan.get("source_audit_dir"),
         "repair_output_dir": plan.get("repair_output_dir"),
@@ -3598,6 +4055,12 @@ def validate_fresh_audit_batch(
     report_configuration(report)
     if plan["audit_id"] != report.get("audit_id"):
         raise ValueError("stale audit: plan audit_id is not authoritative")
+    if any(
+        finding.get("repair_class") != "ABANDON"
+        for finding in plan.get("findings", [])
+        if isinstance(finding, dict)
+    ):
+        enforce_source_score_gate(report)
     route = disposition.get("route") or canonical_publish_route(report)
     if route != "REPAIR_QUEUE":
         raise ValueError("authoritative audit is not routed to REPAIR_QUEUE")
@@ -3607,6 +4070,9 @@ def validate_fresh_audit_batch(
         if isinstance(item, dict) and isinstance(item.get("finding_id"), str)
     }
     for finding in plan["findings"]:
+        source_finding = findings_by_id.get(finding["finding_id"])
+        if source_finding is not None:
+            enforce_repair_lane_boundary(finding, source_finding, report)
         if (
             finding.get("repair_class") != "ABANDON"
             and (
@@ -3777,15 +4243,28 @@ def check_operation_policy(
         )
     expected_precision = precision_kind_for(operation)
     allowed_categories = (
-        {"audit_finding", "public_instruction", "checker_contract", "paper"}
+        {
+            "audit_finding",
+            "public_instruction",
+            "checker_contract",
+            "paper",
+            "direct_source",
+            "authoritative_primary_web",
+        }
         if structural_auto_fix
-        else {"public_instruction", "paper"}
+        else {
+            "public_instruction",
+            "paper",
+            "direct_source",
+            "authoritative_primary_web",
+        }
         if expected_precision == "scientific_method"
         else {
             "audit_finding",
             "public_instruction",
             "checker_contract",
             "paper",
+            "direct_source",
         }
     )
     if any(
@@ -4363,6 +4842,10 @@ def repair_batch(
         )
         control_stage = "equal_depth_reaudit"
         reaudit = run_equal_depth_review(candidate, report, audit_manifest, plan)
+        reaudit_score = authoritative_total_score(
+            reaudit, context="re-audit"
+        )
+        reaudit_below_repair_gate = reaudit_score < MINIMUM_REPAIR_SCORE
         try:
             pass_evidence = validate_authoritative_pass(reaudit)
         except ValueError as exc:
@@ -4451,6 +4934,7 @@ def repair_batch(
     reaudit_findings = [
         item for item in reaudit.get("findings", []) if isinstance(item, dict)
     ]
+    unresolved_severe = unresolved_severe_finding_ids(reaudit_findings)
     # Every targeted finding must be absent/closed in the fresh re-audit before
     # the batch may publish (§8.4); mirrors the legacy single-finding closure
     # guard in validate_reaudit.
@@ -4498,13 +4982,15 @@ def repair_batch(
             and deterministic["repair_summary"]["state"] == "CLEAN"
         )
     fully_passed = (
-        verdict == "PASS"
+        not reaudit_below_repair_gate
+        and verdict == "PASS"
         and route == "PUBLISH_CANDIDATE"
         and pass_evidence.get("authoritative_pass") is True
         and deterministic_clean
         and hard_gate_free
         and not unresolved_findings
         and not targets_still_open
+        and not unresolved_severe
         and package_identity(candidate, directory_name=root.name) == identity
     )
     repair_delta = compute_repair_delta(report, reaudit)
@@ -4529,6 +5015,7 @@ def repair_batch(
             [item["finding_id"] for item in residual_blocking]
         ),
         "residual_blocking_findings": residual_blocking,
+        "unresolved_severe_finding_ids": unresolved_severe,
         "resolved_findings": resolved_targets,
         "unresolved_findings": unresolved_findings,
         "source_finding": {
@@ -4546,11 +5033,20 @@ def repair_batch(
             "execution_level": execution_level,
         },
         "repair_delta": repair_delta,
+        "source_score": authoritative_total_score(
+            report, context="source audit"
+        ),
+        "reaudit_score": reaudit_score,
+        "repair_score_gate": (
+            "ABANDONED"
+            if reaudit_below_repair_gate
+            else "ELIGIBLE"
+        ),
         **pass_evidence,
     }
 
     if not fully_passed:
-        if has_fatal or attempt_number >= 2:
+        if has_fatal or reaudit_below_repair_gate or attempt_number >= 2:
             repair_state = "ABANDONED"
             decision = "ABANDON"
         else:
@@ -4657,7 +5153,6 @@ def repair_batch(
         "source_audit_review_implementation": audit_manifest[
             "review_implementation"
         ],
-        "source_audit_fixture_hashes": audit_manifest.get("fixture_hashes", {}),
         "source_audit_assessment_hashes": audit_manifest.get(
             "assessment_hashes", {}
         ),
@@ -4853,6 +5348,21 @@ def repair(
             candidate, plan["regression_tests"], "after", regression_tests
         )
         reaudit = run_equal_depth_review(candidate, report, audit_manifest, plan)
+        reaudit_score = authoritative_total_score(
+            reaudit, context="re-audit"
+        )
+        if reaudit_score < MINIMUM_REPAIR_SCORE:
+            raise PolicyStop(
+                "ABANDONED",
+                f"re-audit total score {reaudit_score:g} is below "
+                f"{MINIMUM_REPAIR_SCORE:g}; Repair cannot continue",
+            )
+        if reaudit_score < PUBLICATION_SCORE:
+            raise PolicyStop(
+                "PARTIALLY_REPAIRED",
+                f"re-audit total score {reaudit_score:g} permits only a "
+                "partial, non-published repair",
+            )
         re_audit_comparison = validate_reaudit(
             candidate,
             reaudit,
@@ -4892,9 +5402,6 @@ def repair(
             "source_audit_review_implementation": audit_manifest[
                 "review_implementation"
             ],
-            "source_audit_fixture_hashes": audit_manifest.get(
-                "fixture_hashes", {}
-            ),
             "source_audit_assessment_hashes": audit_manifest.get(
                 "assessment_hashes", {}
             ),
@@ -4993,7 +5500,15 @@ def repair(
             "generated_outputs": generated_outputs,
         }
     except Exception as exc:  # noqa: BLE001
-        status = "ROLLED_BACK" if attempt_number == 1 else "ABANDONED"
+        policy_status = (
+            exc.status
+            if isinstance(exc, PolicyStop)
+            and exc.status in {"ABANDONED", "PARTIALLY_REPAIRED"}
+            else None
+        )
+        status = policy_status or (
+            "ROLLED_BACK" if attempt_number == 1 else "ABANDONED"
+        )
         decision = plan["repair_class"] if status == "ROLLED_BACK" else "ABANDON"
         failed_canonical = canonical_fields(
             report.get(
@@ -5038,6 +5553,9 @@ def repair(
             "audit_id": report["audit_id"],
             "finding_id": plan["finding_id"],
             "repair_class": plan["repair_class"],
+            "attempt_consumed": status
+            in {"PARTIALLY_REPAIRED", "ABANDONED"}
+            and "reaudit" in locals(),
             "error": str(exc),
             "snapshot_preserved": (history / "snapshot").is_dir(),
             "candidate_preserved": (history / "candidate").is_dir(),

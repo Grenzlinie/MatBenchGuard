@@ -1,0 +1,172 @@
+{
+  "scoring_tier": "result_level",
+  "scoring_justification": "Recomputing the tight-binding model from raw artifacts is prohibitive in the checker environment; result-level comparison with paper-reported gold and structural checks on wavefunction localization are the strongest feasible verification.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for critical_expansion.json (Δd_c/d₀ and ΔV_c/V₀)",
+      "source_provenance": "Paper Figure 5 and main text: Δd_c/d₀ = 0.34%, ΔV_c/V₀ = −0.68%",
+      "generation_method": "Extracted directly from the paper's reported result for bulk L-point band inversion.",
+      "why_not_fabricated": "These are the paper's actual published numbers used to define the critical expansion; they are reproduced here as the hidden comparison target."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Structural thresholds for wavefunction_distribution.csv",
+      "source_provenance": "Paper Figure 2 and discussion: for Δd<Δd_c wavefunction resides on both surfaces (probability > 0.1); for Δd>Δd_c it shifts below the relaxed surface (probability on relaxed side < 0.01, opposite side > 0.1).",
+      "generation_method": "Inferred from the qualitative description in Figure 2 and the text; numeric thresholds are set to enforce the reported spatial redistribution.",
+      "why_not_fabricated": "These structural relations directly verify the topological blocking effect described in the paper, not arbitrary numbers."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for spatial_spectrum.json blocking ratio",
+      "source_provenance": "Paper Figure 4 and caption: blocking ratio = 0.49 for 100-BL film, unrelaxed peak weight normalized to 1.0.",
+      "generation_method": "Taken from the paper's reported blocking ratio and the normalization they used.",
+      "why_not_fabricated": "These are the explicit numbers the paper provides to quantify the suppression of surface-state intensity."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "critical_expansion.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "critical_delta_d_d0",
+            "critical_delta_V_V0"
+          ],
+          "items": {},
+          "units": {
+            "critical_delta_d_d0": "dimensionless",
+            "critical_delta_V_V0": "dimensionless"
+          }
+        },
+        "description": "Critical normalized expansion and corresponding fractional hopping change at L-point band inversion."
+      },
+      {
+        "file": "wavefunction_distribution.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "z_BL",
+            "state",
+            "delta_d_d0",
+            "prob"
+          ],
+          "units": {
+            "z_BL": "bilayer index (1–100)",
+            "state": "string: S1 or S2",
+            "delta_d_d0": "dimensionless (0.002 or 0.03)",
+            "prob": "normalized probability"
+          }
+        },
+        "description": "Probability distribution of surface states for two expansion values, showing migration away from the relaxed surface for Δd > Δd_c."
+      },
+      {
+        "file": "spatial_spectrum.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "blocking_ratio_100BL",
+            "surface_peak_weight_relaxed",
+            "surface_peak_weight_unrelaxed"
+          ],
+          "items": {},
+          "units": {
+            "blocking_ratio_100BL": "dimensionless",
+            "surface_peak_weight_relaxed": "arbitrary spectral weight",
+            "surface_peak_weight_unrelaxed": "arbitrary spectral weight"
+          }
+        },
+        "description": "Blocking ratio and surface spectral weights quantifying the suppression of surface-state intensity by the relaxation layer."
+      }
+    ],
+    "notes": "All three artifacts are produced by tight-binding calculations using public parameters. The DFT structural optimization stage is omitted (proprietary code) and the task focuses exclusively on the tight-binding part that demonstrates the topological blocking effect."
+  },
+  "steps": [
+    {
+      "id": "step_01_critical_expansion",
+      "output_file": "critical_expansion.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target": {
+        "critical_delta_d_d0": {
+          "value": 0.0034,
+          "tolerance_abs": 0.0002
+        },
+        "critical_delta_V_V0": {
+          "value": -0.0068,
+          "tolerance_abs": 0.0003
+        }
+      }
+    },
+    {
+      "id": "step_02_wavefunction_distribution",
+      "output_file": "wavefunction_distribution.csv",
+      "kind": "structural",
+      "weight": 0.3,
+      "params": {
+        "required_states": [
+          "S1",
+          "S2"
+        ],
+        "required_deltas": [
+          0.002,
+          0.03
+        ],
+        "relaxed_z_range": [
+          1,
+          10
+        ],
+        "opposite_z_range": [
+          91,
+          100
+        ],
+        "thresholds": {
+          "delta_0_002": {
+            "min_prob_relaxed": 0.1,
+            "min_prob_opposite": 0.1
+          },
+          "delta_0_03": {
+            "max_prob_relaxed": 0.01,
+            "min_prob_opposite": 0.1
+          }
+        }
+      }
+    },
+    {
+      "id": "step_03_spatial_spectrum",
+      "output_file": "spatial_spectrum.json",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target": {
+        "blocking_ratio_100BL": {
+          "value": 0.49,
+          "tolerance_abs": 0.05
+        },
+        "surface_peak_weight_relaxed": {
+          "value": 0.49,
+          "tolerance_abs": 0.1
+        },
+        "surface_peak_weight_unrelaxed": {
+          "value": 1.0,
+          "tolerance_abs": 0.1
+        }
+      },
+      "sub_weights": {
+        "blocking_ratio_100BL": 0.8,
+        "surface_peak_weight_relaxed": 0.1,
+        "surface_peak_weight_unrelaxed": 0.1
+      }
+    }
+  ]
+}

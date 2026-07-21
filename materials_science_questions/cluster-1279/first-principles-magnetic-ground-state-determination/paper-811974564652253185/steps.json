@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1_build_superlattice",
+    "title": "Build Fe3/Crn superlattice structural models",
+    "role": "process",
+    "action": "Construct the b.c.c. (001) Fe3/Crn superlattice unit cells for n=3,4,5,6,7. Use in-plane lattice constant of 2.829 Å (fixed by substrate epitaxy) and perpendicular interlayer spacing of 2.875 Å (average of bulk Fe and Cr lattice parameters). Set up atomic coordinates with 3 Fe and n Cr layers per cell, and define both ferromagnetic (FM) and antiferromagnetic (AFM) initial spin arrangements for each n.",
+    "output_file": "",
+    "evidence": "superlattice_models.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Log file confirming structural models were built, listing number of atoms, cell dimensions, and magnetic configurations for each n.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_dft_total_energy",
+    "title": "Self-consistent DFT total-energy calculations",
+    "role": "process",
+    "action": "For each n=3,4,5,6,7, perform self-consistent density functional theory (DFT) calculations within the local spin density approximation (LSDA) using an all-electron method. Run each case (FM and AFM) to convergence, saving the total energies and self-consistent potentials/spin densities. Properly treat spin polarization and collinear magnetism.",
+    "output_file": "",
+    "evidence": "dft_energies.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Log file summarizing the self-consistent DFT calculations, including convergence metrics and total energies for each n and magnetic configuration.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3_stability_table",
+    "title": "Magnetic ground state stability from total energies",
+    "role": "scored",
+    "action": "Extract the total energies from step2 and compute the energy difference per atom ΔE = (E_AFM - E_FM) / (total atoms per cell) for each n, in meV/atom. Determine the stable configuration: FM if ΔE > 0, AFM if ΔE < 0. Write a JSON file with keys for each Cr thickness n (3,4,5,6,7), each containing the computed delta_E and stable_config.",
+    "output_file": "stability_table.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with the computed energy differences per atom and the corresponding stable magnetic order for each Cr thickness n=3‑7.",
+    "output_schema": "Object with keys 'n=3','n=4','n=5','n=6','n=7'. Each value is an object with 'delta_E' (float, meV/atom) and 'stable_config' (string, 'FM' or 'AFM')."
+  },
+  {
+    "id": "step4_deltan_bands",
+    "title": "Non-self-consistent band analysis for sp and d contributions at n=5",
+    "role": "scored",
+    "action": "For the Fe3/Cr5 superlattice only: take the self-consistent AFM solution from step2, flip the spins of half the atoms to create a FM-like configuration, freeze the potentials, and recompute the band energies with a common energy reference. For each atomic site and separately for sp and d bands, compute the integrated number-of-states difference ΔN_{F-AF}(E) = ∫_{-∞}^{E} [n_AF(E') - n_FM(E')] dE' over an energy range covering the Cr sp band bottom (approximately -0.5 to 0.5 eV relative to the Fermi level). Sum the contributions for Fe atoms and Cr atoms, yielding four curves: Fe_sp, Fe_d, Cr_sp, Cr_d. Output each curve as a list of [energy_in_eV, delta_N] pairs.",
+    "output_file": "delta_N_curves_n5.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Integrated number-of-states difference curves for the sp and d bands of Fe and Cr in Fe3/Cr5.",
+    "output_schema": "Object with keys 'Fe_sp', 'Fe_d', 'Cr_sp', 'Cr_d'. Each value is an array of arrays [[energy, delta_N], ...], where energy is in eV (relative to Fermi level) and delta_N is a unitless integrated number-of-states difference."
+  }
+]

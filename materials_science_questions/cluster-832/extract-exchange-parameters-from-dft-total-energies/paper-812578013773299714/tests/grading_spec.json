@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Chirality quantities cannot be recomputed exactly without a reference bond-operator implementation; structural trends (monotonicity, nonmonotonic peak, entropy decrease) are verified instead.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "phase_boundary.csv": "exact_match",
+    "chirality_pressure.csv": "structural_audit",
+    "barrier_pressure.csv": "exact_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phase_boundary.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_kbar",
+            "critical_temp_K"
+          ],
+          "units": {
+            "pressure_kbar": "kbar",
+            "critical_temp_K": "K"
+          }
+        },
+        "description": "Pressure dependence of the magnetic ordering temperature at H=14 T."
+      },
+      {
+        "file": "chirality_pressure.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_kbar",
+            "total_chirality",
+            "ordered_contribution",
+            "fluctuation_contribution",
+            "entanglement_entropy"
+          ],
+          "units": {
+            "pressure_kbar": "kbar",
+            "total_chirality": "dimensionless (magnitude of cross product)",
+            "ordered_contribution": "dimensionless",
+            "fluctuation_contribution": "dimensionless",
+            "entanglement_entropy": "dimensionless"
+          }
+        },
+        "description": "Pressure dependence of the vector spin chirality, its ordered and fluctuation parts, and entanglement entropy."
+      },
+      {
+        "file": "barrier_pressure.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_kbar",
+            "potential_barrier_J_per_m2"
+          ],
+          "units": {
+            "pressure_kbar": "kbar",
+            "potential_barrier_J_per_m2": "J/m^2"
+          }
+        },
+        "description": "Pressure dependence of the potential barrier for polarization reversal."
+      }
+    ],
+    "notes": "All quantities are compared against the paper's digitized values with hidden absolute/relative tolerances."
+  },
+  "steps": [
+    {
+      "id": "step1",
+      "output_file": "phase_boundary.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "params": {
+        "tolerance_abs": 0.5
+      }
+    },
+    {
+      "id": "step2",
+      "output_file": "chirality_pressure.csv",
+      "kind": "structural",
+      "weight": 0.5,
+      "params": {
+        "checks": {
+          "ordered_monotonic_increase": true,
+          "fluctuation_nonmonotonic": true,
+          "entropy_monotonic_decrease": true,
+          "sum_check": true,
+          "fluctuation_fraction_at_p0": true,
+          "peak_fluctuation_between_0_and_6": true
+        },
+        "check_weights": {
+          "ordered_monotonic_increase": 0.2,
+          "fluctuation_nonmonotonic": 0.2,
+          "entropy_monotonic_decrease": 0.2,
+          "sum_check": 0.1,
+          "fluctuation_fraction_at_p0": 0.2,
+          "peak_fluctuation_between_0_and_6": 0.1
+        }
+      }
+    },
+    {
+      "id": "step3",
+      "output_file": "barrier_pressure.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "params": {
+        "tolerance_rel": 0.2
+      }
+    }
+  ]
+}

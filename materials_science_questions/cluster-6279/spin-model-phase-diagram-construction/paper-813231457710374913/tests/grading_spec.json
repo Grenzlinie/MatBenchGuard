@@ -1,0 +1,148 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All headline quantities (T_KT, T_l, alpha) are recomputed from the agent's raw CSV artifacts; agent-reported values are only consistency-checked.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "helicity_crossings.csv": "metric_recompute",
+    "KT_temperatures.json": "reference_match",
+    "specific_heat_L36_x0.9.csv": "metric_recompute",
+    "Ising_analysis.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold KT temperatures (x=0.4, 0.9), Ising transition temperature and exponent (x=0.9)",
+      "source_provenance": "Paper Fig.2 and text: T_KT=1.254(5) at x=0.4, 1.379(5) at x=0.9; T_l=0.36(2) at x=0.9; alpha approx 0.02",
+      "generation_method": "Extracted from the paper's reported values; no synthetic data.",
+      "why_not_fabricated": "Values are direct paper-reported results; the checker recomputes from raw data and compares to these published numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "helicity_crossings.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "L",
+            "T_cross"
+          ]
+        },
+        "description": "Crossing temperatures of the helicity modulus with the critical line, for every (x, L) combination. The checker recomputes T_KT by fitting a polynomial in L^{-1} and extrapolating to L=infty."
+      },
+      {
+        "file": "KT_temperatures.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "x0_4",
+            "x0_9"
+          ],
+          "properties": {
+            "x0_4": {
+              "type": "object",
+              "required": [
+                "T_KT",
+                "error"
+              ]
+            },
+            "x0_9": {
+              "type": "object",
+              "required": [
+                "T_KT",
+                "error"
+              ]
+            }
+          }
+        },
+        "description": "Agent-extrapolated KT transition temperatures. The checker compares these against its own recomputed T_KT from the raw crossings for consistency."
+      },
+      {
+        "file": "specific_heat_L36_x0.9.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "C"
+          ]
+        },
+        "description": "Specific heat as a function of temperature for L=36 at x=0.9. The checker locates the peak and performs a scaling analysis to obtain T_l and alpha."
+      },
+      {
+        "file": "Ising_analysis.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "T_l",
+            "alpha",
+            "method"
+          ]
+        },
+        "description": "Agent-extracted Ising transition temperature and critical exponent. The checker compares these against its own recomputed values from the specific heat data for consistency."
+      }
+    ],
+    "notes": "The Monte Carlo simulation is a required process step that must be executed by the agent; no precomputed simulation averages are provided. All scored outputs derive from the agent's own simulation data."
+  },
+  "steps": [
+    {
+      "id": "helicity_crossings_recompute_kt",
+      "output_file": "helicity_crossings.csv",
+      "weight": 0.4,
+      "kind": "recompute_metric",
+      "description": "Recompute T_KT by fitting a quadratic polynomial of T_cross vs 1/L for each x and extrapolating to 1/L=0; compare to paper gold.",
+      "hidden_gold": {
+        "x0_4": {
+          "T_KT": 1.254,
+          "tolerance": 0.01
+        },
+        "x0_9": {
+          "T_KT": 1.379,
+          "tolerance": 0.01
+        }
+      }
+    },
+    {
+      "id": "kt_temperatures_consistency",
+      "output_file": "KT_temperatures.json",
+      "weight": 0.1,
+      "kind": "consistency",
+      "description": "Check that agent-reported KT temperatures match values recomputed from helicity_crossings.csv within 0.02.",
+      "consistency_tolerance": 0.02
+    },
+    {
+      "id": "specific_heat_recompute_peak_alpha",
+      "output_file": "specific_heat_L36_x0.9.csv",
+      "weight": 0.4,
+      "kind": "recompute_metric",
+      "description": "Locate peak temperature and perform log-log scaling fit to extract exponent alpha; compare to paper gold.",
+      "hidden_gold": {
+        "T_l": 0.36,
+        "tolerance_T_l": 0.02,
+        "alpha": 0.0,
+        "tolerance_alpha": 0.05
+      }
+    },
+    {
+      "id": "ising_analysis_consistency",
+      "output_file": "Ising_analysis.json",
+      "weight": 0.1,
+      "kind": "consistency",
+      "description": "Check that agent-reported T_l and alpha match values recomputed from specific_heat_L36_x0.9.csv within tolerances.",
+      "consistency_tolerance_T_l": 0.02,
+      "consistency_tolerance_alpha": 0.05
+    }
+  ]
+}

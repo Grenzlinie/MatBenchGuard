@@ -1,0 +1,198 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recompute of the DFT total energies is infeasible in the verifier sandbox; score the reported final DFT-derived numbers against paper gold with tolerances and structural trend checks. Grade as structural because the verifier checks numeric tolerance and physical sign/ordering constraints.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_adsorption_energies.csv": "reference_match",
+    "step_02_activation_barriers.csv": "reference_match",
+    "step_03_free_energy_diagram.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper reference values for adsorption energies, activation barriers, free energy diagram",
+      "source_provenance": "Table I and text of the paper; free energy diagram Figure 4",
+      "generation_method": "extracted from paper and cross-checked with reference solve.sh",
+      "why_not_fabricated": "values match the paper's reported numbers exactly; tolerances derived from expected method-dependent DFT spread (~0.15-0.20 eV)"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_adsorption_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "species",
+            "Eads_ev"
+          ],
+          "units": {
+            "Eads_ev": "eV"
+          }
+        },
+        "description": "Adsorption energies of O2, OOH, O, OH, H2O on FeN3-G. The CSV must contain a header row and exactly 5 data rows."
+      },
+      {
+        "file": "step_02_activation_barriers.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "reaction",
+            "Ea_ev"
+          ],
+          "units": {
+            "Ea_ev": "eV"
+          }
+        },
+        "description": "Activation barriers for seven elementary ORR steps. The CSV must contain a header row and at least 7 rows covering O2_dissoc, O2_to_OOH, OOH_to_O_H2O, OOH_to_2OH, OOH_to_O_OH, O_to_OH, OH_to_H2O."
+      },
+      {
+        "file": "step_03_free_energy_diagram.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "step",
+            "dG_ev"
+          ],
+          "units": {
+            "dG_ev": "eV"
+          }
+        },
+        "description": "Gibbs free energy changes for the four reduction steps at U=0 V, pH=0, T=300 K. The CSV must contain a header row and exactly 4 data rows corresponding to the steps O2->OOH, OOH->O+H2O, O->OH, OH->H2O."
+      }
+    ],
+    "notes": "All energies are in eV. The reference comparison is to the paper's reported values (e.g., Table I and text) with method-dependent tolerances."
+  },
+  "steps": [
+    {
+      "id": "adsorption_energies",
+      "output_file": "step_01_adsorption_energies.csv",
+      "kind": "structural",
+      "weight": 0.2,
+      "reference": {
+        "O2": {
+          "value": -2.48,
+          "tolerance_abs": 0.15
+        },
+        "OOH": {
+          "value": -3.04,
+          "tolerance_abs": 0.15
+        },
+        "O": {
+          "value": -5.88,
+          "tolerance_abs": 0.15
+        },
+        "OH": {
+          "value": -4.05,
+          "tolerance_abs": 0.15
+        },
+        "H2O": {
+          "value": -0.9,
+          "tolerance_abs": 0.15
+        }
+      },
+      "checks": {
+        "species_present": [
+          "O2",
+          "OOH",
+          "O",
+          "OH",
+          "H2O"
+        ],
+        "all_negative": true
+      }
+    },
+    {
+      "id": "activation_barriers",
+      "output_file": "step_02_activation_barriers.csv",
+      "kind": "structural",
+      "weight": 0.3,
+      "reference": {
+        "O2_dissoc": {
+          "value": 1.46,
+          "tolerance_abs": 0.2
+        },
+        "O2_to_OOH": {
+          "value": 0.96,
+          "tolerance_abs": 0.2
+        },
+        "OOH_to_O_H2O": {
+          "value": 0.16,
+          "tolerance_abs": 0.2
+        },
+        "OOH_to_2OH": {
+          "value": 0.07,
+          "tolerance_abs": 0.2
+        },
+        "OOH_to_O_OH": {
+          "value": 0.03,
+          "tolerance_abs": 0.2
+        },
+        "O_to_OH": {
+          "value": 0.26,
+          "tolerance_abs": 0.2
+        },
+        "OH_to_H2O": {
+          "value": 0.64,
+          "tolerance_abs": 0.2
+        }
+      },
+      "checks": {
+        "reactions_present": [
+          "O2_dissoc",
+          "O2_to_OOH",
+          "OOH_to_O_H2O",
+          "OOH_to_2OH",
+          "OOH_to_O_OH",
+          "O_to_OH",
+          "OH_to_H2O"
+        ],
+        "all_positive": true,
+        "O2_dissoc_highest": true
+      }
+    },
+    {
+      "id": "free_energy_diagram",
+      "output_file": "step_03_free_energy_diagram.csv",
+      "kind": "structural",
+      "weight": 0.5,
+      "reference": {
+        "O2->OOH": {
+          "value": -0.55,
+          "tolerance_abs": 0.15
+        },
+        "OOH->O+H2O": {
+          "value": -3.05,
+          "tolerance_abs": 0.15
+        },
+        "O->OH": {
+          "value": -1.45,
+          "tolerance_abs": 0.15
+        },
+        "OH->H2O": {
+          "value": 0.78,
+          "tolerance_abs": 0.15
+        }
+      },
+      "checks": {
+        "steps_present": [
+          "O2->OOH",
+          "OOH->O+H2O",
+          "O->OH",
+          "OH->H2O"
+        ],
+        "OH_to_H2O_positive": true,
+        "first_three_negative": true
+      }
+    }
+  ]
+}

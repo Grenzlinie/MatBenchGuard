@@ -1,0 +1,56 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute expected bulk/surface energies and intensity ratio from analytic formulas using given physical parameters. Compare agent's reported values with tolerances.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "physical parameters to compute expected values",
+      "source_provenance": "paper derived formulas, parameters chosen as plausible physical values",
+      "generation_method": "selected S=2, gmuB_HA=0.1 J, ck_abs=0.01, J=1, consistent with antiferromagnet examples",
+      "why_not_fabricated": "The parameters are public inputs; the expected gold values are computed from the same formulas the agent must implement, so gold is derived analytically, not fabricated."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "bulk_energy": "float (units of J)",
+            "surface_energy": "float (units of J)",
+            "intensity_ratio": "float (dimensionless)"
+          }
+        },
+        "description": "The JSON object must contain the three computed quantities: bulk spin-wave energy at zero wavevector (E_B(0)), surface spin-wave energy at zero wavevector (E_S^+(0)), and the ratio of integrated Stokes peak intensities for surface-to-bulk scattering in the absorptive case (I_S/I_B)."
+      }
+    ],
+    "notes": "The material parameters (S, gμ_B H_A, and the optical absorption parameter) are provided in the instruction. The agent must compute the quantities using the paper's analytic formulas."
+  },
+  "steps": [
+    {
+      "id": "step_01_compute_quantities",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 1.0,
+      "params": {
+        "S": 2.0,
+        "gmuB_HA": 0.1,
+        "c_k_abs": 0.01,
+        "J": 1.0
+      },
+      "tolerances": {
+        "bulk_energy_abs": 1e-06,
+        "surface_energy_abs": 1e-06,
+        "intensity_ratio_rel": 0.01
+      }
+    }
+  ]
+}

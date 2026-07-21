@@ -1,0 +1,54 @@
+[
+  {
+    "id": "define_params",
+    "title": "Define problem parameters and material constants",
+    "role": "process",
+    "action": "Set up the PZT-4 base material constants (c^0_ij, e^0_ij, ε^0_ij) from the known standard values. Define the exponential material gradient α, crack lengths a_I and a_II, vertical separation h, horizontal offset X (where applicable), the dielectric permittivity of the crack-filling medium κ (default air κ0=8.85×10^{-12} F/m), the applied far-field tensile stress σ^0_yy = 20 MPa, electric displacement D^0_y = 1×10^{-3} C/m², and the truncation order N for Chebyshev polynomials (e.g., N=20).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Initializes all physical and numerical parameters required for the subsequent computation.",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_kernels",
+    "title": "Compute auxiliary functions and kernel quantities",
+    "role": "process",
+    "action": "Implement the mathematical derivations from the paper: compute the dimensionless β_i coefficients; for each required Fourier variable s, compute the coefficients X_i(s) of the characteristic sixth-order polynomial, solve for the six roots λ_j(s) (three with positive real part, three with negative), compute the ratios a_j, b_j and the functions f_i, Δ(s), g_i(s). Evaluate the kernel integrand functions h_{ij}(s,0) and h^±_{ij}(s,y_k) and extract their high-|s| asymptotic constants h^0_{ij}.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Computes all Fourier-domain building blocks required to assemble the singular integral equations.",
+    "output_schema": ""
+  },
+  {
+    "id": "single_crack_ref",
+    "title": "Compute single-crack reference intensity factors",
+    "role": "process",
+    "action": "Solve the isolated single-crack problem for a crack of length a in the same exponentially graded PZT-4 material under identical far-field loads to obtain the reference mode I stress intensity factor K_I^S, electric displacement intensity factor K_D^S, and crack opening displacement intensity factor K_COD^S. This requires solving the related singular integral equation for a single crack using the same Chebyshev discretization.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Provides the baseline normalization quantities needed for the parametric study.",
+    "output_schema": ""
+  },
+  {
+    "id": "parametric_study",
+    "title": "Parametric study of normalized fracture parameters",
+    "role": "scored",
+    "action": "Using the two-crack solver implemented from the kernel functions and the single-crack references, run the following four parameter sweeps:\n  (1) crack length ratio a_I/a_II for center-aligned cracks (X=0, a_II=1 mm, h_I=-h_II=0.5 a_II) with material gradient α a_II = 0, 0.4, 1.0; compute normalized k_I and k_II at right tips.\n  (2) vertical separation h/a for equal-length center-aligned cracks (a_I=a_II=a, α a = 0, 0.4, 1.0); compute normalized k_D and k_II at right tips.\n  (3) horizontal offset X/a for equal-length cracks with h=a, a = 1 mm, material gradient α a = 0, 1.0; compute normalized k_I at left and right tips of crack I.\n  (4) effect of dielectric permittivity: fix a_I=2 mm, a_II=1 mm, h=a_II, α a_II=0.8; vary horizontal offset X/a_II and dielectric permittivity κ to transition from permeable to impermeable limits (use κ=κ0 and large/small finite values); compute normalized K_D and K_COD at the right tip of crack I.\nFor every configuration, write one row to results.csv with columns: case_id, parameter_name, parameter_value, material_gradient, crack_model, crack, tip, K_I_norm, K_II_norm, K_D_norm, K_COD_norm.",
+    "output_file": "results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing normalized intensity factors for the four parameter sweeps described in the paper.",
+    "output_schema": "case_id (string), parameter_name (string), parameter_value (float), material_gradient (float), crack_model (string), crack (string, 'I' or 'II'), tip (string, 'left' or 'right'), K_I_norm (float), K_II_norm (float), K_D_norm (float), K_COD_norm (float)"
+  }
+]

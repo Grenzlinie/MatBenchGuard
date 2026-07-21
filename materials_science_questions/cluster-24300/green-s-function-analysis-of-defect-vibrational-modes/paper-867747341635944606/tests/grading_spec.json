@@ -1,0 +1,106 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The crossover temperature T_U is recomputed from the agent's raw DOS curves; C_o is compared as a derived constant. T1 is feasible because all required raw artifacts are available.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dos_tau.csv": "structural_audit",
+    "dos_s.csv": "structural_audit",
+    "universality_params.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold parameters for scoring: g (coupling ratio), expected C_o, expected T_U with tolerance.",
+      "source_provenance": "Paper abstract and main text: C_o ≈ 10⁻³, T_U ≈ 3 K, g = γ_τ/γ_S ≈ 0.02, J_o ≈ 500 K.",
+      "generation_method": "Direct extraction of the paper's stated numeric results; no external file needed.",
+      "why_not_fabricated": "These are the central numeric conclusions the paper itself reports; no synthetic holdout or labels are required."
+    }
+  ],
+  "gold": {
+    "g": 0.02,
+    "expected_T_U": 3.0,
+    "T_U_tol_frac": 0.5,
+    "expected_C_o": 0.002,
+    "C_o_tol": 0.001
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dos_tau.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_K",
+            "density"
+          ],
+          "units": {
+            "energy_K": "K",
+            "density": "states per energy per impurity"
+          }
+        },
+        "description": "Density of states for τ-TLSs computed from the lattice simulation."
+      },
+      {
+        "file": "dos_s.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_K",
+            "density"
+          ],
+          "units": {
+            "energy_K": "K",
+            "density": "states per energy per impurity"
+          }
+        },
+        "description": "Density of states for S-TLSs computed from the lattice simulation."
+      },
+      {
+        "file": "universality_params.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "C_o": "float (dimensionless)",
+            "T_U_K": "float (K)"
+          },
+          "optional": {
+            "J_o_K": "float (K)",
+            "g": "float (dimensionless)"
+          },
+          "units": {
+            "C_o": "dimensionless",
+            "T_U_K": "K"
+          }
+        },
+        "description": "Extracted universal tunneling strength C_o and crossover temperature T_U."
+      }
+    ],
+    "notes": "The density-of-states CSV files are scored by structural audit (the checker verifies that n_S(E) drops sharply below ~10 K and n_τ(E) shows only a weak dip below ~0.2 K, and that the overall shapes are physically reasonable). The universality parameters are compared to the paper's reference values with a generous tolerance that accounts for implementation differences."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "dos_tau.csv",
+      "weight": 0.15
+    },
+    {
+      "id": "step_02",
+      "output_file": "dos_s.csv",
+      "weight": 0.25
+    },
+    {
+      "id": "step_03",
+      "output_file": "universality_params.json",
+      "weight": 0.6
+    }
+  ]
+}

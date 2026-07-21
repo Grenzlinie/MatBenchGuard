@@ -1,0 +1,84 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Both MAE and Adjusted Rand Index can be recomputed directly from the raw submitted CSV tables without any external data or training.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold clustering labels for method_clusters.csv; MAE thresholds for test_predictions.csv derived from paper.",
+      "source_provenance": "Paper Figure 2a and abstract claim MAE<0.1 kcal/mol; dendrogram clusters from Figure 2b.",
+      "generation_method": "Threshold set to 0.10 kcal/mol per method per paper's explicit claim of MAE below 0.1 kcal/mol; gold clusters correspond to theoretical families: HF, MP2, SAPT, DFT (B3LYP/B2PLYP).",
+      "why_not_fabricated": "Threshold derived from paper's explicit numerical claim; gold clusters derived from paper's reported dendrogram groupings."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "test_predictions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "dimer_id",
+            "method",
+            "predicted_delta_energy",
+            "true_delta_energy"
+          ],
+          "units": {
+            "predicted_delta_energy": "kcal/mol",
+            "true_delta_energy": "kcal/mol"
+          }
+        },
+        "description": "Test‑set predictions and true ΔE values for the five methods. The checker recomputes per‑method MAE and compares to hidden thresholds."
+      },
+      {
+        "file": "method_clusters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "method",
+            "cluster_label"
+          ],
+          "units": {}
+        },
+        "description": "Cluster assignments for the five methods from hierarchical clustering. The checker computes adjusted Rand index against hidden expected groupings."
+      }
+    ],
+    "notes": "The checker recomputes MAE from the test_predictions.csv and compares each to a hidden threshold (threshold_or_better logic). For method_clusters.csv, the checker computes adjusted Rand index between the submitted labels and hidden expected clusters, requiring a high value for full credit."
+  },
+  "steps": [
+    {
+      "id": "test_predictions_mae",
+      "output_file": "test_predictions.csv",
+      "kind": "recompute_mae",
+      "weight": 0.4,
+      "required_methods": [
+        "HF/aug-cc-pVDZ/CP",
+        "MP2/aug-cc-pVQZ/CP",
+        "B3LYP/aug-cc-pVTZ/CP",
+        "B2PLYP-D3/aug-cc-pVTZ/CP",
+        "SAPT0/jun-cc-pVDZ"
+      ],
+      "threshold": 0.1,
+      "max_mae": 0.5
+    },
+    {
+      "id": "method_clusters_ari",
+      "output_file": "method_clusters.csv",
+      "kind": "compute_ari",
+      "weight": 0.6,
+      "gold": {
+        "HF/aug-cc-pVDZ/CP": 0,
+        "MP2/aug-cc-pVQZ/CP": 1,
+        "SAPT0/jun-cc-pVDZ": 2,
+        "B3LYP/aug-cc-pVTZ/CP": 3,
+        "B2PLYP-D3/aug-cc-pVTZ/CP": 3
+      }
+    }
+  ]
+}

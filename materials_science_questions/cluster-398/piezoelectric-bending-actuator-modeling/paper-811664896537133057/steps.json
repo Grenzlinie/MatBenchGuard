@@ -1,0 +1,41 @@
+[
+  {
+    "id": "fem_simulations",
+    "title": "Run finite-element simulations for parametric sweep of void parameters",
+    "role": "process",
+    "action": "Set up quarter-symmetric 3-D unit-cell models of voided PZT-7A with varying void volume fraction f (spherical voids, S=1) and varying void aspect ratio S (fixed f=6.54%) using an open-source piezoelectric solver. For each geometry, apply the required load cases to extract effective elastic constants (c11, c33), dielectric constants (λ11, λ33), and piezoelectric coefficients (e31, e33, e15) via the averaging formulas derived from the paper’s extraction method. Save the raw effective constants and piezoelectric coefficients for each (f,S) in an intermediate structured JSON file for use in later steps.",
+    "output_file": "",
+    "evidence": "effective_constants.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Executes the core FEM experiment. Not a scored artifact itself but required to produce the inputs for the damage and piezoelectric outputs. The agent must run all (f,S) cases (at least the set specified in the instruction) and output the intermediate results.",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_damages",
+    "title": "Compute mechanical and electrical damage components and export CSV",
+    "role": "scored",
+    "action": "From the effective elastic and dielectric constants obtained in the previous step, compute the mechanical and electrical damage components using the undamaged PZT-7A constants. Specifically, compute D11_M = 1 - c11_eff/c11_undamaged, D33_M = 1 - c33_eff/c33_undamaged, D11_E = 1 - λ11_eff/λ11_undamaged, D33_E = 1 - λ33_eff/λ33_undamaged. Write a CSV file containing a row for each (f,S) case with columns: f, S, D11_M, D33_M, D11_E, D33_E.",
+    "output_file": "damage_vs_parameters.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Damage-vs-parameters data serving as the primary scored artifact. Checker verifies monotonic trends with f and S and compares values to the paper's reference curves within tolerance.",
+    "output_schema": "CSV with header: f, S, D11_M, D33_M, D11_E, D33_E. All columns are floating-point numbers. f is volume fraction (0 < f ≤ 0.321), S is aspect ratio (>0)."
+  },
+  {
+    "id": "compute_piezocoef",
+    "title": "Export effective piezoelectric coefficients to CSV",
+    "role": "scored",
+    "action": "From the same finite-element runs, retrieve the directly extracted effective piezoelectric coefficients e31, e33, e15 for each (f,S) case. Write a CSV file with columns: f, S, e31, e33, e15.",
+    "output_file": "piezo_coefficients.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Piezoelectric coefficient data that supplements the damage results and validates the transversely isotropic damage hypothesis. Checker verifies trends (monotonic decrease with increasing f, etc.) and approximate agreement with reference curves.",
+    "output_schema": "CSV with header: f, S, e31, e33, e15. All columns are floating-point numbers. e31, e33, e15 are in C/m²."
+  }
+]

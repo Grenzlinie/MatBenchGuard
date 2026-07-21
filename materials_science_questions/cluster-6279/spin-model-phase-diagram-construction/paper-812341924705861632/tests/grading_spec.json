@@ -1,0 +1,141 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Cannot recompute full TM/MC simulations inside the checker; therefore compare reported phase boundary points, heat of adsorption values, and isobar coverage to paper-reported numeric reference (tricritical point coordinates, heat step magnitude, isobar plateau temperature) with tolerances, plus structural trends.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "phase_boundaries.csv": "reference_match",
+    "heat_adsorption.csv": "reference_match",
+    "adsorption_isobars.csv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phase_boundaries.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "beta_mu",
+            "beta_omega3",
+            "phase_type",
+            "method"
+          ],
+          "columns": {
+            "beta_mu": "dimensionless chemical potential, float",
+            "beta_omega3": "dimensionless 3NN repulsion, float",
+            "coverage": "monolayer coverage, float (optional for μ-ω3 points)",
+            "phase_type": "string identifying the transition",
+            "method": "string, either 'TM' or 'MC'"
+          }
+        },
+        "description": "Phase boundary points for the μ-ω3 and coverage-temperature phase diagrams of the lattice-gas model with NN/2NN exclusion and finite 3NN repulsion. Each row corresponds to a point on a phase boundary, labelled by the nature of the transition and the method used."
+      },
+      {
+        "file": "heat_adsorption.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "coverage",
+            "Est_eV"
+          ],
+          "columns": {
+            "coverage": "CO coverage in monolayers, float between 0 and 1",
+            "Est_eV": "isosteric heat of adsorption in eV, float"
+          }
+        },
+        "description": "Coverage-dependent isosteric heat of adsorption computed for ω2=0.17 eV, ω3=0.03 eV at T=300 K using transfer matrix in the grand canonical ensemble."
+      },
+      {
+        "file": "adsorption_isobars.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "coverage",
+            "pressure_Torr"
+          ],
+          "columns": {
+            "temperature_K": "temperature in Kelvin, float",
+            "coverage": "CO coverage in monolayers, float",
+            "pressure_Torr": "CO gas pressure in Torr, float"
+          }
+        },
+        "description": "Adsorption isobars (coverage vs temperature at fixed pressures) for the final set of interaction parameters, using the relation between pressure and chemical potential with ε_b=1.60 eV and ν₀=10¹³ s⁻¹."
+      }
+    ],
+    "notes": "The phase_boundaries.csv file may contain points from both the μ-ω3 and coverage-T diagrams; rows corresponding to the μ-ω3 diagram will have a coverage column left blank or set to NaN. The heat_adsorption.csv covers the full coverage range up to 1 ML. The adsorption_isobars.csv should include at least the p_CO = 1×10⁻⁷ Torr curve and may include additional pressures."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for phase tricritical point coordinates, heat step thresholds, isobar plateau temperature",
+      "source_provenance": "paper text: tricritical point 'near (βμ,βω3)=(5.1,0.2)' (Sec. III/Appendix); heat of adsorption sharp drop after 0.5 ML with Est ≈ ε_b - 4ω2 ≈ 0.92 eV; isobar inflection around 420 K for 1e-7 Torr (Sec. VI).",
+      "generation_method": "extracted directly from paper values; heat estimate derived from model formula Est(θ>0.5) ~ ε_b - 4ω2 with ε_b=1.60 eV, ω2=0.17 eV, giving ~0.92 eV.",
+      "why_not_fabricated": "all reference numbers are explicitly stated or directly derivable from the paper's model and reported in the paper; no synthetic creation."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step0-phase-diagram",
+      "output_file": "phase_boundaries.csv",
+      "weight": 0.5,
+      "kind": "phase_boundary_eval",
+      "target": {
+        "tricritical_mu": 5.1,
+        "tricritical_omega3": 0.2,
+        "tricritical_euclidean_tol": 0.3,
+        "required_phase_types": [
+          "D-SO",
+          "SO-c4x2",
+          "D-c4x2",
+          "tricritical"
+        ],
+        "fermion_line_mu_samples": [
+          6.0,
+          7.0
+        ],
+        "fermion_line_omega3_tol": 0.15
+      }
+    },
+    {
+      "id": "step1-heat-adsorption",
+      "output_file": "heat_adsorption.csv",
+      "weight": 0.25,
+      "kind": "heat_eval",
+      "target": {
+        "coverage_low": 0.2,
+        "est_low_min": 1.52,
+        "coverage_high": 0.6,
+        "est_high_max": 0.96,
+        "drop_min": 0.5
+      }
+    },
+    {
+      "id": "step2-adsorption-isobars",
+      "output_file": "adsorption_isobars.csv",
+      "weight": 0.25,
+      "kind": "isobar_eval",
+      "target": {
+        "target_pressure": 1e-07,
+        "plateau_temps": [
+          420,
+          380
+        ],
+        "plateau_coverage_center": 0.5,
+        "plateau_coverage_tol": 0.1,
+        "low_temp": 300,
+        "low_temp_coverage_min": 0.6,
+        "high_temp": 450,
+        "high_temp_coverage_max": 0.5
+      }
+    }
+  ]
+}

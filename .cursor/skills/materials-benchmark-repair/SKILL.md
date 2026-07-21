@@ -25,52 +25,18 @@ python scripts/run_repair.py <Harbor题包目录> \
 The source audit may also live in an external sibling record directory; the
 Harbor 题包 must not receive generated audit or repair-report files.
 `--repair-output-dir` stores the re-audit, repair bundle, and attempt history
-outside the package. When a source-bound public fixture is supplied, Repair
-copies its unchanged output bytes and rebinds only the temporary re-audit
-manifest to the candidate's quality-source hashes. The derived manifest must
-carry a validated parent-manifest lineage; changing fixture bytes is rejected.
+outside the package. The equal-depth re-audit invokes Review with only the
+candidate and its Agent-quality assessment; Review generates all synthetic
+probe cases inside the external re-audit workspace.
 
-Historical plans use schema `0.1` and remain readable as evidence archives.
-New deterministic plans use
-`materials-deterministic-repair-plan/1.0` (the transitional wire spelling
-`0.2` is accepted) and bind the source deterministic schema, registry, digest,
+Deterministic plans use
+`materials-deterministic-repair-plan/1.0` and bind the source deterministic schema, registry, digest,
 and complete queue. A deterministic plan must carry one `audit_id` plus a
 `findings[]` list containing every source `required_finding_id`; omission,
 unknown D1–D6 ownership, stale schema/digest, or a stale source binding fails
 closed before mutation. Each finding carries its own decision, operations,
-evidence, and regressions:
-
-```json
-{
-  "schema_version": "materials-deterministic-repair-plan/1.0",
-  "audit_id": "authoritative audit id",
-  "deterministic_contract": {
-    "schema_version": "materials-deterministic-contract/1.0",
-    "registry_version": "materials-deterministic-check-registry/1.0",
-    "contract_digest": "sha256:...",
-    "audit_id": "authoritative audit id",
-    "required_finding_ids": ["every OPEN blocking finding"]
-  },
-  "source_audit": { "audit_id": "...", "input_hashes": {}, "paper_mode": "paper_grounded", "execution_level": "E1", "core_contract_digest": "..." },
-  "core_contract_digest": "frozen digest",
-  "findings": [
-    {
-      "finding_id": "one open finding id",
-      "repair_class": "AUTO_FIX, ASSISTED_FIX, or ABANDON",
-      "justification": "why this repair resolves the finding",
-      "core_science_change": false,
-      "evidence": [{ "id": "e1", "source": "paper/paper.md or benchmark_audit:<finding>", "quote": "verifiable text", "source_hash": "sha256:..." }],
-      "operations": [],
-      "regression_tests": []
-    }
-  ]
-}
-```
-
-A legacy single-finding plan (top-level `finding_id`/`operations`) and an
-unbound `0.1` batch are still accepted for historical compatibility. They are
-not evidence that the D1–D6 contract was assessed; a new deterministic
-publication must use the bound schema above.
+precise evidence links, and causal regressions; `run_repair.py` enforces the
+complete schema.
 
 There is no human approval state. The closed decision classes are autonomous:
 
@@ -88,10 +54,21 @@ There is no human approval state. The closed decision classes are autonomous:
 - `AUTO_FIX` operations require `core_science_change=false`, source-bound
   proof, and one causal fail-before/pass-after regression. A passing
   regression is not scientific evidence.
-- `ASSISTED_FIX` makes an evidence-backed scientific or checker correction;
-  every operation must link one or more plan evidence IDs. Changes outside the
-  narrow D1–D6 automatic boundary require this class only when the evidence
-  precision is sufficient.
+- `ASSISTED_FIX` makes an Agent-authored evidence-backed scientific or scoring
+  correction; every operation must link one or more plan evidence IDs. Each
+  linked item must declare `source_kind` as `PACKAGE_PAPER`,
+  `PACKAGE_DIRECT_SOURCE`, or `AUTHORITATIVE_PRIMARY_WEB`, carry an exact quote,
+  an `exact_quote`, matching source hash, applicability, derivation, and
+  `core_science_change=false`. Package paper/direct-source evidence must bind
+  the source-audit hash. Web evidence additionally requires an HTTPS `url`,
+  `retrieved_at`, non-empty `retrieval_metadata`, and an explicit approval
+  object with `approved=true`, `primary=true`, an authoritative source class,
+  and an approval reference. Conflicting, ambiguous, or type-mismatched
+  evidence is `BLOCKED_EVIDENCE`; Repair never guesses.
+- Agent-quality findings never receive D1–D6 ownership and can never be
+  reclassified as deterministic `AUTO_FIX`. Changes outside the narrow D1–D6
+  automatic boundary require `ASSISTED_FIX` only when the evidence precision is
+  sufficient.
 - `ABANDON` records a reason only and carries no operations.
 
 If evidence cannot support the requested semantic choice, record
@@ -131,23 +108,23 @@ The batch resolves to one of five states, mapped to the unified terminal fields
 | `ROLLED_BACK` | batch apply or regression failed | source verdict | `false` | restored unchanged |
 | `INFRASTRUCTURE_BLOCKED` | a deterministic control failure occurs, one control fingerprint repeats twice, or three control failures occur in one environment scope | source verdict | `false` | restored unchanged |
 
-**Publish invariant:** for a deterministic plan, atomic publication requires
-`PASS + deterministic CLEAN + no Hard Gate + identity preserved + allowed
-mutation scope + all target findings resolved`, with `reaudit_count=1` at E1.
+**Publish invariant:** for a deterministic or assisted plan, atomic publication
+requires `PASS + total_score >= 80 + deterministic CLEAN + no Hard Gate + no
+unresolved HIGH/FATAL finding + identity preserved + allowed mutation scope +
+all target findings resolved`, with `reaudit_count=1` at E1.
 Any residual deterministic blocker is a non-published
 `PARTIALLY_REPAIRED`/`ABANDONED`/`ROLLED_BACK`/
 `INFRASTRUCTURE_BLOCKED` result. Never publish a
-partially-fixed package. The old `PUBLISHED` state remains readable only for
-legacy certification archives.
+partially-fixed package.
 
 ## Attempt limit
 
 The limit is per `audit_id` batch, not per finding, and counts only completed
-equal-depth semantic re-audits. Setup, Docker, fixture-lineage, regression
+equal-depth semantic re-audits. Setup, Docker, regression
 harness, apply, or Review invocation failures are `CONTROL_FAILURE` rollbacks
 with `attempt_consumed=false`; they never exhaust the package's semantic
-budget. They have a separate circuit breaker: deterministic attestation,
-evidence, or fixture-lineage failures block immediately; the same transient
+budget. They have a separate circuit breaker: deterministic attestation and
+evidence failures block immediately; the same transient
 fingerprint blocks on its second occurrence; rotating transient failures block
 on the third occurrence in one scope. A blocked control state is
 `INFRASTRUCTURE_BLOCKED` with `retryable=false` and is returned without creating
@@ -205,9 +182,10 @@ historical software/version/parameter list.
 
 - A claimed local source file that does not exist → `BLOCKED_EVIDENCE`, even
   before any file is written.
-- Evidence sources must be local package files under an allowed evidence root,
-  with a stored `source_hash`; absolute paths, URLs, symlinks, and traversal are
-  rejected.
+- Package evidence sources must be local files under an allowed evidence root,
+  with a stored `source_hash`; absolute paths, symlinks, and traversal are
+  rejected. URLs are accepted only for the explicitly approved
+  `AUTHORITATIVE_PRIMARY_WEB` form described below.
 - The quote's precision must be at least as specific as the change. A quote that
   only proves "the file exists" may not add fields, types, units, or
   requiredness.
@@ -217,23 +195,31 @@ historical software/version/parameter list.
   thresholds needs the scoring-contract field/value plus a mathematical proof.
 - Paper evidence is always available but must bind the exact `paper/**` file the
   source audit hashed; a hash mismatch or unbound paper file → `BLOCKED_EVIDENCE`.
+- A package direct source is limited to source-audit-hashed `data/**`,
+  `direct_sources/**`, `inputs/**`, `reference(s)/**`, `resources/**`,
+  `sources/**`, `instruction.md`, or `resources.json`. Web evidence is not
+  fetched during Repair: its quoted content hash, URL, retrieval metadata, and
+  explicit primary-source approval must already be present and consistent.
 - Oracle/solution and metadata content cannot support scientific, schema, or
   scoring changes, and solution content cannot become public instruction text.
 
 ## Abandon triggers (deterministic)
 
-Repair abandons (or rolls back) when the Gold source is unverifiable or conflicts
-with the paper, when multiple valid answers lack a fair scoring scheme, when the
-checker must redefine the task to be fixable, when the same audit batch is
-unresolved after two attempts, or when a post-repair FATAL finding remains.
+Repair is not entered when the source Review total is below 60. A re-audit
+total below 60 abandons the candidate and cannot start another semantic
+attempt; 60–79 may remain `PARTIALLY_REPAIRED`. Repair abandons (or rolls back)
+when the Gold source is unverifiable or conflicts with the paper, when multiple
+valid answers lack a fair scoring scheme, when the checker must redefine the
+task to be fixable, when the same audit batch is unresolved after two attempts,
+or when a post-repair FATAL finding remains.
 
 ## Isolated execution and publication
 
 Require a read-only external attestation that binds the exact manifest, report,
-disposition, fixture, and assessment hashes; the package-local manifest cannot
+disposition, and assessment hashes; the package-local manifest cannot
 authenticate itself. Authenticate every manifest-declared audit output and
 require the manifest's Review implementation hashes to match the installed
-Review. Plan-provided fixture/assessment hashes are not authoritative. On a full
+Review. Plan-provided assessment hashes are not authoritative. On a full
 re-audit PASS, write the fixed repair bundle (`repair_plan.json`, `changes.json`,
 `unresolved.json`, `regression_results.json`, `re_audit_comparison.json`,
 `patch.json`, `evidence.json`, `repair.log`, `history.json`), rebase generated

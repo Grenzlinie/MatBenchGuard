@@ -1,0 +1,97 @@
+# Modeling Thermoelectric Behavior In Bi Nano-Wires
+
+G. Dresselhaus
+Francis Bitter Magnet Laboratory, Massachusetts Institute of Technology, Cambridge, MA 02139-4307
+
+M. S. Dresselhaus
+Department of Electrical Engineering and Computer Science, Massachusetts Institute of Technology, Cambridge MA 02139-4307
+
+Z. Zhang and X. Sun
+Department of Physics, Massachusetts Institute of Technology, Cambridge MA 02139-4307
+
+J. Ying
+Department of Chemical Engineering, Massachusetts Institute of Technology, Cambridge MA 02139-4307
+
+G. Chen
+Mechanical and Aerospace Engineering Dept., School of Engineering, University of California, Los Angeles, CA 90024
+
+(May 21, 1998)
+
+## ABSTRACT
+The small effective mass of Bi and high anisotropy of its Fermi surface make Bi nano-wires an excellent system for studying quantum confinement effects on the transport properties of a quasi one-dimensional (1D) electron gas, such as the electrical conductivity, magnetoresistance, thermoelectric power, and thermal conductivity. A theoretical model based on the basic band structure of bulk Bi, suitably modified for the 1D situation, is developed to predict the dependence of these quantities on wire diameter, temperature and crystalline orientation of the Bi nano-wires. Experiments have been carried out on ultra-fine single-crystalline Bi nano-wires (10-120 nm in diameter) with packing densities as high as $7 \times 10^{10}$ nanowires/cm² to test the quantum confinement assumptions of the model. Strong experimental evidence has been observed for an interesting quantum confinement-induced semimetal-to-semiconductor transition in Bi nano-wires with diameters less than 100 nm.
+
+## INTRODUCTION
+Nano-wire systems, especially nano-wire arrays embedded in a dielectric matrix have attracted a great deal of research interest because of their potential applications in electronic and thermoelectric devices and promise for studying one-dimensional (1D) quantum properties. The quantum confinement of carriers in the two dimensions normal to the wire axis will significantly change their electronic energy states and make the transport properties of these quasi-1D systems very different from their bulk counterparts.
+
+One promising approach to fabricate nano-wire systems is to fill an array of parallel nano-channels with the media of interest for thermoelectric applications. Porous anodic alumina,¹ which has hexagonally-packed nanometer-sized channels, is one such possible host template. Anodic alumina has previously been used to synthesize a variety of metal and semiconductor nano-wires, such as Ni, Pd, Au, Pt and CdS, through chemical or electrochemical processes. However, the diameters of those nano-wires have not reached the quantum confinement regime due to their large electron effective masses. In order to exhibit strong quantum confinement characteristics, the wire diameter based on the simplest possible model should be smaller than the exciton diameter, which is given by $d_{ex} = 2\epsilon\hbar^{2}(m_{e}^{-1} + m_{h}^{-1})/e^{2}$, where $\epsilon$ is the static dielectric constant, $e$ is the charge on the electron, $m_{e}$ and $m_{h}$ are the effective masses of the electrons and holes, respectively. Bi, which is a semimetal and has a very small electron effective mass (in the order of $0.002m_{0}$ for the highest curvature direction at the band edge, where $m_{0}$ is the free electron mass), is considered as a good candidate to study the quantum confinement effects in a 1D system. More importantly, the extremely small electron effective mass of Bi, the high anisotropy of its Fermi surface, plus its high atomic number make Bi nano-wires very promising materials for thermoelectric applications.
+
+Most recently, we have successfully fabricated ultra-fine Bi nano-wire arrays by pressure-injecting liquid Bi into the nano-channels of a porous anodic alumina template.² Anodic alumina is amorphous Al₂O₃ with a small amount of impurities that are introduced by the anodizing electrolyte.³ Besides the desirable geometry of the anodic alumina templates, its wide band-gap energy $(\approx 3.5\ eV)^{4}$ and low thermal conductivity⁵ make it an excellent host material for nano-wires for thermoelectric applications. The novel vacuum melting and pressure injection techniques that we developed² can produce continuous, dense nano-wire arrays, as required for thermoelectric and other transport applications where the orientation of the crystal axes with respect to the wire axis is important. Furthermore, this fabrication technique is highly versatile. It not only can be easily modified to incorporate dopants into the Bi nano-wires (such as Te as an electron donor or Pb as a hole donor to produce $n$-type or $p$-type Bi nano-wires), but can also be applied to other low melting temperature metals, semiconductors (such as Bi₂Te₃), alloys (such as $Bi_{1-x}Sb_{x}$), and even polymers and gels.
+
+The porous anodic alumina template was generated by anodizing a mechanically and electrochemically polished high-purity aluminum substrate (99.99 + %) in a strong acid solution as the electrolyte. The channel diameter,
+
+channel packing density and channel length of the an- odic alumina could be systematically varied by control- ling the processing parameters such as the anodizing volt- age, electrolyte temperature and anodizing time. Each nano-channel of the template has only one opening en- trance for the injection of the thermoelectric nano-wire due to the presence of the dense alumina barrier layer between the nano-channels and the Al substrate. After a brief thermal treatment, the porous film, which was kept on the Al substrate, was placed inside a high-pressure re-actor chamber and surrounded by high-purity $(99.999 \%)$  Bi pieces. To degas the porous film, the chamber was evacuated to $\approx 10^{-2}$ mbar, while it was heated to a temperature slightly lower than $T_{m}$ , the melting point of Bi. After the film was degassed, the temperature of the reactor was raised above $T_{m}$ . The vacuum pump was then disconnected, and high-pressure argon gas was in- troduced to drive the molten Bi into the evacuated chan- nels of the anodic alumina template. The low $T_{m}$ of Bi and the high thermal stability (up to $800^{\circ} C)^{6}$ and rigidity of the anodic alumina film make this filling process possi- ble. After the injection process was completed, the reac- tor was slowly cooled down to room temperature, and the impregnated Bi was solidified and crystallized inside the nano-channels. The pressure was then slowly released. Next, the sample was mechanically extracted from the surrounding Bi metal, and the Al substrate was etched away by an amalgamation process. $^{7}$ The barrier layer was dissolved using a $4 wt \%$ phosphoric acid solution to yieldthe final Bi-filled anodic alumina film sample. $^{2}$
+
+![](./images/812435947516854272_1.jpg)
+
+FIG. 1. TEM image of the cross-section of the anodic alu- mina template with an average channel diameter of 56 nm after ion milling (with argon ions at 6 keV).
+
+The materials properties of the Bi nano-wire arrays were characterized by various techniques. The channel diameters and packing densities of the anodic alumina template were determined from the transmission elec- tron microscopy (TEM) images of the templates, after they were thinned from both sides by argon ion milling. As an example, Fig. 1 shows one of these TEM images. We can see here that the anodic alumina template has a highly uniform porous structure with a narrow channel diameter distribution. To confirm that the nano-channels of the anodic alumina film have been filled by continuous dense Bi nano-wires, the alumina matrix was dissolved in a solution of phosphoric acid and chromic acid, which did not attack the Bi nano-wires. Figure 2(a) shows a typical SEM image of the Bi-filled films after the alumina matrix was partially dissolved from the bottom side of the film to expose the Bi wires. Since the whisker-like features shown in Fig. 2(a) were observed throughout the entire film, we conclude that most of the channels were filled by Bi. In order to further resolve individual wires, we fully dissolved the alumina matrix to make free-standing Bi wires. Figures 2(b) and (c) show TEM images of such free-standing Bi nano-wires. These Bi nano-wires show a uniform wire diameter throughout the entire wire length. More importantly, we found that individual Bi nano- wires are essentially single crystals, which was confirmed by high resolution electron microscopy (HREM) and se- lected area electron diffraction (SAED) experiments. A typical SAED pattern taken from a single Bi nano-wire is presented as an inset in Fig. 2(c).
+
+![](./images/812435947516854272_2.jpg)
+
+FIG. 2. (a) SEM micrograph of the exposed Bi nano-wires after the alumina matrix was partially dissolved from the bottom side of the film. (b) and (c) TEM images of the free-standing Bi nano-wires. Shown on inset in Fig. 2(c) is a typical selected area electron diffraction pattern taken from a single free-standing wire.
+
+---
+
+44
+17th International Conference on Thermoelectrics (1998)
+
+![](./images/812435947516854272_3.jpg)
+
+FIG. 3. XRD patterns of the Bi nano-wire/anodic alumina composites made from templates with average channel diameters of (a) 56 nm, (b) 23 nm and (c) 13 nm. Marked above individual peaks are the Miller indices of the corresponding lattice planes.
+
+Shown in Fig. 3 are X-ray diffraction (XRD) patterns of the Bi-filled films (taken from the bottom side) after removal of the barrier layer. All the XRD peaks are located very close to the peak positions of the 3D bulk Bi, revealing that the rhombohedral lattice structure of bulk Bi is also preserved in the nano-wires. The XRD peaks are very narrow and no peak broadening was observed within the instrumental limit, which indicates long-range periodicity of the lattice structure along the wire, consistent with its single crystal nature. For the sample synthesized from a template with an average pore diameter of 56 nm, only three strong peaks [(012), (110) and (202)] were observed [Fig. 3(a)]. For the samples with diameters of 23 and 13 nm, only the (012) and (024) peaks were found [Figs. 3(b) and (c)]. We therefore conclude that individual Bi nano-wires are essentially single crystals and all wires are similarly oriented. These excellent materials properties of the Bi nano-wire array are very desirable for thermoelectric applications.
+
+![](./images/812435947516854272_4.jpg)
+
+FIG. 4. Schematic energy band diagram showing the energies of the subband edges for the heavy and light electrons and for the holes for: (a) bulk Bi, (b) 100 nm diameter Bi nano-wires along the bisectrix direction, and (c) 50 nm diameter Bi nano-wires along the bisectrix direction.
+
+Since bulk Bi is a semimetal with an equal number of electrons and holes, despite its unique properties such as high carrier mobility and low thermal conductivity, the thermoelectric figure of merit $(ZT)$ of pure bulk Bi is very low due to the approximate cancellation of the contributions from electrons and holes to the Seeback coefficient. In this study, we use quantum confinement to induce a semimetal to semiconductor transition, and we take advantage of the resulting semiconducting 1D Bi nanowires to produce a single carrier type semiconductor. Thus after introducing Te dopants into the semiconducting Bi nano-wires to make it $n$-type, we expect to achieve high $ZT$ in this Bi nano-wire system. In our magneto-transport investigations of Bi nano-wire arrays, we have observed strong evidence for such a quantum confinement-induced semimetal-to-semiconductor transition.⁸
+
+Because of the extremely small electron effective mass of Bi, nano-wires of bismuth should be considered as a quasi-1D system. Considering the large aspect ratio of the Bi nano-wires (length to diameter ratio) and the wide band gap of anodic alumina, a model for a confined electron gas inside a cylindrical potential well with an infinite potential height should be a reasonable approximation to Bi nano-wires. Since the rhombohedral crystal structure of bulk Bi is preserved in these nano-wires, we can assume that the basic electronic energy band structure of Bi, suitably modified for a 1D confined system, is applicable to Bi nano-wires. For bulk Bi, which is a semimetal with a band overlap of 38 meV between the conduction band and the valence band, there are three highly elongated electron pockets and one hole pocket inside the Brillouin Zone, and the band edges of the three electron pockets are degenerate at the $L$ point in the Brillouin zone.⁹ When the quasi-1D electron gas is confined inside a cylindrical potential well, the energy levels $E_{ij}$ which electrons (and also holes in the case of semimetals) can occupy are quantized due to the quantization of the transverse momentum, and $E_{ij}$ can be determined by
+
+$$
+E_{ij} = \frac{\hbar^2 k_z^2}{2m_z^*} + \frac{\hbar^2 \chi_{ij}^2}{2m_d^* r_0^2} \tag{1}
+$$
+
+where $2\pi\hbar = h$ is Planck's constant, $k_z$ and $m_z^*$ are the momentum and the effective mass components of the electron (or hole) along the wire axis, $m_d^*$ is the dynamic electron effective mass in the plane perpendicular to the wire, $r_0$ is the radius of the wire, and $\chi_{ij}$ are roots of the Bessel function $J_i(\chi_{ij}) = 0$. To the lowest order approximation, $m_d^* \approx m_c$, where $m_c$ is the cyclotron effective mass at the band edge. The quantization of the electron and hole energy levels in the $x$ and $y$ directions makes the energy positions of the electron and hole subbands dependent on both the diameter and the crystal orientation of the wire. As an example, for Bi nano-wires oriented along the bisectrix direction, there are two electron pockets in which the electrons have a heavy cyclotron effective mass $(m_c^h)$ and one electron pocket with a light cyclotron effective mass $(m_c^l)$. Figures 4 (b) and (c) show schematically the calculated ground state energies of the heavy electron and light electron subbands and also the
+
+hole subband for a Bi wire oriented along the bisectrix direction with a diameter of 100 nm and 50 nm, respec- tively, in comparison to the bulk Bi band structure shown in Fig. 4(a).
+
+![](./images/812435947516854272_5.jpg)
+
+FIG. 5. Dependence on the wire diameter of the calculated band-gap energy between the lowest electron sub-band and the highest hole sub-band of Bi nano-wires oriented along the three primary crystalline directions ((a) binary, (b) trigonal, and (c) bisectrix).
+
+![](./images/812435947516854272_6.jpg)
+
+FIG. 6. The calculated wire diameter dependence of $Z_{1D}T$ for $n$-type Bi nano-wires oriented along the trigonal direction with optimal carrier concentrations at 300K. The behavior for $p$-type wires is similar.
+
+Based on this sub-band structure model for both elec- trons and holes discussed above, using a semi-classical model for constant energy surfaces, we can calculate the electrical conductivity, magnetoresistance, thermoelec- tric power, and thermal conductivity of Bi nano-wires and their dependence on wire diameter, crystal orienta- tion and temperature. Figure 5 shows the wire diameter dependence of the effective band gap of Bi nano-wires with crystal orientation along the three primary crystal- lographic directions of the rhombohedral crystal struc- ture of Bi. Our calculations show that for Bi nano-wires oriented along the binary, trigonal and bisectrix direc- tions, the semimetal to semiconductor transition occurs at a wire diameter of about 30 nm, 45 nm and 81 nm, respectively. Figure 6 shows the calculated wire diam- eter dependence of $ZT$ at room temperature for $n$-type Bi nano-wires oriented along the trigonal axis and hav- ing the optimal carrier concentrations. The behavior for $p$-type Bi nano-wires is similar to that for $n$-type. Since the band gap of Bi nano-wires is generated by quantum confinement, it is expected that the Bi nano-wire systems with wire diameters just below that for the semimetal- semiconductor transition should work better as a ther- moelectric material at low temperatures such as 77K, the liquid nitrogen boiling point. More detailed model cal- culations taking account of the wire boundary scattering for both electrons and phonons, and the temperature de- pendence of $ZT$ will be presented elsewhere.
+
+In summary, ultra-fine Bi nano-wire arrays with high packing densities have been fabricated by a novel vac- uum melting/pressure injecting technique. The excellent materials properties, such as the single crystallinity of the individual nano-wires, the high crystalline orienta- tion of the nano-wire arrays, the narrow wire diameter distribution of the wire array and the uniform wire diam- eter through the entire nano-wire length, have been con- firmed by various characterization techniques. $^{2,4}$ A theo retical model based on the basic band structure of bulk Bi, suitably modified for the quasi-1D system has been developed. Strong evidence for a quantum confinement- induced semimetal to semiconductor transition has been observed in our magnetoresistance measurements. $^{8}$ Our model calculations show that the Bi nano-wire system, when appropriately doped with electron donors, shouldbe a good low temperature thermoelectric material. $^{8}$
+
+This work is supported partially by the US Navy (G.Dresselhaus, M.S. Dresselhaus, Z. Zhang and X. Sun) through contract N00167-92-K0052, and by NSF (J.Y. Ying) through grants CTS-9257223 and DMR-9400334, and by the MURI subcontract #0205-G-7A114-01 (G. Chen, Z. Zhang and M.S. Dresselhaus).
+
+$^{1}$ K. Itaya, S. Sugarwara, K. Arai, and S. Saito, J. Chem. Engr. Jpn. 17, 514 (1984).
+$^{2}$ Z. Zhang, J.Y. Ying, and M.S. Dresselhaus, J. Mater. Res.13, xxx (1998), in press.
+$^{3}$ G.E. Thompson, R.C. Furneaux, G.C. Wood, J.A. Richard- son, and J.S. Goode, Nature (London) 272, 433 (1978).
+$^{4}$ Z. Zhang, M.S. Dresselhaus, and J.Y. Ying, unpublished results. The energy band gap of anodic alumina was deter- mined by optical transmission experiments, and was found to be larger than 3.5 eV.
+$^{5}$ G. Chen, et al, unpublished results.
+$^{6}$ P.P. Mardilovich, A.N. Govyadinov, N.I. Mukhurov, A.M. Rzhevskii, and R. Paterson, J. Mem. Sci. 98, 131 (1995).
+$^{7}$ J. P. O'Sullivan and G.C. Wood, Proc. Roy. Soc. London A317, 511 (1970).
+$^{8}$ Z. Zhang, X. Sun, M.S. Dresselhaus, J.Y. Ying, and J.P. Heremans, unpublished results.
+$^{9}$ R. Hartmann, Phys. Rev. 181, 1070 (1969).
+
+---
+46
+17th International Conference on Thermoelectrics (1998)

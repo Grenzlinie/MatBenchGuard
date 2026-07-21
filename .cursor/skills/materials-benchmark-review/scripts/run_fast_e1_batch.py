@@ -24,13 +24,14 @@ from prepare_audit_output import (
     collect_source_role_inventory,
 )
 from canonical_status import canonical_fields
+from artifact_schema import SCORING_SCHEMA_VERSION
 
 
 SCHEMA_VERSION = "materials-fast-e1-index/0.2"
 IDENTITY_MANIFEST_SCHEMA = "materials-fast-e1-sample-identities/1.0"
 EVIDENCE_TIER = "E1_USABLE_CANDIDATE"
-SCORING_VERSION = "materials-review-scoring/1.0"
-V11_SCORING_VERSION = "materials-review-scoring/1.1"
+SCORING_VERSION = SCORING_SCHEMA_VERSION
+V11_SCORING_VERSION = SCORING_SCHEMA_VERSION
 RUNNER = Path(__file__).resolve().with_name("run_review.py")
 TERMINAL_STATES = {"E1_USABLE_CANDIDATE", "E1_EXCLUDED"}
 IDENTITY_FIELDS = (
@@ -49,13 +50,6 @@ FORBIDDEN_MANUAL_SCORING_FIELDS = {
     "dimension_scores",
     "hard_gates",
     "gate_results",
-}
-DIMENSION_MAX_POINTS = {
-    "scientific_validity": 35,
-    "instruction_answerability": 20,
-    "checker_gold_alignment": 25,
-    "robustness_discrimination": 15,
-    "solution_completeness": 5,
 }
 V11_DIMENSION_WEIGHTS = {
     "C01": 10,
@@ -328,15 +322,10 @@ def authoritative_cli_scoring(report: dict[str, Any]) -> dict[str, Any]:
     )
     if execution_level != "E1":
         raise ValueError("authoritative CLI snapshot requires execution_level=E1")
-    dimensions = report.get("dimension_scores")
     dimensions_v11 = report.get("dimensions_v11")
     gates = report.get("hard_gates")
     if summary.get("scoring_version") != V11_SCORING_VERSION:
         raise ValueError("CLI report uses an unsupported scoring version")
-    if not isinstance(dimensions, list) or {
-        item.get("dimension"): item.get("max_points") for item in dimensions
-    } != DIMENSION_MAX_POINTS:
-        raise ValueError("CLI report dimension schema is invalid")
     if not isinstance(dimensions_v11, list) or {
         item.get("dimension"): item.get("weight") for item in dimensions_v11
     } != V11_DIMENSION_WEIGHTS:
@@ -363,13 +352,10 @@ def authoritative_cli_scoring(report: dict[str, Any]) -> dict[str, Any]:
         )
     snapshot = {
         "scoring_version": V11_SCORING_VERSION,
-        "legacy_scoring_version": SCORING_VERSION,
         "execution_level": execution_level,
         "final_verdict": summary.get("final_verdict"),
         "total_score": total,
-        "legacy_total_score": summary.get("legacy_total_score"),
         "hard_gate_triggered": summary.get("hard_gate_triggered"),
-        "dimension_scores": dimensions,
         "dimensions_v11": dimensions_v11,
         "hard_gates": gates,
     }
@@ -1120,7 +1106,10 @@ def review_one(
                 "source_binding": source_binding(
                     identity,
                     source_hashes,
-                    audit_manifest.get("source_role_inventory"),
+                    collect_source_role_inventory(
+                        source,
+                        paper_mode=paper_mode,
+                    ),
                     cli_identity,
                     source,
                 ),

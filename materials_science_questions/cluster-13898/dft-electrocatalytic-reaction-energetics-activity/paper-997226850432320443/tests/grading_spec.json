@@ -1,0 +1,135 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Free-energy values are compared to paper-reported reference (T0 result-level compare); structural checks verify rate-determining step identification and trend. Scoring uses tolerance-based partial credit; RDS and sign of Cl- difference are checked.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [],
+  "gold": {},
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Ni(OH)2": {
+              "U0": {
+                "G1": "float (eV)",
+                "G2": "float (eV)",
+                "G3": "float (eV)",
+                "G4": "float (eV)"
+              },
+              "U123": {
+                "G1": "float (eV)",
+                "G2": "float (eV)",
+                "G3": "float (eV)",
+                "G4": "float (eV)"
+              }
+            },
+            "doped": {
+              "U0": {
+                "G1": "float (eV)",
+                "G2": "float (eV)",
+                "G3": "float (eV)",
+                "G4": "float (eV)"
+              },
+              "U123": {
+                "G1": "float (eV)",
+                "G2": "float (eV)",
+                "G3": "float (eV)",
+                "G4": "float (eV)"
+              }
+            },
+            "Cl_adsorption_difference": "float (eV)"
+          }
+        },
+        "description": "Gibbs free energy changes for the four OER elementary steps on Ni(OH)2 and Cr-incorporated NiFe (oxy)hydroxide at U=0 V and U=1.23 V vs RHE, as well as the average Cl- adsorption free energy difference between the two surfaces (positive indicates weaker adsorption on the doped surface)."
+      }
+    ],
+    "notes": "All free energies are in eV. The checker verifies that reported values lie within expected tolerances of the paper-reported reference, that the rate-determining step is the OOH deprotonation step, and that Cl_adsorption_difference is positive and within a physically reasonable range."
+  },
+  "steps": [
+    {
+      "id": "ni_oh2_u0",
+      "output_file": "dft_results.json",
+      "kind": "numeric_similarity",
+      "weight": 0.15,
+      "params": {
+        "field_path": ["Ni(OH)2", "U0"],
+        "tolerance_mae": 0.5,
+        "score_formula": "max(0, 1.0 - mae / 0.5)"
+      }
+    },
+    {
+      "id": "ni_oh2_u123",
+      "output_file": "dft_results.json",
+      "kind": "numeric_similarity",
+      "weight": 0.15,
+      "params": {
+        "field_path": ["Ni(OH)2", "U123"],
+        "tolerance_mae": 0.5,
+        "score_formula": "max(0, 1.0 - mae / 0.5)"
+      }
+    },
+    {
+      "id": "doped_u0",
+      "output_file": "dft_results.json",
+      "kind": "numeric_similarity",
+      "weight": 0.15,
+      "params": {
+        "field_path": ["doped", "U0"],
+        "tolerance_mae": 0.5,
+        "score_formula": "max(0, 1.0 - mae / 0.5)"
+      }
+    },
+    {
+      "id": "doped_u123",
+      "output_file": "dft_results.json",
+      "kind": "numeric_similarity",
+      "weight": 0.15,
+      "params": {
+        "field_path": ["doped", "U123"],
+        "tolerance_mae": 0.5,
+        "score_formula": "max(0, 1.0 - mae / 0.5)"
+      }
+    },
+    {
+      "id": "cl_diff",
+      "output_file": "dft_results.json",
+      "kind": "numeric_similarity",
+      "weight": 0.1,
+      "params": {
+        "field": "Cl_adsorption_difference",
+        "tolerance_abs": 0.2,
+        "score_formula": "max(0.0, 1.0 - abs(actual - expected) / 0.25)"
+      }
+    },
+    {
+      "id": "rds",
+      "output_file": "dft_results.json",
+      "kind": "rds_structural",
+      "weight": 0.2,
+      "params": {
+        "u123_key": "U123",
+        "ni_field": "Ni(OH)2",
+        "doped_field": "doped",
+        "keys": ["G1", "G2", "G3", "G4"],
+        "expected_rds_step": "G3",
+        "doped_rds_lower_than_ni_threshold": 0.1
+      }
+    },
+    {
+      "id": "cl_positive",
+      "output_file": "dft_results.json",
+      "kind": "structural_threshold",
+      "weight": 0.1,
+      "params": {
+        "field": "Cl_adsorption_difference",
+        "threshold": 0.0,
+        "direction": "greater"
+      }
+    }
+  ]
+}

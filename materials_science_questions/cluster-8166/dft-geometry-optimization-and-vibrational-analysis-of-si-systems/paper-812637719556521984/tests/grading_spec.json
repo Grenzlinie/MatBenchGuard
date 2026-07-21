@@ -1,0 +1,123 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Wavefunction ΔH is recomputed from raw η², α² using a conversion constant backed out from the paper's own published values; hidden defect-type labels allow verified floating-bonnd vs dangling-bond trend comparison. DOS gap is structural (gap detection). Summary is structural (extract range and cross-check).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden defect-type labels (floating-bond neighbours and dangling-bond atoms) and empirical conversion constant to compute ΔH from α²η².",
+      "source_provenance": "Paper Table I (Phys. Rev. Lett. 63, 1491). Atom indices and ΔH values extracted directly.",
+      "generation_method": "Manual extraction from Table I; the conversion constant is the average ratio of ΔH to α²η² across floating-bond entries (~1455 G).",
+      "why_not_fabricated": "These are exact published values used as a reference; no synthetic labels are invented."
+    }
+  ],
+  "conversion_constant_G": 1455.0,
+  "defect_atoms": {
+    "fb_indices": [
+      49,
+      192,
+      43,
+      67,
+      194,
+      211,
+      199,
+      93,
+      145
+    ],
+    "db_indices": [
+      118,
+      116,
+      176,
+      171,
+      103,
+      172,
+      173
+    ]
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dos_w3.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "dos"
+          ],
+          "units": {
+            "energy": "eV",
+            "dos": "arbitrary"
+          }
+        },
+        "description": "Electronic density of states of the relaxed W3 model, expected to show a band gap."
+      },
+      {
+        "file": "wavefunction_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "atom_index",
+            "coordination",
+            "eta_squared",
+            "alpha_squared",
+            "beta_squared",
+            "delta_H"
+          ],
+          "units": {
+            "atom_index": "integer",
+            "coordination": "integer",
+            "eta_squared": "float",
+            "alpha_squared": "float",
+            "beta_squared": "float",
+            "delta_H": "Gauss"
+          }
+        },
+        "description": "Wavefunction amplitudes, s/p components, and computed hyperfine splittings for atoms in defect environments. Delta_H is recomputed by the verifier from the other columns and the public physical constants."
+      },
+      {
+        "file": "hyperfine_summary.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "Plain text file with sentences summarizing the computed hyperfine splitting ranges for floating-bond neighbours and dangling bonds."
+        },
+        "description": "Text summary reporting the numeric range of hyperfine splittings for floating bonds and noting that dangling-bond splittings are smaller. The verifier checks the qualitative agreement and range consistency."
+      }
+    ],
+    "notes": "The agent must implement the tight-binding model and all relaxation/terminator procedures without relying on pre-provided reference outputs. The physical constants and model coordinates are publicly available."
+  },
+  "steps": [
+    {
+      "id": "step_dos_w3",
+      "output_file": "dos_w3.csv",
+      "weight": 0.2,
+      "kind": "structural",
+      "target_policy": "structural_audit",
+      "description": "Check that the DOS exhibits a clear energy gap of at least 0.5 eV."
+    },
+    {
+      "id": "step_wavefunction_data",
+      "output_file": "wavefunction_data.csv",
+      "weight": 0.5,
+      "kind": "recompute_metric",
+      "target_policy": "metric_recompute",
+      "description": "Recompute ΔH from η², α² using the hidden conversion constant; verify internal consistency and confirm floating-bond neighbours have large splittings (≥25 G), dangling-bond sites have small splittings (≤35 G), and fb_max > db_max."
+    },
+    {
+      "id": "step_hyperfine_summary",
+      "output_file": "hyperfine_summary.txt",
+      "weight": 0.3,
+      "kind": "structural",
+      "target_policy": "structural_audit",
+      "description": "Extract the reported floating-bond hyperfine range, check that it is sensible and consistent with the wavefunction data, and confirm that dangling bonds are described as smaller."
+    }
+  ]
+}

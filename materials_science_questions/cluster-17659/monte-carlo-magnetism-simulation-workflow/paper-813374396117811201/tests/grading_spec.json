@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The paper's headline result is a structural pattern in acceptance rates; recomputing the ordering from submitted values is a structural audit. T1 recompute from raw artifacts is not needed because the headline is the ordering, not a scalar metric.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "acceptance_rates.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected ordering constraints for b=0.05, 0.2, 1.5 from paper Figure 3.",
+      "source_provenance": "Paper text and figure: at T=0.02, flip parallel dominates at small b, rotate at intermediate b, flip xyz at large b.",
+      "generation_method": "Extracted from the paper's description of the acceptance rate trends.",
+      "why_not_fabricated": "These constraints mirror the paper's exact claims and are supported by the reference solution."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "acceptance_rates.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "b",
+            "P_xyz",
+            "P_parallel",
+            "P_rotate"
+          ],
+          "units": {}
+        },
+        "description": "Acceptance rates of loop-flip methods at T=0.02 as a function of b. The ordering among the three methods at specific b values is verified."
+      }
+    ],
+    "notes": "The acceptance rates are scored by checking that the relative ordering at b=0.05, 0.2, and 1.5 matches the expected structural pattern (e.g., P_parallel > P_rotate > P_xyz at small b, etc.) with a small numerical tolerance for stochastic noise."
+  },
+  "steps": [
+    {
+      "id": "ordering",
+      "output_file": "acceptance_rates.csv",
+      "weight": 0.95,
+      "kind": "structural_audit",
+      "tolerance": 0.05,
+      "constraints": {
+        "0.05": [
+          [
+            "P_parallel",
+            "P_rotate"
+          ],
+          [
+            "P_rotate",
+            "P_xyz"
+          ]
+        ],
+        "0.2": [
+          [
+            "P_rotate",
+            "P_parallel"
+          ],
+          [
+            "P_rotate",
+            "P_xyz"
+          ]
+        ],
+        "1.5": [
+          [
+            "P_xyz",
+            "P_rotate"
+          ],
+          [
+            "P_rotate",
+            "P_parallel"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "range",
+      "output_file": "acceptance_rates.csv",
+      "weight": 0.05,
+      "kind": "structural_audit",
+      "check": "range",
+      "min": 0.0,
+      "max": 1.0
+    }
+  ]
+}

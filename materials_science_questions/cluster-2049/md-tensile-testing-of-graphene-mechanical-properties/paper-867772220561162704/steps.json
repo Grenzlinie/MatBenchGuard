@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_a",
+    "title": "Generate initial graphene nanoribbon structure",
+    "role": "process",
+    "action": "Create atomic coordinates for an armchair graphene nanoribbon of dimensions 30 Å (armchair along x) by 80 Å (along y). Fix the two ends in the x‑direction, keep the two y‑edges free.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate the starting flat graphene sheet that will be thermalized.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_b",
+    "title": "Thermalize to obtain warped edge configurations",
+    "role": "process",
+    "action": "Using LAMMPS with the Brenner potential (AIREBO or REBO), thermalize the flat nanoribbon at 1 K and zero pressure within the NPT ensemble (Nosé‑Hoover) for 200 ps. After equilibration, classify the warping direction of each free edge and produce one stable configuration of FBC‑1 (opposite warping) and one of FBC+1 (same warping). Multiple random velocity seeds may be needed.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain the two distinct warped-edge configurations required for subsequent compression tests.",
+    "output_schema": ""
+  },
+  {
+    "id": "step1",
+    "title": "Compress FBC‑1 configuration and record stress‑strain curve",
+    "role": "scored",
+    "action": "Using the thermalized FBC‑1 configuration, apply uniaxial compressive strain in the x‑direction at 1 K by uniformly deforming the simulation box while maintaining lateral relaxation. Record the virial stress σ_xx at each strain. Sample at least 100 points from strain 0 to 0.04. At an engineering strain of 0.02, save the atomic configuration (R_minus). Continue compression until the stress drops to the level of the FBC+1 curve (post‑unknotting); save that configuration as R_plus for later use.",
+    "output_file": "step_01_stress_strain_fbc1.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Stress‑strain data for the FBC‑1 nanoribbon compressed at 1 K. The saved configurations R_minus and R_plus are internal only.",
+    "output_schema": "CSV with columns: strain (dimensionless), stress_xx (GPa). At least 100 rows covering strain from 0 to 0.04."
+  },
+  {
+    "id": "step2",
+    "title": "Compress FBC+1 configuration and record stress‑strain curve",
+    "role": "scored",
+    "action": "Compress the thermalized FBC+1 configuration under identical conditions (1 K, uniform box deformation, lateral relaxation). Record virial stress σ_xx at each strain over the same range 0‑0.04 with at least 100 points.",
+    "output_file": "step_02_stress_strain_fbc+1.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Stress‑strain data for the FBC+1 nanoribbon compressed at 1 K.",
+    "output_schema": "CSV with columns: strain (dimensionless), stress_xx (GPa). At least 100 rows covering strain from 0 to 0.04."
+  },
+  {
+    "id": "step3",
+    "title": "Extract critical unknotting strain",
+    "role": "scored",
+    "action": "From the FBC‑1 stress‑strain curve (step_01), determine the critical unknotting strain εu. A practical definition is the strain at which the stress first falls below 90% of the peak stress after the initial plateau. Write the numeric value.",
+    "output_file": "step_03_critical_unknotting_strain.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Critical unknotting strain εu (dimensionless).",
+    "output_schema": "A single floating‑point number (e.g., 0.0336)."
+  },
+  {
+    "id": "step4",
+    "title": "Perform η‑interpolation potential energy scan",
+    "role": "scored",
+    "action": "Using the saved atomic configurations R_minus (at ε=0.02) and R_plus (unknotted), generate a family of configurations by linear interpolation in fractional coordinates: R(η) = (1‑η)/2 * R_minus + (1+η)/2 * R_plus for η ranging from ‑1 to +1 in at least 21 uniform steps. For each η, perform a static 0 K energy minimization with the Brenner potential to obtain the potential energy. Record η and energy.",
+    "output_file": "step_04_eta_scan_energy.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Potential energy as a function of η for the knotting‑unknotting pathway at ε=0.02.",
+    "output_schema": "CSV with columns: eta (dimensionless, range -1 to 1), potential_energy (eV). At least 21 rows uniformly spaced in eta."
+  },
+  {
+    "id": "step5",
+    "title": "Compute potential energy barrier ΔV",
+    "role": "scored",
+    "action": "From the eta‑scan data (step_04), compute ΔV = V(η=0) − V(η=‑1) and convert to meV (1 eV = 1000 meV). Write the value.",
+    "output_file": "step_05_barrier_mev.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Potential energy barrier for knotting at ε=0.02, in meV.",
+    "output_schema": "A single floating‑point number (e.g., 600 for 0.6 eV)."
+  }
+]

@@ -1,0 +1,79 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Only aggregate domain metrics are submitted; raw spin configurations are not required, so recomputing cluster fractions from raw data is infeasible (T1). T2 consistency would still need partial recomputation from raw, not available. Therefore T3 structural scoring verifies qualitative growth trends against hidden thresholds.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "domain_metrics.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "domain_metrics.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            {
+              "name": "temperature",
+              "type": "float",
+              "description": "Reduced temperature kBT/J"
+            },
+            {
+              "name": "field",
+              "type": "float",
+              "description": "Random field magnitude h"
+            },
+            {
+              "name": "time",
+              "type": "int",
+              "description": "Monte Carlo sweeps per site"
+            },
+            {
+              "name": "largest_cluster_fraction",
+              "type": "float",
+              "description": "Fraction of spins in the largest connected cluster (4-neighbor)"
+            },
+            {
+              "name": "number_of_clusters",
+              "type": "int",
+              "description": "Total number of connected clusters"
+            }
+          ],
+          "description": "Exactly 12 rows covering three conditions (T=2.0,h=0.1; T=2.0,h=0.9; T=99.0,h=0.1) and four time points (40,400,4000,40000)."
+        },
+        "description": "Domain growth metrics from Monte Carlo simulations of the random-field Ising model. The checker verifies that the largest_cluster_fraction trends match qualitative expectations without requiring exact numeric match."
+      }
+    ],
+    "notes": "The high-temperature condition (T=99.0, h=0.1) is a supporting validation; the main claim is assessed via the low-temperature comparisons. No gold values or tolerances are disclosed; the hidden checker uses structural thresholds."
+  },
+  "steps": [
+    {
+      "id": "structural_domain_growth",
+      "output_file": "domain_metrics.csv",
+      "weight": 1.0,
+      "kind": "structural_rubric",
+      "structural_checks": {
+        "weak_field_growth": {
+          "description": "For T=2.0, h=0.1, largest_cluster_fraction at t=40000 exceeds 0.3 and shows substantial increase from t=40.",
+          "pass_condition": "largest_cluster_fraction at t=40000 > 0.3 AND (fraction at t=40000 - fraction at t=40) > 0.2"
+        },
+        "strong_field_suppression": {
+          "description": "For T=2.0, h=0.9, largest_cluster_fraction remains low at all times.",
+          "pass_condition": "max(largest_cluster_fraction across all times for this regime) < 0.1"
+        },
+        "high_temp_no_growth": {
+          "description": "For T=99.0, h=0.1, largest_cluster_fraction remains very low.",
+          "pass_condition": "max(largest_cluster_fraction across all times for this regime) < 0.05"
+        }
+      },
+      "score_weights": {
+        "weak_field_growth": 0.6,
+        "strong_field_suppression": 0.2,
+        "high_temp_no_growth": 0.2
+      }
+    }
+  ]
+}

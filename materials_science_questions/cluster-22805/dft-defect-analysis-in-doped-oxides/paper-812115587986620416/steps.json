@@ -1,0 +1,54 @@
+[
+  {
+    "id": "0",
+    "title": "Retrieve bond-valence parameters",
+    "role": "process",
+    "action": "Fetch the bond-valence parameter CIF file from the IUCr database and extract the d0 characteristic distance for each cation-oxygen pair needed for the dopants (Mg, Zn, Mn, Sc, In, Pr, Nd, Eu, Ho, Er, Yb, Al, Cr, Fe, Ni, Ti, Hf, Ta, W), Li, and Nb.",
+    "output_file": "",
+    "evidence": "d0_parameters.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Retrieve and parse the public bond-valence parameter database to obtain d0 values.",
+    "output_schema": ""
+  },
+  {
+    "id": "1",
+    "title": "Compute bond-valence discrepancy and dopant occupancy",
+    "role": "scored",
+    "action": "Using the bond-valence formula s_ij = exp((d0 - d_ij)/0.37) and the LN bond lengths (Li site: three bonds of 2.260 Å and three of 2.052 Å; Nb site: three bonds of 2.126 Å and three of 1.878 Å), compute d_i_Li and d_i_Nb for each dopant: Mg2+, Zn2+, Mn2+, Sc3+, In3+, Pr3+, Nd3+, Eu3+, Ho3+, Er3+, Yb3+, Al3+, Cr3+, Fe3+, Ni3+, Ti4+, Hf4+, Ta5+, W6+. Compute d_i = |V_i - sum(s_ij)|. Assign occupancy: Li if d_i_Li < d_i_Nb else Nb (borderline if equal). Output CSV with columns ion, d_i_Li, d_i_Nb, occupancy_predicted.",
+    "output_file": "dopant_di_occupancy.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Table of calculated bond-valence discrepancies and predicted site occupancies for 19 dopant ions.",
+    "output_schema": "CSV with columns: ion (string), d_i_Li (float, units v.u.), d_i_Nb (float, units v.u.), occupancy_predicted (string, one of 'Li', 'Nb', 'borderline')."
+  },
+  {
+    "id": "2",
+    "title": "Calibrate critical GII from ZnO experimental threshold",
+    "role": "process",
+    "action": "Using the d_i for Zn on the Li site from step 1 (d_Zn_Li) and the known experimental threshold concentration of ZnO (5.3 mol %), compute the critical GII value by applying the Li-vacancy model (one Li vacancy per substitution, d_V_Li = 1 v.u.) and the GII formula including oxygen contributions. This yields the reference GII that triggers a site change.",
+    "output_file": "",
+    "evidence": "critical_gii.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Calibration step to obtain the critical GII value (≈0.1055 v.u.) used for threshold calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "3",
+    "title": "Compute threshold concentrations",
+    "role": "scored",
+    "action": "For each dopant in {Mg, Zn, Sc, In, Mn, Al, Cr, Fe, Ni, Ti, Hf, Er, Yb}, compute the molar concentration x (mol %) at which the GII of the doped LN equals the critical GII from step 2. Assume charge compensation by (z-1) Li vacancies per substitution (where z is the nominal valence of the dopant). Use the same GII construction (dopant, vacancies, oxygen) to solve for x. Output threshold_table.csv with columns ion and threshold_concentration_mol_percent.",
+    "output_file": "threshold_table.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Threshold concentrations at which dopants change occupancy from Li to Nb sites.",
+    "output_schema": "CSV with columns: ion (string), threshold_concentration_mol_percent (float, units mol %)."
+  }
+]

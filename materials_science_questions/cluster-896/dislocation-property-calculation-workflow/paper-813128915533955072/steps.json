@@ -1,0 +1,80 @@
+[
+  {
+    "id": "implement_core_functions",
+    "title": "Implement generalized Michell solution and dislocation kernels",
+    "role": "process",
+    "action": "Implement the formulas for the generalized Michell solution for cylindrical orthotropy (Eq. 15), the infinite-plane dislocation stress field (Eq. 31), the Fourier-series coefficients for the dislocation solution in an annular plane (Eq. 33 and Appendix A), and the stress field of the intact annular plane under Fourier-expanded boundary tractions (Eq. 40). All expressions are given analytically in the paper.",
+    "output_file": "",
+    "evidence": "michell_dislocation_module.py",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Process step: build the mathematical toolbox (Michell solution, dislocation kernels, intact stress) required for the integral equation solver. No scored output; the evidence file is the Python module implementing these functions.",
+    "output_schema": ""
+  },
+  {
+    "id": "solve_integral_equations",
+    "title": "Implement integral equation solver and SIF extraction",
+    "role": "process",
+    "action": "Implement the distributed dislocation technique: discretize crack geometries, set up the Cauchy singular integral equations using the dislocation stress kernels, apply Lobatto-Chebyshev collocation, incorporate closure conditions for embedded cracks, solve the linear system for dislocation densities, and compute Mode I/II stress intensity factors via the formulas in the paper.",
+    "output_file": "",
+    "evidence": "sif_solver.py",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Process step: build the numerical crack analysis solver. The evidence file is the Python module implementing the integral equation solver and SIF extraction.",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_validation_embedded",
+    "title": "Produce validation SIF table for embedded radial cracks (Tables 1-2)",
+    "role": "scored",
+    "action": "Using the implemented solver, compute normalized Mode I and II stress intensity factors for the embedded radial crack problems described in Tables 1 and 2 of the paper. Parameters: (d-c)/(R2-R1)=0.5, (c-R1)/(R2-d)=1, k0=sigma0*sqrt((d-c)/2) for Mode I and k0=tau0*sqrt((d-c)/2) for Mode II. Sweep R1/(R2-R1) over the values given in the tables. Write the results to a CSV file.",
+    "output_file": "table_1_2.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with columns: R1_over_R2_minus_R1, ki_k0_modeI, ko_k0_modeI, ki_k0_modeII, ko_k0_modeII. One row per ratio; reproduces Tables 1 and 2 combined.",
+    "output_schema": "CSV with columns: float R1_over_R2_minus_R1; float ki_k0_modeI; float ko_k0_modeI; float ki_k0_modeII; float ko_k0_modeII"
+  },
+  {
+    "id": "compute_validation_edge",
+    "title": "Produce validation SIF table for inner edge cracks (Tables 3-4)",
+    "role": "scored",
+    "action": "Compute normalized Mode I and II SIFs for the radial inner edge crack problems described in Tables 3 and 4. Sweep crack depth ratio (d-R1)/(R2-R1) over the given values and radius ratio R1/(R2-R1) over the listed values. Use the same normalizations: k0=sigma0*sqrt(d-R1) for Mode I and k0=tau0*sqrt(d-R1) for Mode II. Write the results to a CSV file.",
+    "output_file": "table_3_4.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with columns: R1_over_R2_minus_R1, d_minus_R1_over_R2_minus_R1, ki_k0_modeI, ki_k0_modeII. One row per (R1 ratio, crack length) combination; reproduces Tables 3 and 4.",
+    "output_schema": "CSV with columns: float R1_over_R2_minus_R1; float d_minus_R1_over_R2_minus_R1; float ki_k0_modeI; float ki_k0_modeII"
+  },
+  {
+    "id": "compute_orthotropic_embedded_varying_length",
+    "title": "Produce orthotropic SIF table for embedded crack variation (Tables 9-10)",
+    "role": "scored",
+    "action": "For an orthotropic annular plane (R2=2R1) with an embedded crack centered at (0.5(R1+R2), 0.6(R2-R1)) and crack angle 0.5211*pi, compute SIFs for the three materials (Balsa, Isotropic, Douglas‑fir) under the loading given by Eq. (56). Perform two parameter sweeps: (a) crack length l/(R2-R1) with d/(R2+R1)=0.5 (Table 9); (b) crack center distance d/(R2-R1) with l=0.3(R2-R1) (Table 10). Normalization k0=sigma0*sqrt(l). Write results to a CSV combining both sweeps.",
+    "output_file": "table_9_10.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with columns: sweep_type (crack_length or center_distance), param_value, material, ki_k0_modeI, ki_k0_modeII. Contains rows for Table 9 (l/(R2-R1) sweep) and Table 10 (d/(R2-R1) sweep).",
+    "output_schema": "CSV with columns: str sweep_type; float param_value; str material; float ki_k0_modeI; float ki_k0_modeII"
+  },
+  {
+    "id": "compute_orthotropic_arc_and_pair",
+    "title": "Produce orthotropic SIF table for arc crack and pair of symmetric cracks (Tables 11-12)",
+    "role": "scored",
+    "action": "For the annular plane with a concentric arc crack (radius a=1.5R1) and with a pair of symmetric radial cracks (centers at distance d=0.5(R2+R1)), compute SIFs for Balsa, Isotropic, and Douglas‑fir under loading Eq. (56). For Table 11, sweep the crack half-length l/(R2-R1) (arc crack). For Table 12, sweep the crack half-length l/(R2-R1) (symmetric radial cracks) and report both inner and outer tip SIFs. Normalization k0=sigma0*sqrt(aγ) for arc crack and k0=sigma0*sqrt(l) for radial cracks. Write results to a CSV combining both tables.",
+    "output_file": "table_11_12.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with columns: config (arc_crack or symmetric_radial), l_over_R2_minus_R1, material, kI_k0_modeI, kII_k0_modeII (for arc and outer tip), and for symmetric cracks: kIi_k0_modeI, kIIi_k0_modeII.",
+    "output_schema": "CSV with columns: str config; float l_over_R2_minus_R1; str material; float kI_k0_modeI; float kII_k0_modeII; float kIi_k0_modeI; float kIIi_k0_modeII"
+  }
+]

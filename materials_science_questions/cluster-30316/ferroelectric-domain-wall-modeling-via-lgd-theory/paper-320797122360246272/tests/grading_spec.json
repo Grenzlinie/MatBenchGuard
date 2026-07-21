@@ -1,0 +1,103 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All target quantities (η, d, ω⊥², ωx1², ωx2², gap) are recomputed from the agent's own reported material parameters, enabling a full T1 recompute without trusting self-reported numbers.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Order-of-magnitude gap range (1e10 s⁻¹ to 1e11 s⁻¹) from the paper's numerical estimate.",
+      "source_provenance": "Paper section 3 last paragraph: 'величина энергетической щели ... может достигать 10^{10}-10^{11} c^{-1}'. Values chosen as the exact stated interval.",
+      "generation_method": "Direct extraction from the paper text; the endpoints are used as a range gate with tolerance.",
+      "why_not_fabricated": "The numbers are taken verbatim from the paper's published claim; they are not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "domain_wall_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "d",
+            "eta",
+            "T",
+            "Tc",
+            "M",
+            "c1",
+            "c2",
+            "b",
+            "alpha",
+            "omega_perp_sq"
+          ],
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "d": "cm",
+            "eta": "dimensionless",
+            "T": "K",
+            "Tc": "K",
+            "M": "g",
+            "c1": "erg·cm²",
+            "c2": "erg·cm²",
+            "b": "erg/cm⁴",
+            "alpha": "s⁻²·K⁻¹",
+            "omega_perp_sq": "rad²/s²"
+          }
+        },
+        "description": "Static domain wall profile properties and material parameters. The checker recomputes η, d, and ω⊥² from the provided parameters, checks self-consistency within 1e-6 relative tolerance, and verifies that the computed gap derived in the next step falls in the expected range."
+      },
+      {
+        "file": "local_mode_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "omega_x1_sq",
+            "omega_x2_sq",
+            "omega_perp_sq",
+            "gap_sq",
+            "units"
+          ],
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "omega_x1_sq": "rad²/s²",
+            "omega_x2_sq": "rad²/s²",
+            "omega_perp_sq": "rad²/s²",
+            "gap_sq": "rad²/s²"
+          }
+        },
+        "description": "Localized mode frequencies squared and energy gap squared. The checker recomputes these quantities from the parameters in step_01 and compares them to the reported values with a tight tolerance, then checks that the absolute gap Δω = sqrt(omega_perp_sq) - sqrt(omega_x1_sq) lies in the physically expected order-of-magnitude range for BaTiO₃."
+      }
+    ],
+    "notes": "The agent must choose typical BaTiO3 parameters that satisfy the paper's scaling relations and yield a gap within the stated order-of-magnitude range. No thin-wall results are required."
+  },
+  "steps": [
+    {
+      "id": "step_01_check",
+      "output_file": "domain_wall_properties.json",
+      "weight": 0.6,
+      "kind": "recompute",
+      "description": "Recompute η, d, ω⊥² from the agent-reported parameters and check self-consistency with tightly reported values. Full credit if all relative errors ≤ 1e-6.",
+      "check": {
+        "tol": 1e-06
+      }
+    },
+    {
+      "id": "step_02_check",
+      "output_file": "local_mode_frequencies.json",
+      "weight": 0.4,
+      "kind": "recompute",
+      "description": "Recompute ωx1², ωx2² from step_01 parameters; verify consistency with agent's reported frequencies and gap_sq, enforce positivity & ordering, and check that the absolute gap Δω=√(ω⊥²)−√(ωx1²) lies in [1e10, 1e11] s⁻¹. Full credit if all consistency/ordering pass and gap in range.",
+      "check": {
+        "gap_low": 10000000000.0,
+        "gap_high": 100000000000.0
+      }
+    }
+  ]
+}

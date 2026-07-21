@@ -1,0 +1,92 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recomputing mean and std of DS energies from the agent's raw time_series and comparing alignment values to paper references within tolerances.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ds_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "trajectory_segments": "object",
+            "alignment": "object"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "AIMD-derived defect state energy statistics and aligned level on the RHE scale."
+      }
+    ],
+    "notes": "The checker will recompute the mean and standard deviation of ds_vs_vbm_eV from the time_series for each trajectory segment and compare them to a hidden reference within tolerances. The alignment values vbm_vs_rhe_V and ds_level_vs_rhe_V will also be compared. The DS level relative to the O2/H2O redox potential will be audited for consistency."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for DS energy statistics and electrochemical alignment from the paper.",
+      "source_provenance": "Paper main text and Table 1: PBE+D3 segment DS energy mean 0.83 eV, std 0.33 eV; PBE+U+D3 segment mean 0.37 eV, std 0.20 eV; VBM alignment 2.24 V vs RHE, DS level 1.41 V vs RHE.",
+      "generation_method": "Transcribed from the paper's Results section and table.",
+      "why_not_fabricated": "These are the paper's reported quantities, faithfully transcribed. No hidden holdout needed."
+    }
+  ],
+  "steps": [
+    {
+      "id": "check_segment_stats",
+      "output_file": "ds_energies.json",
+      "kind": "metric_recompute",
+      "weight": 0.7,
+      "description": "Recompute mean and std of ds_vs_vbm_eV from time_series and compare to paper gold",
+      "target": {
+        "PBE+D3": {
+          "mean": 0.83,
+          "std": 0.33,
+          "tolerance_mean": 0.15,
+          "tolerance_std": 0.1
+        },
+        "PBE+U+D3": {
+          "mean": 0.37,
+          "std": 0.2,
+          "tolerance_mean": 0.15,
+          "tolerance_std": 0.1
+        }
+      }
+    },
+    {
+      "id": "check_alignment",
+      "output_file": "ds_energies.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "description": "Check aligned VBM and DS levels vs RHE",
+      "target": {
+        "vbm_vs_rhe_V": 2.24,
+        "ds_level_vs_rhe_V": 1.41,
+        "tolerance_V": 0.3
+      }
+    },
+    {
+      "id": "check_duration_gap",
+      "output_file": "ds_energies.json",
+      "kind": "structural_audit",
+      "weight": 0.1,
+      "description": "Check trajectory durations and VBM-CBM gap averages are plausible",
+      "target": {
+        "PBE+D3": {
+          "duration_ps_min": 30,
+          "duration_ps_max": 40,
+          "gap_min": 1.5,
+          "gap_max": 2.5
+        },
+        "PBE+U+D3": {
+          "duration_ps_min": 10,
+          "duration_ps_max": 20,
+          "gap_min": 1.6,
+          "gap_max": 2.5
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,172 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute of the FLEX simulation in the checker is infeasible. The checker verifies that the submitted occupancies, eigenvalues, and TN are consistent with the paper's reported reference numbers within tolerance, and checks required physical trends (d-wave eigenvalue > extended-s, TN peak near Ud=8).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference occupancy, eigenvalue, and TN values from the paper (Figs. 6,10,13,18).",
+      "source_provenance": "Extracted from published figures and text of Phys. Rev. B 47, 12153 (1993).",
+      "generation_method": "Values read from the paper's reported data points and cross-checked to match the reference solve.sh which reproduces the same simulation protocol.",
+      "why_not_fabricated": "These are the paper's own reported results; the hidden checker compares the agent's computed quantities against these benchmark values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "occupancies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "param_set",
+            "n_d",
+            "n_p_h",
+            "n_p_n"
+          ],
+          "units": {}
+        },
+        "description": "Average orbital occupancies from FLEX. Checked against reference values from the paper."
+      },
+      {
+        "file": "eigenvalues.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_over_tpd",
+            "lambda_d",
+            "lambda_sstar"
+          ],
+          "units": {}
+        },
+        "description": "Singlet pairing eigenvalues for d-wave and extended-s. Values and inequality λ_d > λ_s* will be checked."
+      },
+      {
+        "file": "TN.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Ud_over_tpd",
+            "TN_over_tpd"
+          ],
+          "units": {}
+        },
+        "description": "Magnetic crossover temperature. Checked against reference and monotonic trend."
+      }
+    ],
+    "notes": "The Wannier-state analysis and one-band model comparison are not required. Only the three-band results are scored."
+  },
+  "steps": [
+    {
+      "id": "occupancies_check",
+      "output_file": "occupancies.csv",
+      "weight": 0.4,
+      "kind": "numeric",
+      "config": {
+        "tolerance": 0.02,
+        "gold_rows": [
+          {
+            "param_set": "Ud6_eps2_n0.8",
+            "n_d": 0.72,
+            "n_p_h": 0.04,
+            "n_p_n": 0.04
+          },
+          {
+            "param_set": "Ud6_eps2_n0.9",
+            "n_d": 0.77,
+            "n_p_h": 0.06,
+            "n_p_n": 0.07
+          },
+          {
+            "param_set": "Ud6_eps2_n1.0",
+            "n_d": 0.82,
+            "n_p_h": 0.08,
+            "n_p_n": 0.1
+          },
+          {
+            "param_set": "Ud6_eps2_n1.1",
+            "n_d": 0.865,
+            "n_p_h": 0.13,
+            "n_p_n": 0.105
+          },
+          {
+            "param_set": "Ud6_eps2_n1.2",
+            "n_d": 0.9,
+            "n_p_h": 0.2,
+            "n_p_n": 0.1
+          }
+        ]
+      }
+    },
+    {
+      "id": "eigenvalues_check",
+      "output_file": "eigenvalues.csv",
+      "weight": 0.3,
+      "kind": "numeric",
+      "config": {
+        "tolerance": 0.05,
+        "gold_rows": [
+          {
+            "T_over_tpd": 0.05,
+            "lambda_d": 0.92,
+            "lambda_sstar": 0.45
+          },
+          {
+            "T_over_tpd": 0.1,
+            "lambda_d": 0.76,
+            "lambda_sstar": 0.38
+          },
+          {
+            "T_over_tpd": 0.15,
+            "lambda_d": 0.6,
+            "lambda_sstar": 0.3
+          },
+          {
+            "T_over_tpd": 0.2,
+            "lambda_d": 0.42,
+            "lambda_sstar": 0.22
+          }
+        ]
+      }
+    },
+    {
+      "id": "tn_check",
+      "output_file": "TN.csv",
+      "weight": 0.3,
+      "kind": "numeric",
+      "config": {
+        "tolerance": 0.005,
+        "gold_rows": [
+          {
+            "Ud_over_tpd": 4,
+            "TN_over_tpd": 0.022
+          },
+          {
+            "Ud_over_tpd": 6,
+            "TN_over_tpd": 0.032
+          },
+          {
+            "Ud_over_tpd": 8,
+            "TN_over_tpd": 0.045
+          },
+          {
+            "Ud_over_tpd": 10,
+            "TN_over_tpd": 0.042
+          },
+          {
+            "Ud_over_tpd": 12,
+            "TN_over_tpd": 0.039
+          }
+        ]
+      }
+    }
+  ]
+}

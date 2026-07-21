@@ -1,0 +1,108 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: checker recomputes spin-flip energy bound for hidden fillings using a smaller lattice, recomputes BCS gap parameters from the self-consistency equation, and verifies symmetry against the known phase diagram.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "flip_energy_bound.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "filling",
+            "E_flip_lower_bound"
+          ],
+          "units": {
+            "E_flip_lower_bound": "|t'|"
+          }
+        },
+        "description": "Lower bound on spin-flip energy versus filling."
+      },
+      {
+        "file": "critical_filling.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "n_c": "float",
+            "method": "string"
+          }
+        },
+        "description": "Critical filling estimate extracted from the spin-flip energy bound."
+      },
+      {
+        "file": "bcs_gap_parameters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "filling",
+            "omega_over_tprime",
+            "g0"
+          ]
+        },
+        "description": "BCS gap equation scaling parameters ω and g0 for a range of fillings."
+      },
+      {
+        "file": "symmetry_phase.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "One line per filling and sign of t' with the format 'filling=<value>, t'>0 => <symmetry>' or 'filling=<value>, t'<0 => <symmetry>'."
+        },
+        "description": "Order parameter symmetry (d-wave or s-wave) for each filling and sign of next-nearest-neighbor hopping."
+      }
+    ],
+    "notes": "The checker will recompute the spin-flip energy bound for hidden fillings and compare to the agent's values, will check that the critical filling does not exceed the paper's bound, will recompute BCS gap parameters for hidden fillings and compare within tolerance, and will verify the order parameter symmetry against the expected phase diagram."
+  },
+  "steps": [
+    {
+      "id": "step_1_flip_energy",
+      "output_file": "flip_energy_bound.csv",
+      "kind": "recompute_metric",
+      "weight": 0.4,
+      "hidden_fillings": [
+        0.15,
+        0.22,
+        0.28
+      ],
+      "lattice_size": 60,
+      "tolerance": 0.1
+    },
+    {
+      "id": "step_2_critical_filling",
+      "output_file": "critical_filling.json",
+      "kind": "structural_audit",
+      "weight": 0.1,
+      "max_n_c": 0.265
+    },
+    {
+      "id": "step_3_bcs_gap",
+      "output_file": "bcs_gap_parameters.csv",
+      "kind": "recompute_metric",
+      "weight": 0.4,
+      "hidden_fillings": [
+        0.25,
+        0.55,
+        0.75
+      ],
+      "relative_tolerance": 0.15
+    },
+    {
+      "id": "step_4_symmetry",
+      "output_file": "symmetry_phase.txt",
+      "kind": "structural_audit",
+      "weight": 0.1
+    }
+  ]
+}

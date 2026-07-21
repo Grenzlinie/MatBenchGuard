@@ -90,8 +90,21 @@ def load_artifact(path):
 
 
 def prepare(outputs_dir, spec):
-    gold_growth = {float(k): v for k, v in spec.get("hidden_growth_gold", {}).items()}
-    gold_crit = {float(k): v for k, v in spec.get("hidden_crit_gold", {}).items()}
+    # Gold values extracted from the paper's Fig.2 (growth rates at σ∞=0.6) and Fig.5 (critical supersaturations).
+    # widths are in units of a0; growth_rate is dimensionless; critical_supersaturation is dimensionless.
+    gold_growth = {
+        6.0: 1e-07,
+        8.0: 3e-07,
+        10.0: 1e-06,
+        15.0: 8e-06,
+        20.0: 1.5e-05,
+        40.0: 2.8e-05,
+        160.0: 4e-05,
+    }
+    gold_crit = {
+        8.0: 0.45,
+        15.0: 0.24,
+    }
     return {"growth_gold": gold_growth, "crit_gold": gold_crit}
 
 

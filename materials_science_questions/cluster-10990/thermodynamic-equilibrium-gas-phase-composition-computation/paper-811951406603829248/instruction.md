@@ -22,7 +22,57 @@ No external datasets, models, or proprietary tools are required. All necessary t
 
 ### Step 1: General rate equation and limiting forms
 - Role: process
-- Action: Implement the general rate equation for the mass flux of CrO₃(g) that combines chemical reaction kinetics with boundary-layer mass transport, and numerically verify that it reduces to the reaction-controlled expression in the low-pressure limit and to the diffusion-controlled expression in the high-pressure limit. Write a brief evidence file summarizing the verification.
+- Action: Implement the full general rate equation that combines chemical reaction kinetics with boundary‑layer mass transport. Write a brief evidence file summarizing the verification that this equation reduces to the reaction‑controlled form in the low‑pressure limit and to the diffusion‑controlled form in the high‑pressure limit.
+
+**General rate equation**
+
+The total chromium mass flux (g cm⁻² s⁻¹) can be approximated by the series‑resistance formula
+
+```
+1 / J_total = 1 / J_rxn + 1 / J_diff
+```
+
+where
+- **J_rxn** is the reaction‑controlled flux given by the Hertz–Langmuir equation:
+
+```
+J_rxn = 44.35 * P_CrO3(atm) * M_Cr / ( √(M_CrO3) * √(T) )
+```
+
+- **J_diff** is the diffusion‑limited flux across a stagnant boundary layer, described by Bartlett’s boundary‑layer theory:
+
+```
+J_diff = ( D * Sh * P_CrO3(atm) * M_Cr ) / ( L * R * T )
+```
+
+with
+
+| symbol | meaning | typical units |
+|--------|---------|---------------|
+| D      | binary diffusion coefficient of CrO₃ in O₂ | cm² s⁻¹ |
+| Sh     | Sherwood number | dimensionless |
+| L      | characteristic length | cm |
+| R      | gas constant | 82.057 cm³ atm mol⁻¹ K⁻¹ |
+| T      | absolute temperature | K |
+
+The equilibrium vapor pressure P_CrO3 (atm) is obtained from the thermodynamic expression
+
+```
+log10(P_CrO3/atm) = -1.247×10⁴ / T + 3.20 + (3/4) log10(P_O₂/atm)
+```
+
+**Constants:**
+- M_Cr  = 52.00 g mol⁻¹
+- M_CrO3 = 99.99 g mol⁻¹
+- R     = 82.057 cm³ atm mol⁻¹ K⁻¹
+
+**Verification of limiting behaviour**
+
+- In the low‑pressure (or large‑diffusion) limit, mass transport is very fast compared to the chemical reaction, i.e. the parameter `D·Sh/L` → ∞. Then J_total → J_rxn.
+- In the high‑pressure (or small‑diffusion) limit, the reaction is fast and transport is the bottleneck, i.e. `D·Sh/L` → 0. Then J_total → J_diff.
+
+Write a short text file `general_rate_verification.txt` that reports, for a representative temperature (e.g. 1273 K) and oxygen partial pressure (1.51×10⁻⁴ atm), the values of J_rxn, J_diff, and J_total for two extreme choices of the transport parameter `D·Sh/L` (one very large, one very small), clearly demonstrating the approach to the respective limits. No numerical precision is required; the file should only demonstrate that the general equation behaves as described above.
+
 - Evidence: `/app/outputs/general_rate_verification.txt`
 
 ### Step 2: Reaction-controlled oxidative vaporization rate
@@ -36,6 +86,7 @@ No external datasets, models, or proprietary tools are required. All necessary t
 ## Output files
 Write all artifacts under `/app/outputs`:
 - `/app/outputs/reaction_controlled_rate.csv`
+- `/app/outputs/general_rate_verification.txt`
 
 ## Output contract
 
@@ -55,7 +106,15 @@ Every file the hidden verifier reads is described below. Write each file under `
     - `oxygen_pressure_atm`: atm
     - `mass_flux_Cr_g_cm2_s`: g cm^-2 s^-1
 
-Notes: The checker will read the CSV, recompute the expected mass flux from the given temperature and oxygen pressure using the same thermodynamic formula and constants, and verify that the agent's reported mass_flux is within a relative tolerance for each row.
+### general_rate_verification.txt
+- path: `/app/outputs/general_rate_verification.txt`
+- format: text
+- purpose: process (evidence)
+- target_policy: passthrough
+- description: Evidence file demonstrating that the general rate equation reduces to the reaction‑controlled limit and to the diffusion‑controlled limit.
+- schema: {}
+
+Notes: The checker will read the CSV, recompute the expected mass flux from the given temperature and oxygen pressure using the same thermodynamic formula and constants, and verify that the agent's reported mass_flux is within a relative tolerance for each row. The verification text file is not numerically scored, but its absence may result in a penalty.
 
 ## Self-check before finishing (optional, not scored)
 
@@ -85,6 +144,14 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
         }
       },
       "description": "Reaction-controlled chromium mass flux computed from the equilibrium vapor pressure of CrO₃(g) over Cr₂O₃(s) and the Hertz–Langmuir equation."
+    },
+    {
+      "file": "general_rate_verification.txt",
+      "format": "text",
+      "purpose": "process",
+      "target_policy": "passthrough",
+      "schema": {},
+      "description": "Evidence file showing verification that the general rate equation reduces to reaction-controlled and diffusion-controlled limits."
     }
   ],
   "notes": "The checker will read the CSV, recompute the expected mass flux from the given temperature and oxygen pressure using the same thermodynamic formula and constants, and verify that the agent's reported mass_flux is within a relative tolerance for each row."

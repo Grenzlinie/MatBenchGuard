@@ -111,85 +111,83 @@ def score_0(artifact, step, ctx):
 
 # === block: score_1 (check id='ripplocation_trends_check') ===
 def score_1(artifact, step, ctx):
-    def score_trends(artifact, step, ctx):
-        models = artifact.get('models')
-        if not models:
-            return 0.0
-        pristine = [m for m in models if m.get('type') == 'pristine']
-        defective = [m for m in models if m.get('type') == 'defective']
-        pts = sorted(pristine, key=lambda x: x.get('buckling_height', 0))
-        dts = sorted(defective, key=lambda x: x.get('buckling_height', 0))
-        inc_ok = all(
-            pts[i].get('formation_energy_pristine') is not None and 
-            pts[i+1].get('formation_energy_pristine') is not None and 
-            pts[i]['formation_energy_pristine'] < pts[i+1]['formation_energy_pristine']
-            for i in range(len(pts)-1)
-        ) if len(pts) >= 2 else False
-        dec_ok = all(
-            dts[i].get('formation_energy_vacancy') is not None and
-            dts[i+1].get('formation_energy_vacancy') is not None and
-            dts[i]['formation_energy_vacancy'] > dts[i+1]['formation_energy_vacancy']
-            for i in range(len(dts)-1)
-        ) if len(dts) >= 2 else False
-        if dts:
-            max_def = max(dts, key=lambda x: x.get('buckling_height', 0))
-            neg_at_max = (max_def.get('formation_energy_vacancy') is not None and
-                          max_def['formation_energy_vacancy'] < 0)
-        else:
-            neg_at_max = False
-        p_map = {m['buckling_height']: m for m in pts}
-        d_map = {m['buckling_height']: m for m in dts}
-        common = set(p_map.keys()) & set(d_map.keys())
-        lower_total = False
-        if common:
-            max_h = max(common)
-            if (p_map[max_h].get('total_energy') is not None and
-                d_map[max_h].get('total_energy') is not None):
-                lower_total = d_map[max_h]['total_energy'] < p_map[max_h]['total_energy']
-        subs = [inc_ok, dec_ok, neg_at_max, lower_total]
-        n_valid = 4 if common else 3
-        score = sum(1 for s in subs if s) / n_valid if n_valid > 0 else 0.0
-        return score
+    models = artifact.get('models')
+    if not models:
+        return 0.0
+    pristine = [m for m in models if m.get('type') == 'pristine']
+    defective = [m for m in models if m.get('type') == 'defective']
+    pts = sorted(pristine, key=lambda x: x.get('buckling_height', 0))
+    dts = sorted(defective, key=lambda x: x.get('buckling_height', 0))
+    inc_ok = all(
+        pts[i].get('formation_energy_pristine') is not None and 
+        pts[i+1].get('formation_energy_pristine') is not None and 
+        pts[i]['formation_energy_pristine'] < pts[i+1]['formation_energy_pristine']
+        for i in range(len(pts)-1)
+    ) if len(pts) >= 2 else False
+    dec_ok = all(
+        dts[i].get('formation_energy_vacancy') is not None and
+        dts[i+1].get('formation_energy_vacancy') is not None and
+        dts[i]['formation_energy_vacancy'] > dts[i+1]['formation_energy_vacancy']
+        for i in range(len(dts)-1)
+    ) if len(dts) >= 2 else False
+    if dts:
+        max_def = max(dts, key=lambda x: x.get('buckling_height', 0))
+        neg_at_max = (max_def.get('formation_energy_vacancy') is not None and
+                      max_def['formation_energy_vacancy'] < 0)
+    else:
+        neg_at_max = False
+    p_map = {m['buckling_height']: m for m in pts}
+    d_map = {m['buckling_height']: m for m in dts}
+    common = set(p_map.keys()) & set(d_map.keys())
+    lower_total = False
+    if common:
+        max_h = max(common)
+        if (p_map[max_h].get('total_energy') is not None and
+            d_map[max_h].get('total_energy') is not None):
+            lower_total = d_map[max_h]['total_energy'] < p_map[max_h]['total_energy']
+    subs = [inc_ok, dec_ok, neg_at_max, lower_total]
+    n_valid = 4 if common else 3
+    score = sum(1 for s in subs if s) / n_valid if n_valid > 0 else 0.0
+    return score
 
 
 # === block: score_2 (check id='trend_text_check') ===
 def score_2(artifact, step, ctx):
-    def score_trend_text(artifact_text, step, ctx):
-        import re
-        ripp_path = '/app/outputs/ripplocation_energies.json'
-        ripp = load_artifact(ripp_path)
-        if ripp is None:
-            return 0.0
-        rv_two = ripp.get('two_vacancy_ripple_energy')
-        models = ripp.get('models', [])
-        txt = artifact_text
-        score = 0.0
-        if rv_two is not None and f'{rv_two:.2f}' in txt:
-            score += 0.25
-        pristine = [m for m in models if m.get('type') == 'pristine']
-        defective = [m for m in models if m.get('type') == 'defective']
-        all_p_ok = True
-        for p in pristine:
-            h = p.get('buckling_height')
-            e = p.get('formation_energy_pristine')
-            if h is None or e is None:
-                all_p_ok = False; break
-            if str(h) not in txt or f'{e:.1f}' not in txt:
-                all_p_ok = False; break
-        all_d_ok = True
-        for d in defective:
-            h = d.get('buckling_height')
-            e = d.get('formation_energy_vacancy')
-            if h is None or e is None:
-                all_d_ok = False; break
-            if str(h) not in txt or f'{e:.1f}' not in txt:
-                all_d_ok = False; break
-        if all_p_ok and all_d_ok:
-            score += 0.35
-        required_terms = ['increases monotonically', 'decreases monotonically', 'negative', 'thermodynamically']
-        if all(term in txt.lower() for term in required_terms):
-            score += 0.4
-        return min(1.0, score)
+    import re
+    ripp_path = '/app/outputs/ripplocation_energies.json'
+    ripp = load_artifact(ripp_path)
+    if ripp is None:
+        return 0.0
+    rv_two = ripp.get('two_vacancy_ripple_energy')
+    models = ripp.get('models', [])
+    txt = artifact
+    score = 0.0
+    if rv_two is not None and f'{rv_two:.2f}' in txt:
+        score += 0.25
+    pristine = [m for m in models if m.get('type') == 'pristine']
+    defective = [m for m in models if m.get('type') == 'defective']
+    all_p_ok = True
+    for p in pristine:
+        h = p.get('buckling_height')
+        e = p.get('formation_energy_pristine')
+        if h is None or e is None:
+            all_p_ok = False; break
+        if str(h) not in txt or f'{e:.1f}' not in txt:
+            all_p_ok = False; break
+    all_d_ok = True
+    for d in defective:
+        h = d.get('buckling_height')
+        e = d.get('formation_energy_vacancy')
+        if h is None or e is None:
+            all_d_ok = False; break
+        if str(h) not in txt or f'{e:.1f}' not in txt:
+            all_d_ok = False; break
+    if all_p_ok and all_d_ok:
+        score += 0.35
+    required_terms = ['increases monotonically', 'decreases monotonically', 'negative', 'thermodynamically']
+    if all(term in txt.lower() for term in required_terms):
+        score += 0.4
+    return min(1.0, score)
 
 
 _SCORERS = {

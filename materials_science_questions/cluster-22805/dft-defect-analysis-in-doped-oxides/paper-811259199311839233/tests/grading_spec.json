@@ -1,0 +1,67 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Checker cannot recompute Keq from raw AIMD trajectories; only the agent's reported numbers are available. Comparison to paper gold with appropriate tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "equilibrium_constants.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for Keq and energy difference from paper Table 1 and text.",
+      "source_provenance": "Paper Table 1: Keq 0.15, 0.56, 2.79, 21.80; energy difference 2.5 eV.",
+      "generation_method": "Extracted directly from paper.",
+      "why_not_fabricated": "Values are the paper's published numerical results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "equilibrium_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "energy_difference_subsurface_surface_ev": "number",
+            "keq_table": "array"
+          },
+          "items": {
+            "doping": "string",
+            "Keq": "number",
+            "delta_G_kJmol": "number"
+          }
+        },
+        "description": "JSON object with two fields: 'energy_difference_subsurface_surface_ev' (eV) and 'keq_table' (array of objects, each with 'doping' ('none','Ni','Zn','Co'), 'Keq' (dimensionless), 'delta_G_kJmol' (kJ/mol)). The values are verified against hidden reference values."
+      }
+    ],
+    "notes": "The scored artifact is the equilibrium constants and energy difference derived entirely from the DFT/AIMD pipeline. The checker verifies the energy difference and the Keq/ΔG values against hidden paper-reported references with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "equilibrium_constants_check",
+      "output_file": "equilibrium_constants.json",
+      "weight": 1.0,
+      "kind": "rubric",
+      "params": {
+        "energy_reference": 2.5,
+        "energy_tol": 0.5,
+        "energy_partial_tol": 1.0,
+        "keq_reference": {
+          "none": 0.15,
+          "Ni": 0.56,
+          "Zn": 2.79,
+          "Co": 21.8
+        },
+        "keq_factor_tol": 10,
+        "deltaG_signs": {
+          "none": "positive",
+          "Ni": "positive",
+          "Zn": "negative",
+          "Co": "negative"
+        }
+      }
+    }
+  ]
+}

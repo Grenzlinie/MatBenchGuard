@@ -109,13 +109,14 @@ def score_0(artifact, step, ctx):
     agent_less = artifact.get("less_than_L")
     if not isinstance(agent_X, (int, float)) or not isinstance(agent_less, bool):
         return 0.0
+    # Consistency check: if agent says less than L, the numerical value must be < 0.3
     if not agent_less or agent_X >= spacing:
         return 0.0
     error = abs(agent_X - correct_X)
     if error < 1e-9:
         return 1.0
-    score = max(0.0, 1.0 - error / 0.01)
-    return score
+    else:
+        return 0.0
 
 
 _SCORERS = {

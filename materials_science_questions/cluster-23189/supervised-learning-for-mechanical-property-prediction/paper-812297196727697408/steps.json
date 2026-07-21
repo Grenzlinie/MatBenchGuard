@@ -1,0 +1,54 @@
+[
+  {
+    "id": "1",
+    "title": "Load training data",
+    "role": "process",
+    "action": "Read the bundled gate_runner_warp_training_data.csv and prepare input-output pairs (N, V, R_D, G_D as features; warp as target) for model training. Verify that the dataset contains the expected 27 examples.",
+    "output_file": "",
+    "evidence": "training_data_summary.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Ensures the training data is correctly loaded and ready for network synthesis.",
+    "output_schema": ""
+  },
+  {
+    "id": "2",
+    "title": "Train abductive network",
+    "role": "process",
+    "action": "Implement or configure a GMDH-style polynomial network (abductive network) that automatically selects polynomial nodes (normalizer, unitizer, white, single, double, triple) using the predicted square error (PSE) criterion. Train the network on the 27 training examples to obtain a parsimonious polynomial surrogate mapping from (N, V, R_D, G_D) to maximum warp. Save the trained network model (coefficients and structure) for subsequent use.",
+    "output_file": "",
+    "evidence": "trained_network.pkl",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "The core method: synthesize a polynomial network that fits the FEM data with a parsimonious structure using PSE. The trained network is required for the downstream scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "3",
+    "title": "Test predictions",
+    "role": "scored",
+    "action": "Using the trained abductive network, predict the maximum warp for two unseen parameter combinations: (N=2, V=25 mm, R_D=3.5 mm, G_D=1.5 mm) and (N=4, V=22 mm, R_D=2.8 mm, G_D=1.5 mm). The volume V is the linear dimension of a cubic part (side length). Write the predictions to step_01_test_predictions.csv.",
+    "output_file": "step_01_test_predictions.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Evaluate the trained network's generalization on two unseen parameter combinations not used in training, matching the test cases described in the paper.",
+    "output_schema": "Columns: N (integer), V (float, mm), R_D (float, mm), G_D (float, mm), warp_predicted (float, mm). Two rows."
+  },
+  {
+    "id": "4",
+    "title": "Simulated annealing optimization",
+    "role": "scored",
+    "action": "Implement simulated annealing using the trained abductive network as the objective function. Search for the parameter set (N, V, R_D, G_D) that minimizes warp_predicted within bounds: N ∈ [1,4], V (linear dimension) ∈ [10,30] mm, R_D ∈ [2.1,3.9] mm, G_D ∈ [0.98,1.82] mm. Use SA parameters: initial temperature=100, final temperature=0.0001, cooling rate=0.95, Boltzmann constant=0.00667. Write the optimal parameter set and its predicted warp to step_02_optimal_parameters.csv.",
+    "output_file": "step_02_optimal_parameters.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Find the optimal design parameters that minimize warp according to the surrogate model, as performed in the paper's SA optimization.",
+    "output_schema": "Columns: N (float or integer), V (float, mm), R_D (float, mm), G_D (float, mm), warp_predicted (float, mm). One row."
+  }
+]

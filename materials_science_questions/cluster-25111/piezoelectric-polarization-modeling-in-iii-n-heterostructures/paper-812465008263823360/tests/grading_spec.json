@@ -1,0 +1,50 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The absorption coefficient formulas involve infinite sums, exponential integral functions, and many parameters; recomputing them exactly in the verifier is impossible. Structural trend checks (monotonicity, temperature direction, imaginary part magnitude) are sufficient to confirm that the agent's implementation correctly captures the physics described in the paper.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "free_carrier_absorption.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "free_carrier_absorption.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "case",
+            "frequency_THz",
+            "thickness_um",
+            "temperature_K",
+            "alpha_real",
+            "alpha_imag",
+            "abs_alpha"
+          ],
+          "units": {
+            "frequency_THz": "THz",
+            "thickness_um": "micrometers",
+            "temperature_K": "K",
+            "alpha_real": "cm^{-1}",
+            "alpha_imag": "cm^{-1}",
+            "abs_alpha": "cm^{-1}"
+          }
+        },
+        "description": "Free-carrier absorption coefficient values for n-type GaAs under four scattering/polarization cases across a grid of photon frequencies, film thicknesses, and temperatures. The hidden checker performs a structural audit: for each case, it verifies that the computed α obeys the monotonic trends reported in the paper (e.g., |α| decreases with frequency, increases with temperature, decreases with thickness, and for PZ_perpendicular, α_real decreases with temperature and shows oscillatory damped behavior with thickness at low T)."
+      }
+    ],
+    "notes": "The checker will validate structural trends, not exact numeric matches. The agent must ensure that the infinite sums are truncated appropriately and that the formulas are implemented correctly. Material parameters are provided in the task instructions."
+  },
+  "steps": [
+    {
+      "id": "step_compute_absorption",
+      "output_file": "free_carrier_absorption.csv",
+      "kind": "structural_trends",
+      "weight": 1.0,
+      "description": "Structural audit of absorption coefficient grid: monotonic trends, temperature direction, imaginary part magnitude."
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes poles, transmission coefficient, and Bloch–Floquet bands from the agent's raw artifacts using the same mathematical model; compares root real/imag parts, κ⁺ values, and band edges.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "poles_all_N.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "N",
+            "real_part",
+            "imag_part",
+            "alpha",
+            "epsilon",
+            "a",
+            "c"
+          ],
+          "units": {}
+        },
+        "description": "Complex resonance poles for each defect configuration. The checker recomputes the poles from the same parameters and compares real and imaginary parts within tolerances."
+      },
+      {
+        "file": "transmission_coefficient_N.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "N",
+            "omega",
+            "kappa_plus"
+          ],
+          "units": {}
+        },
+        "description": "Transmission coefficient κ⁺ as a function of frequency for all N and parameter sets. The checker recomputes κ⁺ at the agent's reported ω values and checks absolute difference."
+      },
+      {
+        "file": "band_edges_comparison.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "band_type",
+            "lower_edge",
+            "upper_edge",
+            "method"
+          ],
+          "units": {}
+        },
+        "description": "Pass band edges determined from transmission coefficient (N=50) and from Bloch–Floquet inequality. The checker recomputes Bloch–Floquet pass bands and verifies agreement within absolute tolerance."
+      }
+    ],
+    "notes": "The hidden checker implements the same mathematical model (k0, Green's function, matrix A, transmission coefficient) using the specified parameters. For poles and transmission coefficient it recomputes reference values; for band edges it solves the Bloch–Floquet inequality independently. Comparison tolerances are chosen to absorb legitimate toolchain spread."
+  },
+  "hidden_assets": [],
+  "steps": [
+    {
+      "id": "poles_check",
+      "output_file": "poles_all_N.csv",
+      "weight": 0.3,
+      "kind": "custom",
+      "parameters": {
+        "tolerance": 0.2,
+        "param_sets": [
+          {
+            "alpha": 0.5,
+            "epsilon": 0.5,
+            "a": 1.0,
+            "c": 4.0
+          },
+          {
+            "alpha": 0.0,
+            "epsilon": 1.0,
+            "a": 1.0,
+            "c": 4.0
+          }
+        ],
+        "Ns": [
+          1,
+          2,
+          5,
+          10,
+          20,
+          50
+        ],
+        "real_range": [
+          0,
+          20
+        ]
+      }
+    },
+    {
+      "id": "transmission_check",
+      "output_file": "transmission_coefficient_N.csv",
+      "weight": 0.5,
+      "kind": "custom",
+      "parameters": {
+        "mae_threshold": 0.01,
+        "param_sets": [
+          {
+            "alpha": 0.5,
+            "epsilon": 0.5,
+            "a": 1.0,
+            "c": 4.0
+          },
+          {
+            "alpha": 0.0,
+            "epsilon": 1.0,
+            "a": 1.0,
+            "c": 4.0
+          }
+        ],
+        "Ns": [
+          1,
+          2,
+          5,
+          10,
+          20,
+          50
+        ]
+      }
+    },
+    {
+      "id": "band_edges_check",
+      "output_file": "band_edges_comparison.csv",
+      "weight": 0.2,
+      "kind": "custom",
+      "parameters": {
+        "edge_tolerance": 0.2,
+        "param_sets": [
+          {
+            "alpha": 0.5,
+            "epsilon": 0.5,
+            "a": 1.0,
+            "c": 4.0
+          },
+          {
+            "alpha": 0.0,
+            "epsilon": 1.0,
+            "a": 1.0,
+            "c": 4.0
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Theoretical curves are independently recomputed pointwise; simulation curves are structurally checked against theoretical curves and expected peak location; summary values are compared to paper-reported headliners with tolerances.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "free_theoretical.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "omega",
+            "coverage_fraction"
+          ]
+        },
+        "description": "Theoretical free coverage fraction curve for identical rectangular particles (s≈1.2). The checker recomputes the curve and compares pointwise with an absolute tolerance."
+      },
+      {
+        "file": "sticking_theoretical.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "omega",
+            "coverage_fraction"
+          ]
+        },
+        "description": "Theoretical sticking coverage fraction curve for identical rectangular particles (s≈1.2). The checker recomputes the curve and compares pointwise with an absolute tolerance."
+      },
+      {
+        "file": "free_simulation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "omega",
+            "coverage_fraction"
+          ]
+        },
+        "description": "Simulated free coverage fraction from Monte Carlo runs. The checker verifies that the curve shape follows the theoretical trend within a specified tolerance at selected ω points and exhibits a maximum near a expected ω value."
+      },
+      {
+        "file": "sticking_simulation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "omega",
+            "coverage_fraction"
+          ]
+        },
+        "description": "Simulated sticking coverage fraction from Monte Carlo runs. The checker verifies that the curve shape follows the theoretical trend within a specified tolerance at selected ω points."
+      },
+      {
+        "file": "results_summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "free_max_theoretical": "float",
+            "free_max_simulation": "float",
+            "stick_at_0.5_theoretical": "float",
+            "stick_at_0.5_simulation": "float"
+          }
+        },
+        "description": "Headline summary metrics: maximum free coverage fraction (theoretical and simulation) and sticking coverage fraction at ω=0.5 (theoretical and simulation). Checker compares to paper‑reported values within tolerances."
+      }
+    ],
+    "notes": "Theoretical steps use the analytical formulas from the paper with shape factor s≈1.2. The simulation uses rectangular particles 40×80 units on a canvas 100×100 times larger than the particle's longer side. The checker independently recomputes the theoretical curves and performs structural checks on simulation curves. Summary values are compared to paper‑reported target values."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for simulation headline metrics: free max ~7.5%, sticking at ω=0.5 ~19%",
+      "source_provenance": "Paper text (Fig. 7 and Fig. 8, and Section 3) reports maximal free coverage fraction ~7.5% and sticking coverage fraction at ω=0.5 ~19%",
+      "generation_method": "Extracted from paper description.",
+      "why_not_fabricated": "These are the paper's reported headline values for the identical rectangle case."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_theoretical_free",
+      "output_file": "free_theoretical.csv",
+      "weight": 0.25,
+      "kind": "pointwise_recompute",
+      "parameters": {
+        "s": 1.2,
+        "tolerance": 0.001
+      }
+    },
+    {
+      "id": "step_theoretical_sticking",
+      "output_file": "sticking_theoretical.csv",
+      "weight": 0.25,
+      "kind": "pointwise_recompute",
+      "parameters": {
+        "s": 1.2,
+        "tolerance": 0.001
+      }
+    },
+    {
+      "id": "step_simulation_free",
+      "output_file": "free_simulation.csv",
+      "weight": 0.2,
+      "kind": "structural_audit_free",
+      "parameters": {
+        "check_omegas": [
+          0.1,
+          0.2,
+          0.3,
+          0.5,
+          0.7
+        ],
+        "tolerance_abs": 0.02,
+        "peak_omega_expected": 0.21,
+        "peak_tolerance_abs": 0.05
+      }
+    },
+    {
+      "id": "step_simulation_sticking",
+      "output_file": "sticking_simulation.csv",
+      "weight": 0.2,
+      "kind": "structural_audit_sticking",
+      "parameters": {
+        "check_omegas": [
+          0.1,
+          0.2,
+          0.3,
+          0.5,
+          0.7
+        ],
+        "tolerance_abs": 0.02
+      }
+    },
+    {
+      "id": "step_summary",
+      "output_file": "results_summary.json",
+      "weight": 0.1,
+      "kind": "summary_comparison",
+      "parameters": {
+        "paper_free_max": 0.075,
+        "tol_free_max": 0.005,
+        "paper_stick_at_0.5": 0.19,
+        "tol_stick_at_0.5": 0.01,
+        "theoretical_max_tol": 0.001
+      }
+    }
+  ]
+}

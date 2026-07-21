@@ -1,0 +1,80 @@
+[
+  {
+    "id": "monte_carlo_half_sweep",
+    "title": "Monte Carlo parameter sweep at half‑monolayer coverage",
+    "role": "process",
+    "action": "Implement a Monte Carlo simulation on a 30×30 rectangular lattice with periodic boundary conditions. Use pairwise interactions ε1 (attractive), ε2=ε3 (repulsive), ε4 (attractive). Run at θ=0.5 for many parameter ratios. For each set record the scaled interaction energies and ΔE_½ = 3ε2 − 4ε4 after scaling the I–T curve such that the order–disorder transition temperature matches the experimentally known half‑monolayer transition (use the scaling target provided in instruction). Collect candidate parameter sets that reproduce this target.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required intermediate: the sweep computes candidate parameter sets for later selection. No single scored artifact is written; the output drives the following step.",
+    "output_schema": ""
+  },
+  {
+    "id": "quarter_selection",
+    "title": "Selection of final parameters via quarter‑monolayer transition",
+    "role": "process",
+    "action": "For candidate parameter sets from the half‑monolayer sweep, run Monte Carlo at θ=0.25. Compute I–T curves and determine the quarter‑monolayer transition temperature. Select the set whose quarter‑monolayer transition temperature best matches the experimentally known value. This set defines the final interaction energies to be saved in the next step.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required intermediate: identifies the parameter set consistent with both coverages.",
+    "output_schema": ""
+  },
+  {
+    "id": "interaction_energies",
+    "title": "Final interaction energies and constraint",
+    "role": "scored",
+    "action": "Save the selected interaction energies, the scaling factor, and the half‑monolayer constraint to /app/outputs/interaction_energies.json.",
+    "output_file": "interaction_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Contains the final scaled pairwise interaction energies ε1, ε2, ε4 (kcal/mol), the scaling factor, and the computed energy difference ΔE_½ = 3ε2 − 4ε4 (kcal/mol).",
+    "output_schema": "JSON object with keys: epsilon1 (number), epsilon2 (number), epsilon4 (number), scaling_factor (number), delta_E_half (number). All units kcal/mol except scaling_factor (dimensionless)."
+  },
+  {
+    "id": "half_monolayer_it_curve",
+    "title": "Half‑monolayer intensity, energy, and entropy curve",
+    "role": "scored",
+    "action": "Using the final interaction energies, run a Monte Carlo simulation at θ=0.5. Compute normalized LEED intensities I1, I2, the total interaction energy per adatom, and the configurational entropy per adatom (via the quasichemical approximation using neighbor pair counts) as functions of temperature. Save the table to /app/outputs/half_monolayer_IT_curve.csv.",
+    "output_file": "half_monolayer_IT_curve.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "I–T curve, energy, and configurational entropy for the final parameter set at θ=0.5. The checker will infer the transition temperature from the inflection point of I1 or I2 vs T.",
+    "output_schema": "CSV with columns: T (K), I1 (dimensionless 0–1), I2 (dimensionless 0–1), E_total (kcal/mol per adatom), S (configurational entropy per adatom in units of k, dimensionless)."
+  },
+  {
+    "id": "quarter_monolayer_it_curve",
+    "title": "Quarter‑monolayer intensity–temperature curve",
+    "role": "scored",
+    "action": "Using the final interaction energies, run a Monte Carlo simulation at θ=0.25. Compute normalized LEED intensities I1, I2 and the total interaction energy per adatom as functions of temperature. Save the table to /app/outputs/quarter_monolayer_IT_curve.csv.",
+    "output_file": "quarter_monolayer_IT_curve.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "I–T curve for the final parameter set at θ=0.25. The checker will infer the transition temperature from the inflection point of I1 or I2 vs T.",
+    "output_schema": "CSV with columns: T (K), I1 (dimensionless 0–1), I2 (dimensionless 0–1), E_total (kcal/mol per adatom)."
+  },
+  {
+    "id": "heat_capacity_curve",
+    "title": "Heat capacity curve at half‑monolayer coverage",
+    "role": "scored",
+    "action": "From the equilibrium configurations at θ=0.5, compute the heat capacity per adatom Cv = (⟨E²⟩ – ⟨E⟩²) / (k T²) for each temperature and save the curve to /app/outputs/heat_capacity_curve.csv.",
+    "output_file": "heat_capacity_curve.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Heat capacity vs temperature for θ=0.5. The checker will verify that the peak lies near the half‑monolayer transition temperature.",
+    "output_schema": "CSV with columns: T (K), Cv (kcal/(mol K))."
+  }
+]

@@ -99,6 +99,39 @@ casebook records the decision boundary, not solution output.
 - A residual D1–D6 blocker prevents publication. The candidate needs one
   equal-depth E1 re-audit and a clean deterministic contract.
 
+## Assisted semantic repairs
+
+`ASSISTED_FIX` is the Agent-quality path for a scientific or scoring correction;
+it is not a wider `AUTO_FIX` lane. Every operation links evidence carrying:
+
+```json
+{
+  "source_kind": "PACKAGE_PAPER",
+  "source": "paper/paper.md",
+  "exact_quote": "the exact source text",
+  "source_hash": "sha256:<retrieved bytes>",
+  "applicability": "why the source governs this package",
+  "derivation": "how the exact typed replacement follows",
+  "core_science_change": false
+}
+```
+
+`source_kind` may instead be `PACKAGE_DIRECT_SOURCE` for an
+source-audit-hashed direct package source, or
+`AUTHORITATIVE_PRIMARY_WEB`. The web form must also include an identical
+`url`/`source`, `retrieved_at`, non-empty `retrieval_metadata`, and an explicit
+approval object (`approved=true`, `primary=true`, an authoritative source
+class, and a reference). Repair does not fetch web pages. Missing fields,
+stale hashes, unsupported source roles, type mismatches, or conflicting
+claims produce `BLOCKED_EVIDENCE`; the operation is not guessed or applied.
+
+Agent-quality findings have no D1–D6 owner and cannot be converted to
+`AUTO_FIX`. The source Review total must be at least 60 to enter Repair. A
+re-audit total below 60 abandons the candidate; 60–79 may remain
+`PARTIALLY_REPAIRED`. Publication still requires the authoritative total to be
+at least 80, deterministic CLEAN, no Hard Gate, no unresolved HIGH/FATAL
+finding, preserved identity, allowed scope, and closure of every target.
+
 ## Oracle-safe evidence rule
 
 The positive Oracle mock is used only to exercise the positive checker path.

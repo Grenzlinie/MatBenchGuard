@@ -11,7 +11,7 @@ Compute the six trigonal spin-lattice coupling coefficients (G11^t, G12^t, G13^t
 
 ## Assets
 
-- Wen-Chen Zheng, Phys. Rev. B 40, 7292 (1989): 10.1103/PhysRevB.40.7292
+- A public reference paper (details in `resources.json`) provides the zero‑order energy separations W₁‑W₅ for d⁸ ions in an octahedral field; the necessary expressions are described in that publicly available reference.
 
 ## Formulas and parameters
 
@@ -54,7 +54,7 @@ G₄₄ᶜ = (√2/12) ξd² [1/W₂² - 1/W₁²] (∂v/∂β)₀
       + (1/2) ξd² [1/(W₁ W₃) - 1/(W₂ W₃)] (∂v'/∂β)₀
       - 2 B ξd² [1/(W₂ W₃ W₅) + 1/(W₂² W₅) - 3/(W₁ W₃ W₄) - 3/(W₂ W₃ W₄)] (∂v'/∂β)₀   (Eq. 10)
 
-where the zero-order energy separations W₁,…,W₅ for d⁸ in an octahedral field are obtained from the Tanabe–Sugano energy matrices; the necessary expressions are described in the public reference cited under Assets.  The derivatives are
+where the zero-order energy separations W₁,…,W₅ for d⁸ in an octahedral field are obtained from the Tanabe–Sugano energy matrices; the necessary expressions are described in the public reference listed in Assets.  The derivatives are
 
 (∂Dt/∂α)₀ = (40/7) Dq ,   (∂Ds/∂α)₀ = - (12/7) e q ⟨r²⟩ / R₀³ ,          (Eq. 11)
 
@@ -72,8 +72,7 @@ All symbols have their usual meaning and the signs of the ξd³ terms in Eqs. 
 
 ### Step 1: Compute cubic spin-lattice coupling coefficients for Al2O3:Fe3+
 - Role: process
-- Action: Using the formulas and notation of the Formulas and parameters section, compute Dq from Eq. 3 with q = -2e, p = 0.059 eR₀, R₀ = 0.191 nm, ⟨r⁴⟩ = N² ⟨r⁴⟩₀ (N = 0.903, ⟨r⁴⟩₀ = 11.46485 a.u.).  Obtain P, D, G from Eq. 4 using B₀=1130.22 cm⁻¹, C₀=4111.45 cm⁻¹ and α = 43 cm⁻¹, each scaled by N as in Eq. 6.  Evaluate G₁₁ᶜ and G₄₄ᶜ from Eqs. 1‑2.  Store the two cubic coefficients in the evidence file.
-- Evidence: `/app/outputs/fe3_cubic.json`
+- Action: Using the formulas and notation of the Formulas and parameters section, compute Dq from Eq. 3 with q = -2e, p = 0.059 eR₀, R₀ = 0.191 nm, ⟨r⁴⟩ = N² ⟨r⁴⟩₀ (N = 0.903, ⟨r⁴⟩₀ = 11.46485 a.u.).  Obtain P, D, G from Eq. 4 using B₀=1130.22 cm⁻¹, C₀=4111.45 cm⁻¹ and α = 43 cm⁻¹, each scaled by N as in Eq. 6.  Evaluate G₁₁ᶜ and G₄₄ᶜ from Eqs. 1‑2.  The two cubic coefficients are kept internally; no separate output file is required.
 
 ### Step 2: Transform to trigonal coefficients for Al2O3:Fe3+
 - Role: scored
@@ -85,8 +84,7 @@ All symbols have their usual meaning and the signs of the ξd³ terms in Eqs. 
 
 ### Step 3: Compute cubic spin-lattice coupling coefficients for ZnSiF6·6H2O:Ni2+
 - Role: process
-- Action: Use the public reference (Assets) to obtain the zero-order energy separations W₁–W₅ for a d⁸ ion in octahedral symmetry with the parameters B = 1208 N⁴ cm⁻¹, C = 4459 N⁴ cm⁻¹, ξd = 636 N² cm⁻¹, ⟨r²⟩ = 1.9804 N² a.u., ⟨r⁴⟩ = 13.4043 N² a.u. (N = 0.9).  Compute Dq = - e q ⟨r⁴⟩ / (6 R₀⁵) with R₀ = 0.2048 nm and q = -2e.  Evaluate G₁₁ᶜ and G₄₄ᶜ from Eqs. 9‑12.  Store the two cubic coefficients in the evidence file.
-- Evidence: `/app/outputs/ni2_cubic.json`
+- Action: Use the public reference (Assets) to obtain the zero-order energy separations W₁–W₅ for a d⁸ ion in octahedral symmetry with the parameters B = 1208 N⁴ cm⁻¹, C = 4459 N⁴ cm⁻¹, ξd = 636 N² cm⁻¹, ⟨r²⟩ = 1.9804 N² a.u., ⟨r⁴⟩ = 13.4043 N² a.u. (N = 0.9).  Compute Dq = - e q ⟨r⁴⟩ / (6 R₀⁵) with R₀ = 0.2048 nm and q = -2e.  Evaluate G₁₁ᶜ and G₄₄ᶜ from Eqs. 9‑12.  The two cubic coefficients are kept internally; no separate output file is required.
 
 ### Step 4: Transform to trigonal coefficients for ZnSiF6·6H2O:Ni2+
 - Role: scored (load-bearing)

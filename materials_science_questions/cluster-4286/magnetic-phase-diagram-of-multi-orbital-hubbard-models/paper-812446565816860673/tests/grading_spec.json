@@ -1,0 +1,113 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute amplitude, harmonic ratio, CDW, saturation, and critical field from the raw JSON artifacts and compare to the paper's reported values with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_sdw_results.json": "exact_match",
+    "step_02_ferh_magnetization.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden target values for Cr SDW envelope amplitude, harmonic ratio, CDW amplitude, FeRh saturation magnetization, and critical field",
+      "source_provenance": "Paper Fig.4 and text: Cr SDW max amplitude 0.38 μB/atom, third/first ratio 0.021, CDW amplitude 0.0068 electrons/atom; FeRh magnetization case a in Fig.7: saturation 4.2 μB/f.u., critical field ~0.03 μ_B H/Δ.",
+      "generation_method": "Extracted from paper's reported figures and explicit numerical values in the text.",
+      "why_not_fabricated": "These are the actual values reported in the paper for the specified parameters, used as hidden gold for result-level comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_sdw_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "planes": "array of objects with plane_index (integer) and magnetic_moment_mub (float)",
+            "harmonic_analysis": "object with first_harmonic_amplitude_mub (float), third_harmonic_amplitude_mub (float), ratio_third_to_first (float)",
+            "cdw_amplitude_electrons_per_atom": "float"
+          }
+        },
+        "description": "Self-consistent Cr SDW envelope (magnetic moment per plane), harmonic content, and charge density wave amplitude."
+      },
+      {
+        "file": "step_02_ferh_magnetization.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "parameters": "object with U_over_Delta (float), E_Fe_minus_E_Rh_over_Delta (float), Nd (float)",
+            "magnetization_curve": "array of objects with field_mub_H_over_Delta (float) and magnetization_mub_per_fu (float)"
+          }
+        },
+        "description": "Magnetization per formula unit of FeRh as a function of external field at T=0, obtained from self-consistent torque balance."
+      }
+    ],
+    "notes": "All energies and fields are expressed in units of the virtual level half-width Δ. The agent must implement the self-consistent solver from the paper's formalism and produce the stated JSON artifacts; the checker compares key features (envelope, harmonic ratio, CDW amplitude, saturation magnetization, critical field, curve shape) against hidden paper-reported values with suitable tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_01_max_amplitude",
+      "output_file": "step_01_sdw_results.json",
+      "weight": 0.2,
+      "kind": "custom",
+      "target": 0.38,
+      "tolerance_abs": 0.05,
+      "description": "Maximum absolute magnetic moment per plane should be close to 0.38 μB."
+    },
+    {
+      "id": "step_01_harmonic_ratio",
+      "output_file": "step_01_sdw_results.json",
+      "weight": 0.2,
+      "kind": "custom",
+      "target": 0.021,
+      "tolerance_abs": 0.005,
+      "description": "Ratio of third to first harmonic amplitude must be ~0.021."
+    },
+    {
+      "id": "step_01_cdw",
+      "output_file": "step_01_sdw_results.json",
+      "weight": 0.2,
+      "kind": "custom",
+      "target": 0.0068,
+      "tolerance_abs": 0.001,
+      "description": "CDW amplitude must be ~0.0068 electrons/atom."
+    },
+    {
+      "id": "step_02_saturation",
+      "output_file": "step_02_ferh_magnetization.json",
+      "weight": 0.15,
+      "kind": "custom",
+      "target": 4.2,
+      "tolerance_abs": 0.3,
+      "description": "Saturation magnetization should be ~4.2 μB per formula unit."
+    },
+    {
+      "id": "step_02_critical_field",
+      "output_file": "step_02_ferh_magnetization.json",
+      "weight": 0.15,
+      "kind": "custom",
+      "target": 0.03,
+      "tolerance_abs": 0.006,
+      "description": "Critical field where magnetization reaches saturation should be ~0.03 μ_B H/Δ."
+    },
+    {
+      "id": "step_02_monotonic",
+      "output_file": "step_02_ferh_magnetization.json",
+      "weight": 0.05,
+      "kind": "custom",
+      "description": "Magnetization curve must be monotonic increasing."
+    },
+    {
+      "id": "step_02_zero_start",
+      "output_file": "step_02_ferh_magnetization.json",
+      "weight": 0.05,
+      "kind": "custom",
+      "description": "Magnetization at zero field should be close to zero."
+    }
+  ]
+}

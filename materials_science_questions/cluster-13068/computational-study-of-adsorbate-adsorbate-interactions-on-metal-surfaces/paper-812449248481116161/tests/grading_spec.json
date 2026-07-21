@@ -1,0 +1,82 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes expected work-function and density profile from the paper's equations; compares pointwise with absolute tolerances, monotonic reward.",
+  "pass_threshold": 0.7,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "workfunction_vs_Na.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "d",
+            "Na",
+            "Phi"
+          ],
+          "units": {
+            "d": "atomic units",
+            "Na": "atoms/cm^2",
+            "Phi": "eV"
+          }
+        },
+        "description": "Work-function as a function of adsorbate surface density for three adlayer thicknesses."
+      },
+      {
+        "file": "density_profile.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "case",
+            "x",
+            "n_over_nbar"
+          ],
+          "units": {
+            "x": "atomic units",
+            "n_over_nbar": "dimensionless"
+          }
+        },
+        "description": "Normalized electron density profile for clean and covered surfaces."
+      }
+    ],
+    "notes": "The experimental comparison (Fig. 3) is excluded because the experimental data are not public. The work-function and density profile are computational predictions that can be verified against hidden gold values derived from the same equations with high precision."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden tolerances and model parameters for on-the-fly recompute of gold values.",
+      "source_provenance": "Paper equations (2), (10), (11) and explicitly reported constants (rs=2.085, κ=16).",
+      "generation_method": "Parameters and tolerances derived from the paper; no external file needed.",
+      "why_not_fabricated": "Tolerances chosen to absorb legitimate root-finding differences while rejecting gross errors."
+    }
+  ],
+  "steps": [
+    {
+      "id": "workfunction_check",
+      "output_file": "workfunction_vs_Na.csv",
+      "kind": "numeric",
+      "weight": 0.6,
+      "params": {
+        "abs_tol_Phi": 0.01,
+        "clean_Phi_target": 5.0,
+        "clean_Phi_tol": 0.5
+      }
+    },
+    {
+      "id": "density_check",
+      "output_file": "density_profile.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "params": {
+        "abs_tol_n": 0.001,
+        "Na_covered": 670000000000000.0,
+        "d_covered": 7.13
+      }
+    }
+  ]
+}

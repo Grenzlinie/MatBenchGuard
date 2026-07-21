@@ -60,6 +60,14 @@ for sigma, t, xi in params:
     Ks = -(3.0/4.0) * sigma * (1.0 - f)
     rows.append([sigma, t, xi, f, g, Bs_3333, Bs_3311, Bs_1111, Bs_1122, Ks])
 
+# Save intermediate f, g
+with open('/app/outputs/f_g.csv', 'w', newline='') as fout:
+    writer = csv.writer(fout)
+    writer.writerow(['sigma','t','xi','f','g'])
+    for row in rows:
+        writer.writerow([f"{row[0]:.10f}", f"{row[1]:.10f}", f"{row[2]:.10f}", f"{row[3]:.10f}", f"{row[4]:.10f}"])
+
+# Save final results
 with open('/app/outputs/results.csv', 'w', newline='') as fout:
     writer = csv.writer(fout)
     writer.writerow(['sigma','t','xi','f','g','Bs_3333','Bs_3311','Bs_1111','Bs_1122','Ks'])

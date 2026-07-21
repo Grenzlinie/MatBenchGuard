@@ -1,0 +1,93 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Simulation cannot be rerun by lightweight checker; transition threshold is checked against paper-derived range and overstep is compared to ~2 kJ/mol. Structural checks on morphology table monotonicity and grid validity add supporting verification.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "morphology_table.csv": "structural_audit",
+    "transition_estimate.txt": "reference_match",
+    "final_grid_variable.txt": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference overstep (2.0 kJ/mol) and plausible transition range [0.1, 3.0]",
+      "source_provenance": "Paper main text: 'estimated minimum overstep of ~2 kJ mol⁻¹ needed to produce branched growth for Φ₁/kT of 4 or more (Fig. DR3)'. Transition range based on parameter sweeps in Fig. DR3 and Figure 3.",
+      "generation_method": "Direct extraction from paper statements and figure annotations.",
+      "why_not_fabricated": "Values are the paper's primary quantitative conclusion; range is chosen to encompass plausible implementation variations."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "morphology_table.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "run_id",
+            "delta_mu_kT",
+            "branch_count",
+            "compactness"
+          ],
+          "units": {
+            "delta_mu_kT": "dimensionless",
+            "branch_count": "integer count",
+            "compactness": "dimensionless circularity"
+          }
+        },
+        "description": "Morphological descriptors (branch count, compactness) for each simulation run, used to verify the monotonic trend with decreasing supersaturation."
+      },
+      {
+        "file": "transition_estimate.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "lines": [
+            "Transition_Δμ_kT = <float>",
+            "Overstep_kJ_per_mol = <float> (optional)"
+          ]
+        },
+        "description": "Estimated dimensionless supersaturation at the morphological transition (branching disappears), and optionally the equivalent overstep in kJ/mol."
+      },
+      {
+        "file": "final_grid_variable.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "Space-separated 0/1 occupancy grid from the variable‑supersaturation run, row‑major order."
+        },
+        "description": "Final crystal occupancy grid from the time‑varying simulation, used to verify core–rim structural pattern."
+      }
+    ],
+    "notes": "The agent must run all simulations itself; no pre‑computed intermediate results are provided. The transition threshold is scored because it is the main quantitative result linking morphological change to supersaturation."
+  },
+  "steps": [
+    {
+      "id": "morphology_table",
+      "output_file": "morphology_table.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "description": "Verify branch_count is non-decreasing with increasing Δμ/kT (monotonic trend expected from simulation)"
+    },
+    {
+      "id": "transition_estimate",
+      "output_file": "transition_estimate.txt",
+      "kind": "reference_match",
+      "weight": 0.7,
+      "description": "Check transition Δμ/kT within plausible range [0.1, 3.0] and overstep close to 2 kJ/mol if provided"
+    },
+    {
+      "id": "final_grid",
+      "output_file": "final_grid_variable.txt",
+      "kind": "structural_audit",
+      "weight": 0.1,
+      "description": "Validate file contains a rectangular 2D grid of 0/1 integers"
+    }
+  ]
+}

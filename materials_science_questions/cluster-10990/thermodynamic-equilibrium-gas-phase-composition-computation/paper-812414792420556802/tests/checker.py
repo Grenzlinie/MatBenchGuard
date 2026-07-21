@@ -109,9 +109,9 @@ def score_0(artifact, step, ctx):
         'vapor_OU_5000_UO1_96': 2.50
     }
     tolerances = {
-        'pO2': 0.10,   # 10% rel
-        'total_pressure': 0.25,
-        'vapor_OU': 0.20
+        'pO2': 0.10,        # 10% relative error
+        'total_pressure': 0.20,
+        'vapor_OU': 0.20     # not used for structural check
     }
     weights = {
         'pO2_3150_1_90': 0.1,
@@ -126,17 +126,20 @@ def score_0(artifact, step, ctx):
     score = 0.0
     for k, w in weights.items():
         agent_val = artifact.get(k)
-        ref_val = gold.get(k)
-        if agent_val is None or ref_val is None:
+        if agent_val is None:
             continue
         if k == 'vapor_OU_5000_UO1_96':
-            # structural check: must exceed 2.0
-            if agent_val <= 2.0:
+            # Structural check: vapor must be more oxygen-rich than the condensed phase (O/U > 1.96)
+            if agent_val > 1.96:
+                score += w
+        else:
+            ref_val = gold.get(k)
+            if ref_val is None:
                 continue
-        tol = tolerances['pO2'] if k.startswith('pO2') else (tolerances['total_pressure'] if 'total' in k else tolerances['vapor_OU'])
-        rel_err = abs(agent_val - ref_val) / ref_val if ref_val != 0 else abs(agent_val - ref_val)
-        if rel_err <= tol:
-            score += w
+            tol = tolerances['pO2'] if k.startswith('pO2') else tolerances['total_pressure']
+            rel_err = abs(agent_val - ref_val) / ref_val if ref_val != 0 else abs(agent_val - ref_val)
+            if rel_err <= tol:
+                score += w
     return score
 
 

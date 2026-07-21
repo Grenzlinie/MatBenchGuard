@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_generate_disorder",
+    "title": "Generate quenched disorder samples",
+    "role": "process",
+    "action": "For each linear size L in {8, 12, 16, 24, 32}, generate random occupation configurations ε_x (occupation probability p=0.7) on a cubic lattice with periodic boundary conditions. Produce 1000 samples for L=8,12,16,24 and 700 samples for L=32.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_tethered_mc",
+    "title": "Run Tethered Monte Carlo simulations",
+    "role": "process",
+    "action": "For every disorder sample, perform independent Monte Carlo simulations at fixed smoothed magnetizations (m̂, m̂_s) on a grid of approximately 5 m̂ values and ~30 m̂_s values per m̂. Use the tethered ensemble with the Gaussian smoothing kernel defined in the protocol, at temperature T=1.6. Employ temperature parallel tempering for lattice sizes L≥24. Compute and store the tethered expectation values ⟨b̂⟩ and ⟨b̂_s⟩ at each grid point.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_average_potential",
+    "title": "Average tethered fields and reconstruct effective potential",
+    "role": "process",
+    "action": "Average the tethered field expectations over all disorder realizations. Numerically integrate the averaged fields to obtain the disorder-averaged Helmholtz effective potential Ω̂_N(m̂, m̂_s). Determine the saddle-point relation m̂(h) in the limit h_s→0+ and compute the canonical observables: correlation length ξ and free-energy barrier ΔF.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_xi_over_l",
+    "title": "Compute correlation length ξ/L vs h and save data",
+    "role": "scored",
+    "action": "From the reconstructed observables, compute the second-moment correlation length ξ via the staggered propagator for a range of applied fields h at T=1.6 for each L. Output a CSV with columns L (int), h (float), xi_over_L (float), error_xi_over_L (float).",
+    "output_file": "xi_over_L_data.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV containing ξ/L vs h for each lattice size L at T=1.6. The checker will verify the existence and validity of the columns, and inspect the crossing structure of ξ/L curves.",
+    "output_schema": "Columns: L (int), h (float), xi_over_L (float), error_xi_over_L (float)."
+  },
+  {
+    "id": "step_barrier",
+    "title": "Compute free-energy barrier and output",
+    "role": "scored",
+    "action": "At the critical field h_c, compute the free-energy barrier per spin ΔF/N by line-integrating the tethered fields along a path from the antiferromagnetic saddle point to the disordered saddle point. Fit the barriers to ΔF = A L^θ and obtain the hyperscaling violation exponent θ. Output a JSON with keys: L (array of integers), Delta_F_over_N (array of floats), error_Delta_F (array of floats), theta_estimate (float), theta_error (float), fit_range (string).",
+    "output_file": "barrier_data.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Barrier data and fitted θ. The checker compares ΔF/N per L and the fitted θ to the paper's reference values within tolerances.",
+    "output_schema": "JSON object with keys: L (array of integers), Delta_F_over_N (array of floats), error_Delta_F (array of floats), theta_estimate (float), theta_error (float), fit_range (string)."
+  },
+  {
+    "id": "step_exponents",
+    "title": "Extract critical exponents using quotients method",
+    "role": "scored",
+    "action": "Apply the quotients method to the ξ/L curves at T=1.6: compute the intersection point h*(L) for each pair (L,2L) and extract β/ν and ν_h from derivatives of ξ and the staggered magnetization. Also compute ν_T from the temperature dependence at fixed h=-2.13. Output a JSON with per-size values (with errors) and final estimates of β/ν, ν_h, ν_T, and θ.",
+    "output_file": "critical_exponents.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Critical exponents extracted from the intersection analysis. Because these exponents can only be correct if the underlying ξ/L curves and barrier data were genuinely produced by the process steps, this step is load-bearing. The checker compares the values to the paper's reference exponents within tolerances.",
+    "output_schema": "JSON object with arrays: L (int[]), h_star (float[]), h_star_error (float[]), beta_over_nu (float[]), beta_over_nu_error (float[]), nu_h (float[]), nu_h_error (float[]), nu_T (float[]), nu_T_error (float[]); final estimates: final_beta_over_nu (float), final_beta_over_nu_error (float), final_nu_h (float), final_nu_h_error (float), final_nu_T (float), final_nu_T_error (float), final_theta (float), final_theta_error (float)."
+  }
+]

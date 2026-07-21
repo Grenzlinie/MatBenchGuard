@@ -1,0 +1,54 @@
+[
+  {
+    "id": "sim",
+    "title": "Monte Carlo simulation of Ising model",
+    "role": "process",
+    "action": "Implement single-spin-flip Metropolis Monte Carlo simulations for the S=1/2 simple-cubic Ising model with periodic boundary conditions for lattice sizes N = 4, 6, 8, 10, 14, 20. For each N, scan a temperature range covering the critical region around Tc=0.221654 (in units of J/k). Collect time series of energy and magnetization, and compute mean values and fluctuations to obtain specific heat and susceptibility as functions of T.",
+    "output_file": "",
+    "evidence": "simulation_data.npz",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "Run the Metropolis Monte Carlo simulation to generate raw thermodynamic data for later analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "extract_tc",
+    "title": "Extract pseudotransition temperatures",
+    "role": "scored",
+    "action": "For each N, locate the temperature T at which the specific heat C(T) attains its maximum. Record T as Tc(N). Output a CSV with columns N and Tc.",
+    "output_file": "step_02_Tc_values.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV containing the finite-lattice pseudotransition temperatures determined from the specific heat peak.",
+    "output_schema": "CSV with header 'N,Tc'. N integer, Tc float (temperature in units of J/k)."
+  },
+  {
+    "id": "fit_a",
+    "title": "Fit finite-size shift amplitude a",
+    "role": "scored",
+    "action": "Using the Tc(N) values and the known infinite-lattice critical temperature Tc(∞)=0.221654 and correlation-length exponent ν=0.64, compute δTc = 1 - Tc(N)/Tc(∞). Perform a power-law fit of the form δTc = a N^{-λ} with λ fixed to ν^{-1} (λ=1.5625) over the available N. Extract the amplitude a. Save a JSON object with key 'a' and optionally 'a_error'.",
+    "output_file": "step_04_fitted_a.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Amplitude a of the finite-size shift of the pseudotransition temperature.",
+    "output_schema": "JSON object with key 'a' (float) and optionally 'a_error' (float)."
+  },
+  {
+    "id": "scaling_amps",
+    "title": "Extract bulk finite-size scaling amplitudes",
+    "role": "scored",
+    "action": "Using the magnetization and susceptibility data from simulations, construct finite-size scaling plots for magnetization (M N^{β/ν} vs t N^{1/ν}) and high-temperature susceptibility (χ N^{-γ/ν} vs t N^{1/ν}), with β=0.312, ν=0.64, γ=1.25, and t = |1 - T/Tc(∞)|. From the large-x (large t N^{1/ν}) region, extract the asymptotic amplitudes B (for magnetization, from M N^{β/ν} ≈ B (t N^{1/ν})^{β}) and C+ (for susceptibility, from χ N^{-γ/ν} ≈ C+ (t N^{1/ν})^{-γ}). Save a JSON object with keys 'B' and 'Cplus'.",
+    "output_file": "step_06_scaling_amplitudes.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Bulk finite-size scaling amplitudes for magnetization and susceptibility.",
+    "output_schema": "JSON object with keys 'B' (float) and 'Cplus' (float)."
+  }
+]

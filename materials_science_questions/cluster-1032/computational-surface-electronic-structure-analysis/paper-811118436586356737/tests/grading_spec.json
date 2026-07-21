@@ -1,0 +1,111 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Fully recompute band inversion (gap < 0), node-line closure around Z, Berry phase pattern (π/0), and flat surface band from the agent's raw JSON arrays; compare against the paper's expected topological properties.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bulk_band_structure.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "kpath": "array of objects, each with 'label' (string) and 'k' (array of 3 floats, fractional coordinates)",
+            "eigenvalues": "array of arrays, each inner array of 4 floats representing the 4 band energies in eV",
+            "node_line_points": "array of arrays of 3 floats, fractional coordinates of the closed node line"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "eigenvalues": "eV",
+            "k": "dimensionless (fractional)",
+            "node_line_points": "dimensionless (fractional)"
+          }
+        },
+        "description": "Bulk tight-binding band structure and identified node line points."
+      },
+      {
+        "file": "berry_phase_zigzag.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "k_parallel": "array of arrays of 2 floats (k2, k3) in fractional coordinates",
+            "berry_phase": "array of floats, Berry phase in units of π"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "k_parallel": "dimensionless (fractional)",
+            "berry_phase": "unit of π"
+          }
+        },
+        "description": "Berry phase computed for the zigzag termination as a function of in-plane momentum."
+      },
+      {
+        "file": "surface_band_beard.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "k_path": "array of arrays of 2 floats, surface BZ k-point coordinates",
+            "eigenvalues": "array of arrays, each inner array containing the slab band eigenvalues in eV"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "k_path": "dimensionless (surface BZ coordinates)",
+            "eigenvalues": "eV"
+          }
+        },
+        "description": "Surface band structure of the beard-terminated (100) slab."
+      }
+    ],
+    "notes": "The checker will verify the band inversion at Z (negative gap), the closed loop of node_line_points, the quantization of Berry phase (π outside / 0 inside), and the presence of drumhead-like flat bands inside the node ring. Tolerances and reference patterns are derived from the paper and are hidden."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "topological and structural criteria extracted from the paper",
+      "source_provenance": "paper text, Fig. 1(c)-(e), Fig. 2, and the definition of the node-line semimetal state",
+      "generation_method": "expected structural properties derived from the paper's reported band inversion, node-line geometry, Berry phase quantization, and drumhead surface states; no external gold files required",
+      "why_not_fabricated": "the criteria are the paper's own reported qualitative and quantitative features, not invented; the checker recomputes them from the agent's raw arrays and never trusts a self-reported number"
+    }
+  ],
+  "steps": [
+    {
+      "id": "bulk_band_inversion",
+      "output_file": "bulk_band_structure.json",
+      "kind": "recompute_gap",
+      "weight": 0.3,
+      "description": "Verify band inversion at Z point: gap between the two central bands is negative (conduction below valence)."
+    },
+    {
+      "id": "bulk_node_line",
+      "output_file": "bulk_band_structure.json",
+      "kind": "recompute_node_line",
+      "weight": 0.25,
+      "description": "Verify node line forms a closed loop in the k_x≈0 plane surrounding Z (0,0,0.5)."
+    },
+    {
+      "id": "berry_phase_zigzag",
+      "output_file": "berry_phase_zigzag.json",
+      "kind": "recompute_berry",
+      "weight": 0.3,
+      "description": "Verify Berry phase pattern: ~π outside the projected node line, ~0 inside."
+    },
+    {
+      "id": "surface_band_beard",
+      "output_file": "surface_band_beard.json",
+      "kind": "recompute_flat_band",
+      "weight": 0.15,
+      "description": "Verify existence of a nearly flat drumhead surface state inside the projected node ring."
+    }
+  ]
+}

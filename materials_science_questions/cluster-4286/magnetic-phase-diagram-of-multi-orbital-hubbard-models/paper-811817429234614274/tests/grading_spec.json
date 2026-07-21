@@ -1,0 +1,232 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Structural checks on renormalized K_rho and ground-state spin (trends aligning with paper's phase diagram) and pairing correlation inequalities; full ED recomputation is infeasible in the verifier sandbox.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "k_rho_data.json": "exact_match",
+    "pairing_correlations.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold renormalized K_rho values (from Fig. 2 of paper, digitized for Δ=1.9) and ground-state spin assignments",
+      "source_provenance": "Paper Fig. 2, Δ=1.9 curve, electron density n=5/3, 6-site cluster ED. Values read from graph.",
+      "generation_method": "Manual digitization from published figure; tolerance set to 0.2 to account for curve-reading imprecision",
+      "why_not_fabricated": "Actual paper-reported data, critical for verifying superconducting phase diagram"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "k_rho_data.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "U_prime",
+              "K_rho",
+              "ground_state_spin"
+            ],
+            "properties": {
+              "U_prime": {
+                "type": "number"
+              },
+              "K_rho": {
+                "type": "number"
+              },
+              "ground_state_spin": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "description": "Renormalized K_rho and ground-state spin for a sweep of U' values at Δ=1.9 and n=5/3; compared against digitized reference values with absolute tolerance to verify the SC phase diagram."
+      },
+      {
+        "file": "pairing_correlations.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "parameters",
+              "correlations"
+            ],
+            "properties": {
+              "parameters": {
+                "type": "object",
+                "required": [
+                  "U_prime",
+                  "J",
+                  "U",
+                  "Delta",
+                  "filling"
+                ],
+                "properties": {
+                  "U_prime": {
+                    "type": "number"
+                  },
+                  "J": {
+                    "type": "number"
+                  },
+                  "U": {
+                    "type": "number"
+                  },
+                  "Delta": {
+                    "type": "number"
+                  },
+                  "filling": {
+                    "type": "string"
+                  }
+                }
+              },
+              "correlations": {
+                "type": "object",
+                "required": [
+                  "S_on_u",
+                  "S_nn_u",
+                  "S_on_l",
+                  "S_nn_l",
+                  "S_on_lu",
+                  "T_nn_u",
+                  "T_nn_l",
+                  "T_on_lu",
+                  "S_nn_l-u",
+                  "T_nn_l-u"
+                ],
+                "properties": {
+                  "S_on_u": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  },
+                  "S_nn_u": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  },
+                  "S_on_l": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  },
+                  "S_nn_l": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  },
+                  "S_on_lu": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  },
+                  "T_nn_u": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  },
+                  "T_nn_l": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  },
+                  "T_on_lu": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  },
+                  "S_nn_l-u": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  },
+                  "T_nn_l-u": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Pairing correlation functions for two parameter sets (U'=1.0, J=0.25 with U=2.4 and U=-0.4). The structural audit verifies the dominant pairing channel and inter-orbital sign reversal without exact numerical tolerance."
+      }
+    ],
+    "notes": "The task reproduces the main numerical results of the paper: the renormalized K_rho as a function of U' (detecting the SC phase and ferromagnetic transition) and the pairing correlation functions that identify the dominant pairing symmetry. The noninteracting band structure determination and the anomalous flux quantization check are not required as separate artifacts."
+  },
+  "steps": [
+    {
+      "id": "k_rho_score",
+      "output_file": "k_rho_data.json",
+      "weight": 0.6,
+      "kind": "numeric",
+      "tolerance": 0.2,
+      "gold_K_rho": {
+        "0.0": 1.0,
+        "0.5": 0.95,
+        "1.0": 0.88,
+        "1.5": 0.8,
+        "2.0": 0.85,
+        "2.5": 1.05,
+        "3.0": 1.15,
+        "3.5": 1.25,
+        "4.0": 1.35
+      },
+      "gold_spin": {
+        "0.0": 0,
+        "0.5": 0,
+        "1.0": 0,
+        "1.5": 0,
+        "2.0": 0,
+        "2.5": 1,
+        "3.0": 1,
+        "3.5": 1,
+        "4.0": 1
+      }
+    },
+    {
+      "id": "pairing_score",
+      "output_file": "pairing_correlations.json",
+      "weight": 0.4,
+      "kind": "structural"
+    }
+  ]
+}

@@ -150,13 +150,8 @@ def score_4(artifact, step, ctx):
 
 # === block: score_5 (check id='check_total_free_energy') ===
 def score_5(artifact, step, ctx):
-    stages = artifact.get('stages', {})
-    fields = ['Fb_minus_Fa','Fc_minus_Fb','Fd_minus_Fc','Fe_minus_Fd','Ff_minus_Fe']
-    try:
-        total = sum(float(stages[k]) for k in fields)
-    except (TypeError, KeyError):
-        total = None
-    return score_rel_tolerance(total, step['target'], step.get('tolerance_rel', 0.0))
+    value = get_nested(artifact, step.get('json_path', 'total_free_energy'))
+    return score_rel_tolerance(value, step['target'], step.get('tolerance_rel', 0.0))
 
 
 # === block: score_6 (check id='check_surface_tension') ===

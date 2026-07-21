@@ -1,0 +1,53 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The main result is the presence of specific reciprocal-space peaks indicating 1T CDW modulation on the 1H layer. Absolute LDOS values are not comparable across DFT implementations, so we audit the structural pattern (T3). T1 recompute of a single numeric metric is infeasible.",
+  "pass_threshold": 0.5,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected CDW reciprocal lattice vectors and tolerance parameters",
+      "source_provenance": "Derived from the known crystallography of (√13×√13)R13.9° superstructure of 1T-TaS2 with lattice constant a=3.316 Å as reported in literature (Wilson, Adv. Phys. 1969; Fazekas, Philos. Mag. B 1979).",
+      "generation_method": "Computed from atomic lattice reciprocal vectors b1, b2 and supercell transformation: A* = (4b1 - b2)/13, B* = (b1 + 3b2)/13.",
+      "why_not_fabricated": "These vectors are deterministic fixed numbers from the well-established crystallography of the CDW phase; they are not random."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ldos_ef_200meV.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "y",
+            "integrated_LDOS"
+          ],
+          "units": {
+            "x": "Angstrom",
+            "y": "Angstrom",
+            "integrated_LDOS": "arbitrary units"
+          }
+        },
+        "description": "Real-space local density of states integrated from EF to EF+200 meV on a plane 1.5 Å above the outer S atoms of the 1H layer. The checker computes its 2D Fourier transform and verifies the presence of peaks at the reciprocal lattice vectors of the (√13×√13)R13.9° superstructure, confirming the CDW transparency effect."
+      }
+    ],
+    "notes": "The checker performs a structural audit (T3) using 2D FFT to detect peaks at the expected CDW reciprocal lattice vectors. No absolute numeric value is compared; scoring is based on the presence and relative amplitude of those peaks. The raw energy positions of the Hubbard bands are not scored, only the LDOS periodicity."
+  },
+  "steps": [
+    {
+      "id": "ldos_cdw_fft_check",
+      "output_file": "ldos_ef_200meV.csv",
+      "kind": "structural_audit",
+      "weight": 1.0,
+      "description": "Validate that the 2D FFT of the LDOS grid contains peaks at the reciprocal lattice vectors of the (√13×√13)R13.9° CDW superstructure, with amplitude at least 5% of the strongest non-DC peak.",
+      "parameters": {
+        "a0": 3.316,
+        "rel_threshold": 0.05,
+        "tolerance_rad_per_ang": 0.15
+      }
+    }
+  ]
+}

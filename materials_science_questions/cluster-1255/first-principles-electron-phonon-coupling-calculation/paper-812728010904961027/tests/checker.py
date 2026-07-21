@@ -106,11 +106,9 @@ def prepare(outputs_dir, spec):
 
 # === block: score_0 (check id='resistivity') ===
 def score_0(artifact, step, ctx):
-    params = step.get("params", {})
-    rho0 = params["rho0"]
-    targets = params["targets"]
-    tol = params["tolerance_relative"]
-    per_point = params.get("score_per_point", 0.2)
+    # Enforce minimum row count and reasonable temperature span
+    if artifact is None or len(artifact) < 20:
+        return 0.0
     Ts = []
     rhos = []
     for row in artifact:
@@ -119,8 +117,19 @@ def score_0(artifact, step, ctx):
             rhos.append(float(row["rho"]))
         except (KeyError, ValueError):
             return 0.0
-    if len(Ts) < 2:
+    if len(Ts) < 20:
         return 0.0
+    # Check that the temperature points cover at least 10..300 K and are roughly uniform
+    T_min = min(Ts)
+    T_max = max(Ts)
+    if T_min > 15.0 or T_max < 290.0:
+        return 0.0
+    # Continue with existing accuracy scoring
+    params = step.get("params", {})
+    rho0 = params["rho0"]
+    targets = params["targets"]
+    tol = params["tolerance_relative"]
+    per_point = params.get("score_per_point", 0.2)
     def interp(T_val):
         if T_val <= Ts[0]:
             return rhos[0]
@@ -147,13 +156,9 @@ def score_0(artifact, step, ctx):
 
 # === block: score_1 (check id='distribution') ===
 def score_1(artifact, step, ctx):
-    params = step.get("params", {})
-    dip_center_exp = params["dip_center_expected"]
-    center_tol = params["dip_center_tolerance"]
-    dip_range = params["dip_min_expected_range"]
-    dip_depth_min = params["dip_depth_min"]
-    monotonic_ranges = params["monotonic_increase_expected"]
-    weights = params["score_weights"]
+    # Enforce minimum row count and dense sampling in the dip region
+    if artifact is None or len(artifact) < 100:
+        return 0.0
     y_vals = []
     phi_vals = []
     for row in artifact:
@@ -164,8 +169,22 @@ def score_1(artifact, step, ctx):
             phi_vals.append(phi)
         except (KeyError, ValueError):
             continue
-    if len(y_vals) < 10:
+    if len(y_vals) < 100:
         return 0.0
+    # Check that at least 10 points lie in the dip window [0.68, 0.76]
+    dip_window_low = 0.68
+    dip_window_high = 0.76
+    points_in_window = sum(1 for y in y_vals if dip_window_low <= y <= dip_window_high)
+    if points_in_window < 10:
+        return 0.0
+    # Continue with existing structural scoring
+    params = step.get("params", {})
+    dip_center_exp = params["dip_center_expected"]
+    center_tol = params["dip_center_tolerance"]
+    dip_range = params["dip_min_expected_range"]
+    dip_depth_min = params["dip_depth_min"]
+    monotonic_ranges = params["monotonic_increase_expected"]
+    weights = params["score_weights"]
     min_phi = float('inf')
     min_y = None
     for y, phi in zip(y_vals, phi_vals):

@@ -4,10 +4,41 @@
 In pulsed GaAs injection lasers, transient heating of the active region causes the emission wavelength to shift during a current pulse. Understanding this heating is essential for predicting spectral behaviour and for applications such as spectroscopic absorption measurements and interferometry. This task addresses the thermal side of the problem: compute the transient temperature increase at the center of the laser junction for a known current pulse shape, using a semi-infinite solid approximation and a convolution integral that accounts for the power dissipated by optical reabsorption and nonradiative recombination.
 
 ## Approach
-The thermal model treats the diode crystal as a semi‑infinite solid, with one face held at a constant heat‑sink temperature. The temperature rise ΔT_c(t) at the junction centre is given by a self‑consistent convolution integral that couples the dissipated power P(τ) with the temperature response of the medium. The power is taken as P(t)=1.4·I(t), where I(t) is the drive current. For this task, the current pulse is assumed to have a bell shape of the form I(t)=I_max·(t/t_m)²·exp(−2t/t_m+2), with I_max=40 A and the peak time t_m taking the values 30, 50, 70, and 90 ns. The material parameters are the density ρ=5370 kg/m³, specific heat c=320 J/(kg·K), and junction volume V=1.4×10⁻¹³ m³. The integral equation must be solved numerically over a time window that covers the pulse and the post‑pulse cooling. The solution produces the junction temperature increase ΔT_c(t) as a function of time for each pulse width.
+The thermal model treats the diode crystal as a semi‑infinite solid, with one face held at a constant heat‑sink temperature. The temperature rise ΔT_c(t) at the junction centre is given by the integral equation
+
+$$
+\Delta T_{\mathrm{c}}(t)=\frac{1}{\varrho c V} \int_{0}^{t} P(\tau)\, \frac{\mathrm{d}}{\mathrm{d}\tau} \Delta T_{\mathrm{c}}(t-\tau) \,\mathrm{d}\tau \qquad (1)
+$$
+
+where  
+- \(\varrho = 5370\,\mathrm{kg\,m^{-3}}\) is the density,  
+- \(c = 320\,\mathrm{J\,kg^{-1}\,K^{-1}}\) the specific heat,  
+- \(V = 1.4\times10^{-13}\,\mathrm{m^{3}}\) the junction volume, and  
+- \(P(\tau) = 1.4\cdot I(\tau)\) is the power dissipated in the junction (optical reabsorption and nonradiative recombination).  
+
+The current pulse is assumed to have the bell‑shaped form  
+
+$$
+I(t)=I_{\max}\left(\frac{t}{t_m}\right)^{2} \exp\!\left(-2\frac{t}{t_m}+2\right), \qquad I_{\max}=40\,\mathrm{A}.
+$$
+
+The parameter \(t_m\) (the time at which the pulse reaches its maximum) takes the values 30, 50, 70, and 90 ns.
+
+**Numerical solution of the integral equation**
+
+Eq. (1) is a Volterra integral equation that can be solved by time‑stepping on a uniform grid. Discretise time with step \(\Delta t\) and write \(t_n = n\Delta t\). Let \(\Delta T_n \equiv \Delta T_{\mathrm{c}}(t_n)\) and \(P_n \equiv P(t_n)\). Approximating the derivative inside the integral by a backward difference leads to the explicit recurrence
+
+\[
+\Delta T_0 = 0,\qquad
+\Delta T_n = \frac{1}{\varrho c V} \sum_{j=1}^{n-1} P_j\, \bigl(\Delta T_{n-j} - \Delta T_{n-j-1}\bigr), \quad n\ge 1.
+\]
+
+This formula can be evaluated sequentially for n = 1, 2, … until the desired final time. A recommended discretisation is \(\Delta t = 0.1\,\mathrm{ns}\) and a total simulation time of \(t_{\max}=150\,\mathrm{ns}\), which comfortably covers the 100 ns sampling window and the post‑pulse cooling. Using a smaller step further improves accuracy.
+
+The material parameters, pulse shape and the above recurrence together define a deterministic numerical integration; the computed \(\Delta T_c\) values are unambiguous.
 
 ## Reproduction target
-Compute the transient junction‑centre temperature increase ΔT_c(t) for each of the four pulse widths t_m = 30 ns, 50 ns, 70 ns, and 90 ns. Extract the temperature values at the five time points t = 20 ns, 40 ns, 60 ns, 80 ns, and 100 ns after the start of the current pulse. Save the results as a CSV file with columns t_ns, tm_30_K, tm_50_K, tm_70_K, and tm_90_K, where each row corresponds to one time point and the columns contain the corresponding ΔT_c in Kelvin.
+Compute the transient junction‑centre temperature increase \(\Delta T_c(t)\) for each of the four pulse widths \(t_m = 30\,\mathrm{ns},\; 50\,\mathrm{ns},\; 70\,\mathrm{ns},\; 90\,\mathrm{ns}\). Extract the temperature values at the five time points \(t = 20\,\mathrm{ns},\; 40\,\mathrm{ns},\; 60\,\mathrm{ns},\; 80\,\mathrm{ns},\; 100\,\mathrm{ns}\) after the start of the current pulse. Save the results as a CSV file with columns `t_ns`, `tm_30_K`, `tm_50_K`, `tm_70_K`, `tm_90_K`, where each row corresponds to one time point and the columns contain the corresponding \(\Delta T_c\) in Kelvin.
 
 ## Assets
 
@@ -18,10 +49,10 @@ Compute the transient junction‑centre temperature increase ΔT_c(t) for each o
 
 ### Step 1: Transient junction temperature calculation
 - Role: scored (load-bearing)
-- Action: Implement the thermal model: numerically solve the convolution equation for the junction‑center temperature increase ΔT_c(t) using the semi-infinite solid approximation. Use the specified material parameters (ρ=5370 kg/m³, c=320 J/(kg·K), V=1.4×10⁻¹³ m³) and the bell‑shaped current pulse I(t)=I_max·(t/t_m)²·exp(−2t/t_m+2) with I_max=40 A. The power dissipation is P(t)=1.4·I(t). Compute ΔT_c(t) for t_m = 30, 50, 70, 90 ns over a sufficient time range. Extract the temperature values at t = 20, 40, 60, 80, 100 ns for each t_m and save them to temperature_values.csv.
+- Action: Implement the thermal model described in the Approach section. Use the recurrence formula to numerically solve the integral equation for the junction‑center temperature increase \(\Delta T_c(t)\). Apply the specified material parameters and the bell‑shaped current pulse. Compute \(\Delta T_c(t)\) for each \(t_m = 30, 50, 70, 90\,\mathrm{ns}\) over a time range that includes the sampling points. Extract the temperature values at \(t = 20, 40, 60, 80, 100\,\mathrm{ns}\) for each \(t_m\) and save them to `temperature_values.csv`.
 - Output file: `/app/outputs/temperature_values.csv`
 - Format: csv
-- Contract: Header: t_ns,tm_30_K,tm_50_K,tm_70_K,tm_90_K. Rows: one per time point (20, 40, 60, 80, 100 ns). Temperature values are floating‑point numbers in Kelvin.
+- Contract: Header: `t_ns,tm_30_K,tm_50_K,tm_70_K,tm_90_K`. Rows: one per time point (20, 40, 60, 80, 100 ns). Temperature values are floating‑point numbers in Kelvin.
 - Scoring: scored by hidden verifier
 
 ## Output files

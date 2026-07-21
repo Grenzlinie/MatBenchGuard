@@ -1,0 +1,135 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Ground-state labels are recomputed from agent's reported energies at hidden parameter points; the checker does not trust the self-reported 'ground_state' column. Hidden gold labels for those points are derived from the paper's explicit phase-diagram descriptions.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "phase_diagram_data.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Set of hidden test points with expected ground-state labels used for recompute verification",
+      "source_provenance": "Derived from the paper's reported Figs. 2 and 6 and associated text, which unambiguously describe which phases are stable in certain doping/coupling regimes.",
+      "generation_method": "Manually selected points that lie deep inside the described F, CI, and AF phase regions for both lattices; the expected labels mirror the paper's conclusions.",
+      "why_not_fabricated": "Each label follows directly from the paper's own characterization of the phase diagram (e.g., 'F state is realized for n≲2 and n≳4', 'CI state is stable near band-center fillings', 'AF state near half filling'). No invented values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phase_diagram_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "lattice",
+            "n",
+            "K_over_t",
+            "J_over_t",
+            "E_F",
+            "E_FI",
+            "E_CI",
+            "E_AF",
+            "E_SI",
+            "ground_state"
+          ],
+          "units": {
+            "n": "electrons per unit cell",
+            "K_over_t": "dimensionless",
+            "J_over_t": "dimensionless",
+            "E_F": "units of |t|",
+            "E_FI": "units of |t|",
+            "E_CI": "units of |t|",
+            "E_AF": "units of |t|",
+            "E_SI": "units of |t|",
+            "ground_state": "string label"
+          }
+        },
+        "description": "The CSV holds the computed total energies and ground state for every (lattice, n, K_over_t, J_over_t) grid point. The hidden checker recomputes the energies at a small set of hidden points using an independent mean-field solver and verifies the ground-state assignment and energy ordering."
+      }
+    ],
+    "notes": "The checker implements a separate mean-field solver to recompute energies at hidden (n, K/t, J/t) points. It compares the agent's reported energies and ground_state labels against those independently obtained values, using appropriate tolerances. It does not re-run the full sweep."
+  },
+  "steps": [
+    {
+      "id": "phase_diagrams",
+      "output_file": "phase_diagram_data.csv",
+      "weight": 1.0,
+      "kind": "custom",
+      "test_points": [
+        {
+          "lattice": "kagome",
+          "n": 1.5,
+          "K_over_t": 2.0,
+          "J_over_t": 0.0,
+          "expected": "F"
+        },
+        {
+          "lattice": "kagome",
+          "n": 3.0,
+          "K_over_t": 2.0,
+          "J_over_t": 0.0,
+          "expected": "CI"
+        },
+        {
+          "lattice": "kagome",
+          "n": 5.0,
+          "K_over_t": 2.0,
+          "J_over_t": 0.0,
+          "expected": "F"
+        },
+        {
+          "lattice": "kagome",
+          "n": 0.5,
+          "K_over_t": 1.0,
+          "J_over_t": 0.04,
+          "expected": "CI"
+        },
+        {
+          "lattice": "kagome",
+          "n": 5.5,
+          "K_over_t": 1.0,
+          "J_over_t": 0.04,
+          "expected": "CI"
+        },
+        {
+          "lattice": "pyrochlore",
+          "n": 1.0,
+          "K_over_t": 2.0,
+          "J_over_t": 0.0,
+          "expected": "F"
+        },
+        {
+          "lattice": "pyrochlore",
+          "n": 4.0,
+          "K_over_t": 2.0,
+          "J_over_t": 0.0,
+          "expected": "CI"
+        },
+        {
+          "lattice": "pyrochlore",
+          "n": 7.0,
+          "K_over_t": 2.0,
+          "J_over_t": 0.0,
+          "expected": "F"
+        },
+        {
+          "lattice": "pyrochlore",
+          "n": 1.0,
+          "K_over_t": 1.0,
+          "J_over_t": 0.04,
+          "expected": "CI"
+        },
+        {
+          "lattice": "pyrochlore",
+          "n": 3.0,
+          "K_over_t": 4.0,
+          "J_over_t": 0.0,
+          "expected": "AF"
+        }
+      ]
+    }
+  ]
+}

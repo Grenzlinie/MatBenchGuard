@@ -1,0 +1,104 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "The checker cannot re-run DMFT to recompute the order parameters; it verifies structural consistency of the reported curves (monotonicity, range, quasiparticle weight stability) and compares the critical orbital splitting to the paper’s reported values.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "adw_order_parameter.csv": "structural_audit",
+    "af_order_parameter.csv": "structural_audit",
+    "phase_transition_D.txt": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Critical orbital splitting D_c for U=-2.5 (ADW→superfluid) and U=2.0 (AF→metallic) as reported in the paper",
+      "source_provenance": "Paper Fig. 2(b) for U=-2.5 (D_c=1.27) and Fig. 5(b) for U=2.0 (D_c=1.46), described in the main text",
+      "generation_method": "Values copied from the paper’s explicit statements and figure descriptions",
+      "why_not_fabricated": "Directly quoted from the published article, not invented"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adw_order_parameter.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "U",
+            "M_ADW",
+            "Z"
+          ],
+          "units": {
+            "U": "in units of hopping t",
+            "M_ADW": "dimensionless",
+            "Z": "dimensionless"
+          }
+        },
+        "description": "ADW order parameter M_ADW and quasiparticle weight Z as functions of attractive interaction U at D=0."
+      },
+      {
+        "file": "af_order_parameter.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "U",
+            "M_AF",
+            "Z"
+          ],
+          "units": {
+            "U": "in units of hopping t",
+            "M_AF": "dimensionless",
+            "Z": "dimensionless"
+          }
+        },
+        "description": "AF order parameter M_AF and quasiparticle weight Z as functions of repulsive interaction U at D=0."
+      },
+      {
+        "file": "phase_transition_D.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "pattern": "Two lines with format: 'D_c_attractive = <float>' and 'D_c_repressive = <float>'.",
+          "units": "in units of hopping t"
+        },
+        "description": "Critical orbital splitting D_c for the ADW-superfluid transition at U=-2.5 and the AF-metallic transition at U=2.0."
+      }
+    ],
+    "notes": "The checker will compare the values in adw_order_parameter.csv and af_order_parameter.csv against hidden reference data points with appropriate tolerance for each U. The quasiparticle weight Z should be close to 1.0 in the ordered phases. For phase_transition_D.txt, the two critical D values will be checked against the paper's reported values within a tolerance. No gold values are revealed here."
+  },
+  "steps": [
+    {
+      "id": "step_adw",
+      "output_file": "adw_order_parameter.csv",
+      "weight": 0.25,
+      "kind": "numeric",
+      "note": "Structural audit: checks monotonicity, range, and Z stability of the ADW order parameter."
+    },
+    {
+      "id": "step_af",
+      "output_file": "af_order_parameter.csv",
+      "weight": 0.25,
+      "kind": "numeric",
+      "note": "Structural audit: checks monotonicity, range, and Z stability of the AF order parameter."
+    },
+    {
+      "id": "step_dc",
+      "output_file": "phase_transition_D.txt",
+      "weight": 0.5,
+      "kind": "numeric",
+      "gold": {
+        "D_c_attractive": 1.27,
+        "D_c_repressive": 1.46
+      },
+      "tolerance": 0.1,
+      "note": "Check both critical orbital splitting values within ±0.1 of the paper’s reported numbers."
+    }
+  ]
+}

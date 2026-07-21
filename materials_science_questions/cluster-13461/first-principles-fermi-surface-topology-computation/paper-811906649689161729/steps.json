@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step-01",
+    "title": "Define crystal structures",
+    "role": "process",
+    "action": "Define the cubic CaF₂-type (space group Fm-3m) crystal structures for the four compounds: Be₂B, AlBeB, MgBeB, NaBeB. Specify atomic positions: Be at (0.25,0.25,0.25), B at (0,0,0); for the ternary phases, replace one Be atom with the substituting atom (Al, Mg, Na) at the same fractional coordinate.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Set up input structures for subsequent DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-02",
+    "title": "Run DFT volume scans",
+    "role": "process",
+    "action": "Perform DFT self-consistent field (SCF) calculations using the PBE-GGA exchange-correlation functional for each compound at a series of unit-cell volumes to obtain total energy vs. volume data.",
+    "output_file": "",
+    "evidence": "e_v_data.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Generate total energy versus volume data for each compound; optionally save a log file e_v_data.csv.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-03",
+    "title": "Fit equation of state and extract structural parameters",
+    "role": "process",
+    "action": "Fit the total-energy vs. volume data from step-02 to the Murnaghan equation of state. Extract the equilibrium lattice constant and bulk modulus for each compound. Save these values to a temporary intermediate file.",
+    "output_file": "",
+    "evidence": "structural_parameters.json",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Intermediate file containing equilibrium lattice constants and bulk moduli for the four compounds. Downstream scored steps depend on these values.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-04",
+    "title": "Compute electronic structure at equilibrium volume",
+    "role": "process",
+    "action": "Using the equilibrium lattice constants from step-03, perform DFT SCF calculations at the equilibrium volume for each compound. Then compute the electronic band structure along high-symmetry lines and the density of states (DOS).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produce band structure and DOS data required for the electronic quantity extraction.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-05",
+    "title": "Extract electronic quantities",
+    "role": "process",
+    "action": "From the band structure obtained in step-04, extract the valence bandwidth (energy difference between the top of the valence band and the bottom of the lowest valence band) and the Γ–X band gap (lowest conduction band at X minus highest valence band at Γ). From the DOS, extract the total DOS at the Fermi level and the B p-projected DOS at the Fermi level for each compound. Save these values to a temporary file.",
+    "output_file": "",
+    "evidence": "electronic_quantities.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Intermediate file containing the extracted electronic quantities.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-06",
+    "title": "Compile scored output",
+    "role": "scored",
+    "action": "Read the structural parameters (from step-03) and electronic quantities (from step-05) and compile the final scored output file `computed_properties.json`, containing an array of four objects, one per compound (order: Be₂B, AlBeB, MgBeB, NaBeB). Each object must include the keys: compound, lattice_constant_angstrom, bulk_modulus_GPa, valence_bandwidth_eV, band_gap_Gamma_X_eV, total_DOS_at_EF_states_per_eV_cell, B_p_DOS_at_EF_states_per_eV_cell.",
+    "output_file": "computed_properties.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final scored artifact containing the six required quantities for all four compounds. This is the only file the checker reads.",
+    "output_schema": "Array of objects, each with keys: compound (string), lattice_constant_angstrom (number), bulk_modulus_GPa (number), valence_bandwidth_eV (number), band_gap_Gamma_X_eV (number), total_DOS_at_EF_states_per_eV_cell (number), B_p_DOS_at_EF_states_per_eV_cell (number). One entry per compound in the fixed order Be2B, AlBeB, MgBeB, NaBeB."
+  }
+]

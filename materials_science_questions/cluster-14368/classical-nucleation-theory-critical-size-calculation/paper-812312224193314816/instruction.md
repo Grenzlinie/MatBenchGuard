@@ -50,7 +50,7 @@ Every file the hidden verifier reads is described below. Write each file under `
 - format: csv
 - purpose: scored
 - target_policy: metric_recompute
-- description: Critical nucleus radius (meters) and required undercooling (Kelvin) for steam condensation at 100 °C.
+- description: Critical nucleus radius (meters) and required undercooling (Kelvin) for steam condensation at 100 deg C.
 - schema:
   - `type`: table
   - `required_columns`: `r_crit_m`, `undercooling_K`
@@ -63,15 +63,15 @@ Every file the hidden verifier reads is described below. Write each file under `
 - format: csv
 - purpose: scored
 - target_policy: metric_recompute
-- description: Heat transfer coefficient α_m (W/(m²·K)) as a function of temperature difference ΔT (K).
+- description: Heat transfer coefficient alpha_m (W/(m^2 K)) as a function of temperature difference Delta_T (K).
 - schema:
   - `type`: table
   - `required_columns`: `Delta_T_K`, `alpha_m_W_m2K`
   - `units`:
     - `Delta_T_K`: Kelvin
-    - `alpha_m_W_m2K`: W/(m^2·K)
+    - `alpha_m_W_m2K`: W/(m^2 K)
 
-Notes: The checker recomputes the nucleation quantities and α_m(ΔT) using the same theoretical model. For nucleation: comparison of critical radius and undercooling against recomputed values. For heat transfer: comparison of α_m at each ΔT point and verification of the qualitative trend (peak location).
+Notes: For nucleation: the checker verifies that the critical radius and undercooling are physically reasonable according to the classical nucleation model described. For heat transfer: the checker recomputes alpha_m(Delta_T) using the same model and performs a point-wise comparison (10% tolerance) as well as a shape-consistency check that the peak occurs at a temperature difference compatible with the nucleation threshold and model parameters.
 
 ## Self-check before finishing (optional, not scored)
 
@@ -98,7 +98,7 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
           "undercooling_K": "Kelvin"
         }
       },
-      "description": "Critical nucleus radius (meters) and required undercooling (Kelvin) for steam condensation at 100 °C."
+      "description": "Critical nucleus radius (meters) and required undercooling (Kelvin) for steam condensation at 100 deg C."
     },
     {
       "file": "heat_transfer.csv",
@@ -113,15 +113,15 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
         ],
         "units": {
           "Delta_T_K": "Kelvin",
-          "alpha_m_W_m2K": "W/(m^2·K)"
+          "alpha_m_W_m2K": "W/(m^2 K)"
         }
       },
-      "description": "Heat transfer coefficient α_m (W/(m²·K)) as a function of temperature difference ΔT (K)."
+      "description": "Heat transfer coefficient alpha_m (W/(m^2 K)) as a function of temperature difference Delta_T (K)."
     }
   ],
-  "notes": "The checker recomputes the nucleation quantities and α_m(ΔT) using the same theoretical model. For nucleation: comparison of critical radius and undercooling against recomputed values. For heat transfer: comparison of α_m at each ΔT point and verification of the qualitative trend (peak location)."
+  "notes": "For nucleation: the checker verifies that the critical radius and undercooling are physically reasonable. For heat transfer: the checker recomputes alpha_m(Delta_T) and performs point-wise comparison (10% tolerance) and a shape-consistency check of the peak position."
 }
 ```
 
 ## How you are scored
-Your submission is scored by a hidden verifier that independently recomputes the expected outputs from the same theoretical model. For `nucleation.csv`, it compares your `r_crit` and undercooling values against its own reference (relative tolerance allowed). For `heat_transfer.csv`, it recomputes α_m for every ΔT point and compares against your reported values (relative tolerance per point). In addition, it checks that the α_m curve reaches its maximum at a temperature difference consistent with the model. Both artifacts contribute to the final reward, which is a single number between 0 and 1. Reporting numbers without a correct computational trace will not receive credit.
+Your submission is scored by a hidden verifier. For `nucleation.csv`, it checks that the critical radius `r_crit_m` and undercooling `undercooling_K` are consistent with the classical nucleation theory described above; each check contributes 50 % of the nucleation score. For `heat_transfer.csv`, it independently recomputes the mean heat‑transfer coefficient α_m for every ΔT point using the same physics model and parameters described above, and compares your values point‑by‑point with a relative tolerance of 10 %. In addition, it verifies that your α_m curve attains its maximum at a temperature difference that is physically expected given the nucleation threshold and model inputs. The point‑wise comparison contributes 80 % of the heat‑transfer score and the peak‑location check contributes 20 %. The overall reward is a weighted combination of the nucleation (30 %) and heat‑transfer (70 %) scores. Reporting numbers without a correct computational trace will not receive credit.

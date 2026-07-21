@@ -1,0 +1,99 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes δ_c, δ_a, Δ_conv from agent-provided reconstructed defect parameters and iterations, comparing to paper-derived thresholds.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "reconstructions.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Thresholds for δ_c, δ_a, Δ_conv derived from paper-reported iteration counts and known defect geometry.",
+      "source_provenance": "Paper iterations: K*_IGA=106, K*_FGA=200 for σ=0.25 S/m; K*_IGA=165, K*_FGA=200 for σ=0.5 S/m, SNR=25 dB. True defect is square void crack side 0.2λ0 at origin.",
+      "generation_method": "Computed Δ_conv = (K_FGA - K_IGA)/K_FGA * 100. Tolerances per plan: δ_c ≤ 2%, δ_a ≤ 10%, Δ_conv ≥ gold−10pp.",
+      "why_not_fabricated": "Thresholds directly derived from explicit paper iteration numbers and well-defined public true defect geometry."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reconstructions.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "required": [
+              "scenario",
+              "method",
+              "center_x",
+              "center_y",
+              "width",
+              "length",
+              "orientation",
+              "iterations",
+              "final_functional"
+            ],
+            "properties": {
+              "scenario": {
+                "type": "string",
+                "enum": [
+                  "sigI0.25_SNR25",
+                  "sigI0.5_SNR25"
+                ]
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "IGA",
+                  "FGA"
+                ]
+              },
+              "center_x": {
+                "type": "number",
+                "units": "wavelength λ0"
+              },
+              "center_y": {
+                "type": "number",
+                "units": "wavelength λ0"
+              },
+              "width": {
+                "type": "number",
+                "units": "wavelength λ0"
+              },
+              "length": {
+                "type": "number",
+                "units": "wavelength λ0"
+              },
+              "orientation": {
+                "type": "number",
+                "units": "radians"
+              },
+              "iterations": {
+                "type": "integer"
+              },
+              "final_functional": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "description": "Reconstructed defect parameters and convergence statistics for the IGA and FGA methods under two host conditions, used to compute center location error, area error, and convergence improvement."
+      }
+    ],
+    "notes": "The hidden verifier will compare your reconstructed defect parameters to the true (hidden) defect parameters using the metrics δ_c, δ_a, and Δ_conv."
+  },
+  "steps": [
+    {
+      "id": "eval_reconstructions",
+      "output_file": "reconstructions.json",
+      "kind": "recompute_metric",
+      "weight": 1.0,
+      "description": "Recompute δ_c, δ_a for IGA, and Δ_conv per scenario; compare to paper-derived thresholds. Each scenario that meets all thresholds adds 0.5 to the total score."
+    }
+  ]
+}

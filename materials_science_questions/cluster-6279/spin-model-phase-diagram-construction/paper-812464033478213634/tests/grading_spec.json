@@ -1,0 +1,176 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Critical exponent ratios are recomputed from raw maxima via finite-size scaling regression and scored against paper's reported values with monotonic policy; phase diagram points coordinates compared to paper's gold with tolerance; topology checked structurally.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Provide reference exponent ratios and special points coordinates for verification",
+      "source_provenance": "Paper Table 1 and Figure 2; values extracted from paper text.",
+      "generation_method": "Manual extraction from paper's reported numbers.",
+      "why_not_fabricated": "These are the paper's actual reported quantities for the model and simulations, exactly as published."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "specific_heat_maxima.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "N",
+            "mu",
+            "T_c",
+            "c_max"
+          ]
+        },
+        "description": "Maximum specific heat values and the temperatures at which they occur for every simulated (N, μ) pair. The checker will recompute critical exponent ratio α/ν from these maxima using finite-size scaling."
+      },
+      {
+        "file": "susceptibility_maxima.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "N",
+            "mu",
+            "T_c",
+            "chi_max"
+          ]
+        },
+        "description": "Maximum susceptibility values and the temperatures at which they occur for every simulated (N, μ) pair. The checker will recompute critical exponent ratio γ/ν from these maxima using finite-size scaling."
+      },
+      {
+        "file": "phase_diagram_points.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "Theta",
+            "mu",
+            "boundary_type"
+          ]
+        },
+        "description": "Points on the T–Θ phase diagram boundaries (critical lines, coexistence boundaries, and special points) determined from the N=96 simulations. The checker will compare the coordinates of the labeled tricritical, eutectic, and critical points to the paper-reported values within a tolerance, and verify the presence of required coexistence regions."
+      }
+    ],
+    "notes": "All three scored files are essential to verify the paper's main claim that the minimal lattice-gas model reproduces the experimental phase diagram. The checker does not rely on any self-reported metrics; it recomputes exponent ratios from the raw maxima and directly compares boundary-point coordinates."
+  },
+  "steps": [
+    {
+      "id": "step_specific_heat_fss",
+      "output_file": "specific_heat_maxima.csv",
+      "kind": "metric_recompute",
+      "target_policy": "reference_match",
+      "weight": 0.25,
+      "description": "Recomputes critical exponent ratio alpha/nu from specific heat maxima for mu ~ -1.14 and mu ~ -0.75, scores closeness to paper values.",
+      "mu_ideal": [
+        -1.14,
+        -0.75
+      ],
+      "ref_alpha_nu": [
+        1.065,
+        0.529
+      ],
+      "tolerance_alpha": [
+        0.08,
+        0.08
+      ]
+    },
+    {
+      "id": "step_susceptibility_fss",
+      "output_file": "susceptibility_maxima.csv",
+      "kind": "metric_recompute",
+      "target_policy": "reference_match",
+      "weight": 0.25,
+      "description": "Recomputes critical exponent ratio gamma/nu from susceptibility maxima for mu ~ -1.14 and mu ~ -0.75, scores closeness to paper values.",
+      "mu_ideal": [
+        -1.14,
+        -0.75
+      ],
+      "ref_gamma_nu": [
+        1.763,
+        1.54
+      ],
+      "tolerance_gamma": [
+        0.082,
+        0.116
+      ]
+    },
+    {
+      "id": "step_special_points",
+      "output_file": "phase_diagram_points.csv",
+      "kind": "reference_match",
+      "target_policy": "reference_match",
+      "weight": 0.3,
+      "description": "Extracts tricritical, eutectic, and critical point coordinates from phase diagram points and compares to paper gold with absolute tolerance.",
+      "gold_points": [
+        {
+          "type": "tricritical",
+          "label": "P_tr_A",
+          "T": 0.07,
+          "Theta": 0.21,
+          "abs_tol_T": 0.02,
+          "abs_tol_Theta": 0.02
+        },
+        {
+          "type": "tricritical",
+          "label": "P_tr_B",
+          "T": 0.189,
+          "Theta": 0.25,
+          "abs_tol_T": 0.02,
+          "abs_tol_Theta": 0.02
+        },
+        {
+          "type": "tricritical",
+          "label": "P_tr_D",
+          "T": 0.185,
+          "Theta": 0.327,
+          "abs_tol_T": 0.02,
+          "abs_tol_Theta": 0.02
+        },
+        {
+          "type": "eutectic",
+          "label": "P_eut",
+          "T": 0.158,
+          "Theta": 0.292,
+          "abs_tol_T": 0.02,
+          "abs_tol_Theta": 0.02
+        },
+        {
+          "type": "critical",
+          "label": "P_c_D",
+          "T": 0.187,
+          "Theta": 0.3333333,
+          "abs_tol_T": 0.02,
+          "abs_tol_Theta": 0.02
+        }
+      ]
+    },
+    {
+      "id": "step_topology",
+      "output_file": "phase_diagram_points.csv",
+      "kind": "structural_audit",
+      "target_policy": "structural_audit",
+      "weight": 0.2,
+      "description": "Verifies presence of required boundary types (critical, coexistence_left/right, tricritical, eutectic) and that phase boundary coverage spans Theta 0.05–0.33.",
+      "required_boundary_types": [
+        "critical",
+        "coexistence_left",
+        "coexistence_right",
+        "tricritical",
+        "eutectic"
+      ],
+      "theta_range_min": 0.05,
+      "theta_range_max": 0.33
+    }
+  ]
+}

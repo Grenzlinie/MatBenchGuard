@@ -1,0 +1,195 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute from raw per-point data is infeasible because the public output contract provides only summary slopes/R², not individual (δ,a_X) points; we compare reported ξ and formation parameters to paper gold with tolerances and enforce diagnostics-vs-results consistency.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "diagnostics.csv": "structural_audit",
+    "results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold interaction energies for CeH2+δ (Lundin data) from Table 1 of the paper",
+      "source_provenance": "Paper Table 1: Hydrogen interstitial interaction energies in cerium dihydride",
+      "generation_method": "Transcribed directly from the paper's Table 1",
+      "why_not_fabricated": "These are the paper's own reported experimental values for the same system and conditions the agent must reproduce."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold interaction energies for ThC1-δ (analysed as CTh1+δ) from Table 2 of the paper",
+      "source_provenance": "Paper Table 2: Carbon vacancy interaction energies in thorium monocarbide",
+      "generation_method": "Transcribed directly from the paper's Table 2",
+      "why_not_fabricated": "These are the paper's own reported experimental values for the same system."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold vacancy-pair formation enthalpy and entropy for YH2-δ from the paper text",
+      "source_provenance": "Paper text: 'values of -2.35 kcal/mole and -1.37 cal/deg mole were calculated for the enthalpy and entropy of vacancy pair formation'",
+      "generation_method": "Directly quoted from the paper",
+      "why_not_fabricated": "These are the paper's central derived parameters for YH2-δ."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected predominant defect types for the three systems",
+      "source_provenance": "Paper conclusions: hydrogen vacancies for YH2-δ, hydrogen interstitials for CeH2+δ, carbon vacancies for ThC1-δ",
+      "generation_method": "Derived from the paper's defect identification statements",
+      "why_not_fabricated": "These are the paper's main qualitative results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "diagnostics.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "defect_model",
+            "temperature",
+            "x_i",
+            "y_i",
+            "R_squared",
+            "slope",
+            "intercept"
+          ]
+        },
+        "description": "Diagnostic data for each defect model at each temperature for YH2, CeH2, and ThC. The verifier recomputes linear regressions from the provided (x_i,y_i) pairs and checks slope consistency."
+      },
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "YH2": {
+              "type": "object",
+              "required": {
+                "temperatures_C": "list of number",
+                "xi_H_values_kcal_per_mol": "list of number",
+                "formation_enthalpy_kcal_per_mol": "number",
+                "formation_entropy_cal_per_deg_mol": "number",
+                "identified_defect": "string"
+              }
+            },
+            "CeH2": {
+              "type": "object",
+              "required": {
+                "temperatures_C": "list of number",
+                "xi_H_values_kcal_per_mol": "list of number",
+                "identified_defect": "string"
+              }
+            },
+            "ThC": {
+              "type": "object",
+              "required": {
+                "temperatures_K": "list of number",
+                "xi_C_values_kcal_per_mol": "list of number",
+                "identified_defect": "string"
+              }
+            }
+          }
+        },
+        "description": "Final extracted interaction energies, defect types, and for YH2 the formation enthalpy and entropy. The verifier compares these reported values to a hidden paper-based gold within tolerance."
+      }
+    ],
+    "notes": "All temperatures for YH2 and CeH2 are in °C; for ThC they are in K. The formation enthalpy is in kcal/mol, the entropy in cal/(deg·mol)."
+  },
+  "gold": {
+    "CeH2": {
+      "temperatures_C": [
+        300,
+        400,
+        500,
+        550,
+        600,
+        650
+      ],
+      "xi_kcal_per_mol": [
+        0.42,
+        0.3,
+        0.22,
+        0.2,
+        0.17,
+        0.18
+      ],
+      "tolerance_xi": 0.1
+    },
+    "ThC": {
+      "temperatures_K": [
+        1000,
+        1100,
+        1200
+      ],
+      "xi_kcal_per_mol": [
+        10.5,
+        9.6,
+        10.0
+      ],
+      "tolerance_xi": 0.5
+    },
+    "YH2": {
+      "temperatures_C": [
+        601,
+        651,
+        701,
+        750,
+        800,
+        850,
+        899,
+        949
+      ],
+      "formation_enthalpy_kcal_per_mol": -2.35,
+      "formation_entropy_cal_per_deg_mol": -1.37,
+      "tolerance_enthalpy": 0.5,
+      "tolerance_entropy": 0.5
+    },
+    "expected_defects": {
+      "YH2": "hydrogen_vacancy",
+      "CeH2": "hydrogen_interstitial",
+      "ThC": "carbon_vacancy"
+    }
+  },
+  "steps": [
+    {
+      "id": "diagnostics_shape",
+      "output_file": "diagnostics.csv",
+      "weight": 0.05,
+      "kind": "rubric"
+    },
+    {
+      "id": "defect_identification",
+      "output_file": "diagnostics.csv",
+      "weight": 0.2,
+      "kind": "rubric"
+    },
+    {
+      "id": "xi_ceh2",
+      "output_file": "results.json",
+      "weight": 0.25,
+      "kind": "rubric"
+    },
+    {
+      "id": "xi_thc",
+      "output_file": "results.json",
+      "weight": 0.15,
+      "kind": "rubric"
+    },
+    {
+      "id": "yh2_formation",
+      "output_file": "results.json",
+      "weight": 0.25,
+      "kind": "rubric"
+    },
+    {
+      "id": "consistency",
+      "output_file": "results.json",
+      "weight": 0.1,
+      "kind": "rubric"
+    }
+  ]
+}

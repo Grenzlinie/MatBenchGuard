@@ -1,0 +1,342 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recompute from raw stress-strain curves is infeasible because the agent only submits extracted scalar properties, not the raw curves. Therefore we compare reported numbers to paper-reported hidden gold with relative tolerances and add structural trend checks (monotonicity).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "pristine_mechanical_properties.csv": "reference_match",
+    "gb_mechanical_properties.csv": "reference_match",
+    "strain_rate_results.csv": "reference_match",
+    "temperature_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for mechanical properties and trends",
+      "source_provenance": "Paper Table 1, Table 3, Fig. 5 and associated text",
+      "generation_method": "Direct extraction of reported numbers from the paper",
+      "why_not_fabricated": "Values are the actual numerical results published in the paper; they are used as authoritative reference targets."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pristine_mechanical_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "direction",
+            "Youngs_modulus_GPa",
+            "UTS_GPa",
+            "failure_strain_percent"
+          ],
+          "units": {
+            "Youngs_modulus_GPa": "GPa",
+            "UTS_GPa": "GPa",
+            "failure_strain_percent": "%"
+          }
+        },
+        "description": "Baseline mechanical properties of pristine h-BN along zigzag and armchair directions, extracted from stress-strain curves."
+      },
+      {
+        "file": "gb_mechanical_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "model_name",
+            "direction",
+            "GB_linear_density_nm-1",
+            "Youngs_modulus_GPa",
+            "UTS_GPa",
+            "failure_strain_percent",
+            "first_broken_bond_type"
+          ],
+          "units": {
+            "GB_linear_density_nm-1": "nm⁻¹",
+            "Youngs_modulus_GPa": "GPa",
+            "UTS_GPa": "GPa",
+            "failure_strain_percent": "%"
+          }
+        },
+        "description": "Mechanical properties of grain boundary configurations, including GB linear density and the type of the first broken bond observed during tensile failure."
+      },
+      {
+        "file": "strain_rate_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "model_name",
+            "strain_rate_s-1",
+            "UTS_GPa",
+            "Youngs_modulus_GPa"
+          ],
+          "units": {
+            "strain_rate_s-1": "s⁻¹",
+            "UTS_GPa": "GPa",
+            "Youngs_modulus_GPa": "GPa"
+          }
+        },
+        "description": "Ultimate tensile strength and Young's modulus for selected GB models at different strain rates."
+      },
+      {
+        "file": "temperature_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "model_name",
+            "temperature_K",
+            "UTS_GPa",
+            "Youngs_modulus_GPa"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "UTS_GPa": "GPa",
+            "Youngs_modulus_GPa": "GPa"
+          }
+        },
+        "description": "Ultimate tensile strength and Young's modulus for selected GB models at different temperatures."
+      }
+    ],
+    "notes": "The checker compares submitted values to hidden reference values with tolerances and also verifies structural trends: UTS increases with strain rate, UTS and Young's modulus decrease with temperature, and UTS and Young's modulus generally decrease with increasing GB linear density."
+  },
+  "steps": [
+    {
+      "id": "pristine_numeric",
+      "output_file": "pristine_mechanical_properties.csv",
+      "kind": "numeric",
+      "weight": 0.1,
+      "tolerances": {
+        "Youngs_modulus_GPa": 0.1,
+        "UTS_GPa": 0.1,
+        "failure_strain_percent": 0.2
+      },
+      "gold": {
+        "zz": {
+          "Youngs_modulus_GPa": 678,
+          "UTS_GPa": 133,
+          "failure_strain_percent": 27.9
+        },
+        "am": {
+          "Youngs_modulus_GPa": 611,
+          "UTS_GPa": 116,
+          "failure_strain_percent": 23.9
+        }
+      }
+    },
+    {
+      "id": "gb_numeric",
+      "output_file": "gb_mechanical_properties.csv",
+      "kind": "numeric",
+      "weight": 0.25,
+      "tolerances": {
+        "Youngs_modulus_GPa": 0.1,
+        "UTS_GPa": 0.1,
+        "failure_strain_percent": 0.2
+      },
+      "gold": {
+        "(2,1)|(1,2)": {
+          "Youngs_modulus_GPa": 627,
+          "UTS_GPa": 77,
+          "failure_strain_percent": 13.6
+        },
+        "(3,2)|(2,3)": {
+          "Youngs_modulus_GPa": 615,
+          "UTS_GPa": 93,
+          "failure_strain_percent": 17.0
+        },
+        "(6,5)|(5,6)": {
+          "Youngs_modulus_GPa": 634,
+          "UTS_GPa": 99,
+          "failure_strain_percent": 17.4
+        },
+        "(1,9)|(9,1)": {
+          "Youngs_modulus_GPa": 607,
+          "UTS_GPa": 76,
+          "failure_strain_percent": 14.4
+        },
+        "(1,4)|(4,1)": {
+          "Youngs_modulus_GPa": 549,
+          "UTS_GPa": 63,
+          "failure_strain_percent": 11.7
+        },
+        "(2,5)|(5,2)": {
+          "Youngs_modulus_GPa": 504,
+          "UTS_GPa": 69,
+          "failure_strain_percent": 12.7
+        }
+      }
+    },
+    {
+      "id": "gb_trend",
+      "output_file": "gb_mechanical_properties.csv",
+      "kind": "structural",
+      "weight": 0.1,
+      "trend_checks": [
+        {
+          "property": "UTS_GPa",
+          "index": "GB_linear_density_nm-1",
+          "direction": "decreasing"
+        },
+        {
+          "property": "Youngs_modulus_GPa",
+          "index": "GB_linear_density_nm-1",
+          "direction": "decreasing"
+        }
+      ]
+    },
+    {
+      "id": "strain_rate_numeric",
+      "output_file": "strain_rate_results.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "tolerances": {
+        "UTS_GPa": 0.1,
+        "Youngs_modulus_GPa": 0.1
+      },
+      "gold": {
+        "(2,1)|(1,2)": {
+          "1e8": {
+            "UTS_GPa": 80,
+            "Youngs_modulus_GPa": 627
+          },
+          "5e8": {
+            "UTS_GPa": 80,
+            "Youngs_modulus_GPa": 627
+          },
+          "1e9": {
+            "UTS_GPa": 80,
+            "Youngs_modulus_GPa": 627
+          },
+          "5e9": {
+            "UTS_GPa": 199,
+            "Youngs_modulus_GPa": 627
+          },
+          "1e10": {
+            "UTS_GPa": 199,
+            "Youngs_modulus_GPa": 627
+          }
+        },
+        "(1,9)|(9,1)": {
+          "1e8": {
+            "UTS_GPa": 76,
+            "Youngs_modulus_GPa": 607
+          },
+          "5e8": {
+            "UTS_GPa": 158,
+            "Youngs_modulus_GPa": 607
+          },
+          "1e9": {
+            "UTS_GPa": 240,
+            "Youngs_modulus_GPa": 607
+          },
+          "5e9": {
+            "UTS_GPa": 240,
+            "Youngs_modulus_GPa": 607
+          },
+          "1e10": {
+            "UTS_GPa": 240,
+            "Youngs_modulus_GPa": 607
+          }
+        }
+      }
+    },
+    {
+      "id": "strain_rate_trend",
+      "output_file": "strain_rate_results.csv",
+      "kind": "structural",
+      "weight": 0.1,
+      "trend_checks": [
+        {
+          "property": "UTS_GPa",
+          "index": "strain_rate_s-1",
+          "direction": "increasing"
+        }
+      ]
+    },
+    {
+      "id": "temperature_numeric",
+      "output_file": "temperature_results.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "tolerances": {
+        "UTS_GPa": 0.1,
+        "Youngs_modulus_GPa": 0.1
+      },
+      "gold": {
+        "(2,1)|(1,2)": {
+          "1": {
+            "UTS_GPa": 98,
+            "Youngs_modulus_GPa": 648
+          },
+          "300": {
+            "UTS_GPa": 77,
+            "Youngs_modulus_GPa": 627
+          },
+          "500": {
+            "UTS_GPa": 65,
+            "Youngs_modulus_GPa": 590
+          },
+          "800": {
+            "UTS_GPa": 52,
+            "Youngs_modulus_GPa": 560
+          },
+          "1100": {
+            "UTS_GPa": 43,
+            "Youngs_modulus_GPa": 551
+          }
+        },
+        "(1,9)|(9,1)": {
+          "1": {
+            "UTS_GPa": 90,
+            "Youngs_modulus_GPa": 635
+          },
+          "300": {
+            "UTS_GPa": 76,
+            "Youngs_modulus_GPa": 607
+          },
+          "500": {
+            "UTS_GPa": 60,
+            "Youngs_modulus_GPa": 580
+          },
+          "800": {
+            "UTS_GPa": 45,
+            "Youngs_modulus_GPa": 550
+          },
+          "1100": {
+            "UTS_GPa": 38,
+            "Youngs_modulus_GPa": 532
+          }
+        }
+      }
+    },
+    {
+      "id": "temperature_trend",
+      "output_file": "temperature_results.csv",
+      "kind": "structural",
+      "weight": 0.05,
+      "trend_checks": [
+        {
+          "property": "UTS_GPa",
+          "index": "temperature_K",
+          "direction": "decreasing"
+        },
+        {
+          "property": "Youngs_modulus_GPa",
+          "index": "temperature_K",
+          "direction": "decreasing"
+        }
+      ]
+    }
+  ]
+}

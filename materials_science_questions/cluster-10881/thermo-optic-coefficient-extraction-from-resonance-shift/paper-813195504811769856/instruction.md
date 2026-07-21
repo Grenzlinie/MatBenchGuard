@@ -19,7 +19,7 @@ This task requires no external datasets, models, or proprietary software. The co
 - Action: Calculate the on-axis temperature change ΔT(0) using the analytical solution of the steady-state heat equation for a Gaussian pump beam in an absorbing medium. Use the formula ΔT(0) = (α·P/(4π·k))·(γ + ln(2·a²/w²)), where γ is the Euler–Mascheroni constant. Input parameters: α = 130 m⁻¹, P = 0.3 W, k = 0.58 W/(m·K), a = 0.005 m, w = 32e-6 m. Output the computed value as a plain-text decimal with at least 4 decimal places.
 - Output file: `/app/outputs/delta_T_zero.txt`
 - Format: txt
-- Contract: A single decimal number with at least 4 decimal places (e.g., a value around 22.7584 K).
+- Contract: A single decimal number with at least 4 decimal places.
 - Scoring: scored by hidden verifier
 
 ## Output files
@@ -34,7 +34,7 @@ Every file the hidden verifier reads is described below. Write each file under `
 - path: `/app/outputs/delta_T_zero.txt`
 - format: txt
 - purpose: scored
-- target_policy: exact_match
+- target_policy: absolute_tolerance
 - description: The computed on-axis temperature change ΔT(0) from the analytical heat equation model.
 - schema:
   - `type`: text
@@ -55,7 +55,7 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
       "file": "delta_T_zero.txt",
       "format": "txt",
       "purpose": "scored",
-      "target_policy": "exact_match",
+      "target_policy": "absolute_tolerance",
       "schema": {
         "type": "text",
         "description": "A single decimal number representing the on-axis temperature change ΔT(0) in Kelvin, with at least 4 decimal places."

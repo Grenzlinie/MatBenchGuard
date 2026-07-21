@@ -88,7 +88,7 @@ Every file the hidden verifier reads is described below. Write each file under `
     - `exponent_b`: dimensionless
     - `coefficient_a`: cal/(mol·K^(b+1))
 
-Notes: The agent must compute Θ₃ from the explicitly provided a₃ and the Debye relation (which relates a₃, R, and Θ₃). The intermediate c_V data for the regression is supplied directly in the task instructions; the agent must parse it and perform the fit. The hidden gold values are 260 K for Theta3_K and 0.7576 for exponent_b, with tolerances as stated; these are not disclosed to the agent.
+Notes: The agent must compute Θ₃ from the explicitly provided a₃ and the Debye relation (which relates a₃, R, and Θ₃). The intermediate c_V data for the regression is supplied directly in the task instructions; the agent must parse it and perform the fit. The hidden gold values are not disclosed to the agent.
 
 ## Self-check before finishing (optional, not scored)
 
@@ -143,7 +143,7 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
       "description": "Power-law exponent (b) of the heat capacity c_V ∝ T^b in the intermediate temperature range 100–190 K, obtained from a log-log linear regression on the experimentally derived c_V values (Table 1). The exponent is scored against a hidden gold value with a tolerance of ±0.02."
     }
   ],
-  "notes": "The agent must compute Θ₃ from the explicitly provided a₃ and the Debye relation (which relates a₃, R, and Θ₃). The intermediate c_V data for the regression is supplied directly in the task instructions; the agent must parse it and perform the fit. The hidden gold values are 260 K for Theta3_K and 0.7576 for exponent_b, with tolerances as stated; these are not disclosed to the agent."
+  "notes": "The agent must compute Θ₃ from the explicitly provided a₃ and the Debye relation (which relates a₃, R, and Θ₃). The intermediate c_V data for the regression is supplied directly in the task instructions; the agent must parse it and perform the fit. The hidden gold values are not disclosed to the agent."
 }
 ```
 

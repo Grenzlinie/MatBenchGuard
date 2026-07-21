@@ -1,0 +1,167 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 feasible: the agent's raw time-series, distance profiles, and energy tables allow recomputation of the paper's key quantities (final angle, monotonic distance profile, energy magnitude and dominance) without needing the simulation trajectory.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_angle_vs_time.csv": "reference_match",
+    "step_02_basepair_distance.csv": "reference_match",
+    "step_03_interaction_energy.csv": "reference_match",
+    "step_04_final_angles.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values, tolerances, and expected ranges for MD adsorption results, used by the checker to score reproducibility.",
+      "source_provenance": "Extracted from the paper: angle stabilises at ~78° (Fig. 4A, Section 3.1), base-pair distances increase from 0.1 nm to 3.4 nm (Fig. 4B), total interaction energy ~-120 kJ/mol, vdW ~-105 to -140 kJ/mol, electrostatic ~-15 to 15 kJ/mol (Fig. 6, Table 1), control system angles ~78° for altered sequence, and 65°–75° for shorter DNA (Section 3.3).",
+      "generation_method": "Values and ranges taken directly from paper text/figures. Tolerances set to accommodate reasonable MD re-implementation spread while excluding physically implausible results.",
+      "why_not_fabricated": "All gold numbers are directly traced to the paper's reported results and qualitative conclusions; no synthetic or guessed values are used."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_angle_vs_time.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time(ns)",
+            "angle_perp(deg)",
+            "angle_par(deg)"
+          ],
+          "units": {
+            "time(ns)": "ns",
+            "angle_perp(deg)": "deg",
+            "angle_par(deg)": "deg"
+          }
+        },
+        "description": "Time evolution of the angle between the ds-DNA main axis and the MoS₂ surface for the two main orientations."
+      },
+      {
+        "file": "step_02_basepair_distance.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "base_pair",
+            "distance_perp(nm)",
+            "distance_par(nm)"
+          ],
+          "units": {
+            "distance_perp(nm)": "nm",
+            "distance_par(nm)": "nm"
+          }
+        },
+        "description": "Average distance from the centre of mass of each base pair to the MoS₂ surface during the last 15 ns of the main simulations."
+      },
+      {
+        "file": "step_03_interaction_energy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "distance_cutoff(A)",
+            "energy_type",
+            "value(kJ/mol)"
+          ],
+          "units": {
+            "distance_cutoff(A)": "Å",
+            "value(kJ/mol)": "kJ/mol"
+          }
+        },
+        "description": "Van der Waals and electrostatic interaction energies between DNA and MoS₂ for residues within 4 Å of the surface."
+      },
+      {
+        "file": "step_04_final_angles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "final_angle(deg)"
+          ],
+          "units": {
+            "final_angle(deg)": "deg"
+          }
+        },
+        "description": "Final equilibrium adsorption angles for all five systems (two main orientations, altered sequence, 8 bp, 6 bp)."
+      }
+    ],
+    "notes": "All outputs are scored by comparing computed quantities to hidden reference values with per-artifact tolerances. Angles, distances, energies, and stability metrics must match the paper's reported trends and approximate values."
+  },
+  "steps": [
+    {
+      "id": "analyze_angle",
+      "output_file": "step_01_angle_vs_time.csv",
+      "weight": 0.25,
+      "kind": "angle_convergence",
+      "params": {
+        "target_angle_deg": 78.0,
+        "stabilization_time_ns": 100.0,
+        "tolerance_deg": 5.0
+      }
+    },
+    {
+      "id": "analyze_distance",
+      "output_file": "step_02_basepair_distance.csv",
+      "weight": 0.25,
+      "kind": "distance_profile",
+      "params": {
+        "pair1_distance_min_nm": 0.05,
+        "pair1_distance_max_nm": 0.3,
+        "pair12_distance_min_nm": 3.0,
+        "pair12_distance_max_nm": 4.2,
+        "require_monotonic": true
+      }
+    },
+    {
+      "id": "analyze_energy",
+      "output_file": "step_03_interaction_energy.csv",
+      "weight": 0.15,
+      "kind": "energy_check",
+      "params": {
+        "required_systems": [
+          "perp",
+          "par"
+        ],
+        "cutoff": 4.0,
+        "vdw_min": -160.0,
+        "vdw_max": -80.0,
+        "ele_min": -25.0,
+        "ele_max": 25.0,
+        "total_min": -150.0,
+        "total_max": -90.0
+      }
+    },
+    {
+      "id": "final_angles",
+      "output_file": "step_04_final_angles.csv",
+      "weight": 0.35,
+      "kind": "final_angle_check",
+      "params": {
+        "reference_angle_deg": 78.0,
+        "reference_tolerance_deg": 6.0,
+        "short_angle_range": [
+          65.0,
+          75.0
+        ],
+        "systems": {
+          "perp": "reference",
+          "par": "reference",
+          "seq_changed": "reference",
+          "8bp": "short",
+          "6bp": "short"
+        }
+      }
+    }
+  ]
+}

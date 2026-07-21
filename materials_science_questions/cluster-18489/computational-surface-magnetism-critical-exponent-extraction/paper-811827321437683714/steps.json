@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_setup",
+    "title": "Model and film geometry setup",
+    "role": "process",
+    "action": "Define a simple cubic lattice with (100) surfaces, N=100 atomic layers, nearest-neighbor exchange J=1, and a surface exchange modification ΔJ (default 0). Compute the bulk spin-wave stiffness constants D_x = D_y = 2J a^2. Set physical constants k_B=1, ħ=1, lattice constant a=1, and total surface area S=1 (both surfaces). The target temperature for the specific heat is T = 0.1 J/k_B.",
+    "output_file": "",
+    "evidence": "none",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Initialize the lattice geometry, exchange constants, and physical constants for the calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_spectrum",
+    "title": "Compute spin-wave spectrum for each k_parallel",
+    "role": "process",
+    "action": "For a fine grid of wavevectors k_parallel in the two-dimensional Brillouin zone, construct the N×N dynamical matrix D(k_parallel) from the spin-wave equations of motion. Diagonalize to obtain all eigenfrequencies. Identify the surface mode(s) and the bulk band edges Ω_m and Ω_M. Compute the parameter γ(k_parallel) and the phase angle φ_B(k_parallel, Ω) using the paper's formulas.",
+    "output_file": "",
+    "evidence": "none",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Numerical diagonalization of the spin-wave Hamiltonian to obtain the mode spectrum needed for specific heat contributions.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_surface_contribution",
+    "title": "Compute surface magnon contribution to specific heat",
+    "role": "process",
+    "action": "Numerically integrate the surface magnon internal energy over the two-dimensional Brillouin zone using the Bose-Einstein distribution at T=0.1. Replace the surface mode frequency by Ω_B(k_parallel,0) in the long-wavelength limit. Obtain the surface specific heat C_S = dU_S/dT.",
+    "output_file": "",
+    "evidence": "none",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Integration of the surface magnon energy to get the surface-specific-heat contribution.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_bulk_redistribution",
+    "title": "Compute bulk-mode redistribution contribution",
+    "role": "process",
+    "action": "Using the density-of-states correction Δρ_B and the piecewise-defined phase angle φ(Ω) with sum-rule constants φ1=3π/2, φ2=0, evaluate the two bulk-mode contributions: ΔU_B^(1) from the δ-function at Ω_m and ΔU_B^(2) from the continuous part by numerical integration over k_parallel and Ω. Combine with the surface magnon result to obtain the total surface correction to the specific heat, C_s^(TOT) = (1/4) C_S.",
+    "output_file": "",
+    "evidence": "none",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Evaluation of the bulk-mode redistribution and its effect on the surface specific heat.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_final",
+    "title": "Generate final surface specific heat results and verify insensitivity",
+    "role": "scored",
+    "action": "Compute the analytic surface specific heat using the formula \\(C_s^{\\mathrm{analytic}} = \\frac{S}{8\\pi}\\,\\zeta(2)\\,\\frac{k_B T}{\\hbar\\sqrt{D_x D_y}}\\) with \\(\\zeta(2)=\\pi^2/6\\) and the given parameters (T=0.1, S=1, J=1, D_x=D_y=2). Assemble the final JSON with temperature T, surface area S, exchange J, stiffness constants D_x, D_y, the computed C_s_computed (from step 04), the analytic C_s_analytic, and the relative error. Then re-run the calculation pipeline (steps 02–04) with surface exchange modifications ΔJ = +0.5J and ΔJ = -0.5J while keeping other parameters fixed, and record the respective C_s_computed values in the insensitivity_checks field. Verify that the relative change from the ΔJ=0 case is ≤1%.",
+    "output_file": "surface_specific_heat_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final scored artifact containing the computed and analytic specific heat, relative error, and insensitivity check results.",
+    "output_schema": "JSON object with keys: T (float), S (float), J (float), D_x (float), D_y (float), C_s_computed (float), C_s_analytic (float), relative_error (float), insensitivity_checks (object with keys '+0.5J' and '-0.5J', each value a float for C_s_computed)."
+  }
+]

@@ -1,0 +1,122 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes analytical elastic constants and design parameters using the paper's formulas and material constants; scoring is based on error thresholds relative to those recomputed values.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "forward_predictions.csv": "threshold_or_better",
+    "inverse_Vf_predictions.csv": "threshold_or_better",
+    "angle_predictions.csv": "threshold_or_better"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "forward_predictions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Vf_pct",
+            "E11_pred",
+            "E22_pred",
+            "G12_pred",
+            "G23_pred",
+            "nu12_pred",
+            "nu21_pred",
+            "nu23_pred"
+          ],
+          "units": {
+            "Vf_pct": "percent",
+            "E11_pred": "GPa",
+            "E22_pred": "GPa",
+            "G12_pred": "GPa",
+            "G23_pred": "GPa",
+            "nu12_pred": "dimensionless",
+            "nu21_pred": "dimensionless",
+            "nu23_pred": "dimensionless"
+          }
+        },
+        "description": "Forward network predictions of elastic constants at test Vf values."
+      },
+      {
+        "file": "inverse_Vf_predictions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Vf_true",
+            "E11_input",
+            "E22_input",
+            "G12_input",
+            "Vf_pred"
+          ],
+          "units": {
+            "Vf_true": "percent",
+            "E11_input": "GPa",
+            "E22_input": "GPa",
+            "G12_input": "GPa",
+            "Vf_pred": "percent"
+          }
+        },
+        "description": "Inverse Vf network predictions compared to true Vf values."
+      },
+      {
+        "file": "angle_predictions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "theta_true",
+            "E11_input",
+            "E22_input",
+            "G12_input",
+            "theta_pred"
+          ],
+          "units": {
+            "theta_true": "degrees",
+            "E11_input": "GPa",
+            "E22_input": "GPa",
+            "G12_input": "GPa",
+            "theta_pred": "degrees"
+          }
+        },
+        "description": "Inverse angle network predictions compared to true fiber orientation angles."
+      }
+    ],
+    "notes": "All material constants are fixed as given in the paper. The checker recomputes analytic targets and scores using thresholds on maximum errors (forward relative error, inverse absolute errors)."
+  },
+  "steps": [
+    {
+      "id": "forward_predictions_check",
+      "output_file": "forward_predictions.csv",
+      "weight": 0.5,
+      "kind": "custom"
+    },
+    {
+      "id": "inverse_Vf_predictions_check",
+      "output_file": "inverse_Vf_predictions.csv",
+      "weight": 0.25,
+      "kind": "custom"
+    },
+    {
+      "id": "angle_predictions_check",
+      "output_file": "angle_predictions.csv",
+      "weight": 0.25,
+      "kind": "custom"
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold analytical values for test points of forward, inverse Vf, and angle networks; material constants from paper Table 1 and formulas Eq.4; laminate theory formulas standard.",
+      "source_provenance": "Paper Table 1 and Eq.4 for T300/Epoxy properties; laminate theory derived from standard composite mechanics.",
+      "generation_method": "Computed in checker's prepare function using pure Python arithmetic with the same constants and formulas; no external data.",
+      "why_not_fabricated": "These values are exact closed-form results from the paper's defining equations and material data; they are the unique target values for each test point."
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The sole artifact is the output of the deterministic model; no deeper recompute is feasible. Agent values are compared directly to the paper's reference model output (Table I calculated columns).",
+  "pass_threshold": 1.0,
+  "target_policies": {
+    "predictions.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for predicted strain percent and lattice parameter of BSTO for x=0.25,0.50,0.75 from the paper's thermal‑expansion model (Table I, 'Calculated' columns).",
+      "source_provenance": "Paper Table I (Calculated in‑plane strain (%) and Calculated BSTO in‑plane lattice parameter (nm)).",
+      "generation_method": "Values were directly transcribed from the published table; no synthesis.",
+      "why_not_fabricated": "These are the exact model‑predicted values from the original paper's analysis, providing the correct target for the agent's own calculation."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "predictions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "predicted_strain_percent",
+            "predicted_lattice_parameter_nm"
+          ]
+        },
+        "description": "Predicted in-plane strain (percent) and lattice parameter (nm) for BSTO at x=0.25, 0.50, 0.75 (1000 nm film thickness), computed from the thermal-expansion mismatch model. The checker compares each row to the paper's measured values within tolerances; correct sign is also required."
+      }
+    ],
+    "notes": "The only scored artifact is the predictions.csv containing three rows with the computed quantities. The checker will compare each predicted strain and lattice parameter to hidden measured values (from the paper's Table I, 1000 nm films) with a tolerance on strain and lattice parameter, and verify correct sign of strain (positive for x=0.25,0.50; negative for x=0.75). Partial credit is proportional to the number of correct values."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "predictions.csv",
+      "kind": "custom",
+      "weight": 1.0,
+      "description": "Compare agent-computed strain and lattice parameter for each composition x to the paper's model-calculated reference values within tolerance, checking sign.",
+      "tolerance_strain": 0.01,
+      "tolerance_lattice": 0.0005,
+      "gold_strain_025": 1.18,
+      "gold_strain_050": 1.18,
+      "gold_strain_075": -0.68,
+      "gold_lattice_025": 0.4012,
+      "gold_lattice_050": 0.4012,
+      "gold_lattice_075": 0.3938
+    }
+  ]
+}

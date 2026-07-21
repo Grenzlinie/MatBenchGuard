@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01",
+    "title": "Define Debye-Van Hove model functions",
+    "role": "process",
+    "action": "Implement the phonon density of states and the phonon Green's function for the Debye-Van Hove model: ρ(ω) = (32/π) ω⁴ √(1-ω²) for 0 ≤ ω ≤ 1, Re G(ω) = -2 - 8ω² + 16ω⁴, Im G(ω) = (π/(2ω)) ρ(ω). Also implement the Bose occupation factor n(ω, T) for given temperature T (in units of top phonon frequency). These are building blocks for all subsequent integrals.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare reusable Python functions for the ground-state Debye-Van Hove model.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Compute renormalized spectral functions for each b",
+    "role": "process",
+    "action": "For each quadratic coupling parameter b in [-0.2, 0, 0.16], define the auxiliary matrix D(ω) = G(ω) + i 2 n(|ω|, T) Im G(ω) and the renormalized quantity D_tilde(ω) = D(ω) / (1 - b D(ω)). These will be used in the final scored step. Implement as functions that accept ω, b, T and return complex values.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Construct the renormalized functions needed for ZPL integrals.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Compute ZPL quantities and write output",
+    "role": "scored",
+    "action": "For each combination of b ∈ [−0.2, 0, 0.16] and dimensionless temperature T ∈ [0, 0.1, 0.5] (with k_B T / ħ ω_top), compute:\n- Stokes shift δ_L = (a² / (2π)) Re[ D_tilde(0) ] with a = 1.\n- Renormalized Huang-Rhys factor for absorption: S_L_absorption = (a² / π) ∫_0^∞ ω^{-2} Im[ D_tilde(ω) ] dω.\n- Renormalized Huang-Rhys factor for luminescence: S_L_luminescence = (a² / π) ∫_0^∞ ω^{-2} Im[ D_tilde(ω) |1 - b G(ω)|² ] dω.\n- Linewidth and shift from quadratic coupling: γ - i δ_Q = (1/(2π)) ∫_0^∞ ln(1 - b D(ω)) dω; separate real (γ) and imaginary (δ_Q) parts.\nUse numerical integration and handle the singularity at ω=0 properly. Output a JSON file with the computed results.",
+    "output_file": "zpl_quantities.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Evaluates all headline ZPL quantities for the scalar case using the Debye-Van Hove model and writes them to a structured JSON file.",
+    "output_schema": "JSON object with keys: 'b_values' (list of floats), 'T_values' (list of floats), 'results' (list of objects, each with fields: {b, T, delta_L, S_L_absorption, S_L_luminescence, gamma, delta_Q}). All numeric fields are floats."
+  }
+]

@@ -1,0 +1,141 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The activation energy is recomputed from raw temperature-TOF data; kinetic orders are recomputed from pressure-TOF data. No trust in self-reported numbers.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "arrhenius_tof.csv": "metric_recompute",
+    "activation_energy_kcal.txt": "threshold_or_better",
+    "orders_simulation.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Target ranges for activation energy and kinetic orders",
+      "source_provenance": "Paper abstract and Fig. 8, Fig. 9",
+      "generation_method": "Direct copy from paper: Ea 9–12 kcal/mol, H2 order 0.65–0.85, C2H4 order –0.4 to 0.",
+      "why_not_fabricated": "Exact numbers stated in the paper's conclusions and figure descriptions."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "arrhenius_tof.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Temperature (K)",
+            "TurnoverFrequency (s⁻¹)"
+          ],
+          "units": {
+            "Temperature (K)": "K",
+            "TurnoverFrequency (s⁻¹)": "s⁻¹"
+          }
+        },
+        "description": "Raw TOF vs temperature data; the checker will recompute the apparent activation energy from these points."
+      },
+      {
+        "file": "activation_energy_kcal.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "description": "A single floating-point number representing the fitted activation energy in kcal/mol."
+        },
+        "description": "The agent-reported activation energy; used as a reference, with primary scoring via recomputation from arrhenius_tof.csv."
+      },
+      {
+        "file": "orders_simulation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "experiment_label",
+            "Pressure_Torr",
+            "TurnoverFrequency_s-1"
+          ],
+          "units": {
+            "Pressure_Torr": "Torr",
+            "TurnoverFrequency_s-1": "s⁻¹"
+          }
+        },
+        "description": "TOF data at varying H₂ and C₂H₄ pressures; the checker will recompute the kinetic orders from these points."
+      }
+    ],
+    "notes": "The verifier will check activation energy and kinetic orders against acceptable ranges; the exact ranges are not disclosed to the agent."
+  },
+  "steps": [
+    {
+      "id": "arrhenius_structural",
+      "output_file": "arrhenius_tof.csv",
+      "kind": "structural",
+      "weight": 0.05,
+      "description": "File contains six rows, TOF values positive and decreasing with increasing temperature.",
+      "target": {},
+      "tolerance": {}
+    },
+    {
+      "id": "arrhenius_recompute_Ea",
+      "output_file": "arrhenius_tof.csv",
+      "kind": "recompute_Ea",
+      "weight": 0.4,
+      "description": "Fit ln(TOF) vs 1/T; derive activation energy in kcal/mol; must be within 9-12 kcal/mol.",
+      "target": {
+        "range_min": 9.0,
+        "range_max": 12.0
+      },
+      "tolerance": {
+        "hard_range": true,
+        "partial_decay": true
+      }
+    },
+    {
+      "id": "activation_energy_consistency",
+      "output_file": "activation_energy_kcal.txt",
+      "kind": "consistency",
+      "weight": 0.05,
+      "description": "Self-reported activation energy must match the recomputed Ea from arrhenius_tof.csv within ±2 kcal/mol.",
+      "target": {},
+      "tolerance": {
+        "abs_tol": 2.0
+      }
+    },
+    {
+      "id": "orders_H2_order",
+      "output_file": "orders_simulation.csv",
+      "kind": "recompute_order",
+      "weight": 0.25,
+      "description": "From H2 variation rows, fit log TOF vs log P_H2; order must be within 0.65–0.85.",
+      "target": {
+        "species": "H2",
+        "order_range_min": 0.65,
+        "order_range_max": 0.85
+      },
+      "tolerance": {
+        "hard_range": true,
+        "partial_decay": true
+      }
+    },
+    {
+      "id": "orders_C2H4_order",
+      "output_file": "orders_simulation.csv",
+      "kind": "recompute_order",
+      "weight": 0.25,
+      "description": "From C2H4 variation rows, fit log TOF vs log P_C2H4; order must be within -0.4 to 0.",
+      "target": {
+        "species": "C2H4",
+        "order_range_min": -0.4,
+        "order_range_max": 0.0
+      },
+      "tolerance": {
+        "hard_range": true,
+        "partial_decay": true
+      }
+    }
+  ]
+}

@@ -93,70 +93,72 @@ def load_artifact(path):
 
 
 def prepare(outputs_dir, spec):
-    def prepare(outputs_dir, spec):
-        return {"spec": spec}
+    return {"spec": spec}
 
 
 # === block: score_0 (check id='step_02_binding_curves') ===
 def score_0(artifact, step, ctx):
-    def score(artifact, step, ctx):
-        if not artifact or len(artifact) == 0:
+    if not artifact or len(artifact) == 0:
+        return 0.0
+    data = {}
+    for row in artifact:
+        s = row.get('structure')
+        if s is None:
+            continue
+        s = s.strip()
+        try:
+            v = float(row['volume_norm'])
+            e = float(row['binding_energy'])
+        except (ValueError, TypeError, KeyError):
+            continue
+        data.setdefault(s, []).append((v, e))
+    required = ['diamond', 'wurtzite', 'white-tin(4)', 'fcc', 'bcc']
+    for s in required:
+        if s not in data or not data[s]:
             return 0.0
-        data = {}
-        for row in artifact:
-            s = row.get('structure')
-            if s is None:
-                continue
-            s = s.strip()
-            try:
-                v = float(row['volume_norm'])
-                e = float(row['binding_energy'])
-            except (ValueError, TypeError, KeyError):
-                continue
-            data.setdefault(s, []).append((v, e))
-        required = ['diamond', 'wurtzite', 'white-tin(4)', 'fcc', 'bcc']
-        for s in required:
-            if s not in data or not data[s]:
-                return 0.0
-        diamond_pts = data['diamond']
-        eq_vol = min(diamond_pts, key=lambda x: x[1])[0]
-        def energy_at_vol(pts, target):
-            idx = min(range(len(pts)), key=lambda i: abs(pts[i][0] - target))
-            return pts[idx][1]
-        e_d = energy_at_vol(diamond_pts, eq_vol)
-        e_w = energy_at_vol(data['wurtzite'], eq_vol)
-        e_t4 = energy_at_vol(data['white-tin(4)'], eq_vol)
-        e_f = energy_at_vol(data['fcc'], eq_vol)
-        e_b = energy_at_vol(data['bcc'], eq_vol)
-        t4_min_vol = min(data['white-tin(4)'], key=lambda x: x[1])[0]
-        conditions = [
-            e_d < e_w,
-            e_w < e_t4,
-            e_t4 < e_f,
-            e_t4 < e_b,
-            t4_min_vol < eq_vol
-        ]
-        return sum(conditions) / len(conditions)
+    diamond_pts = data['diamond']
+    eq_vol = min(diamond_pts, key=lambda x: x[1])[0]
+    def energy_at_vol(pts, target):
+        idx = min(range(len(pts)), key=lambda i: abs(pts[i][0] - target))
+        return pts[idx][1]
+    e_d = energy_at_vol(diamond_pts, eq_vol)
+    e_w = energy_at_vol(data['wurtzite'], eq_vol)
+    e_t4 = energy_at_vol(data['white-tin(4)'], eq_vol)
+    e_f = energy_at_vol(data['fcc'], eq_vol)
+    e_b = energy_at_vol(data['bcc'], eq_vol)
+    t4_min_vol = min(data['white-tin(4)'], key=lambda x: x[1])[0]
+    conditions = [
+        e_d < e_w,
+        e_w < e_t4,
+        e_t4 < e_f,
+        e_t4 < e_b,
+        t4_min_vol < eq_vol
+    ]
+    return sum(conditions) / len(conditions)
 
 
 # === block: score_1 (check id='step_03_diamond_properties') ===
 def score_1(artifact, step, ctx):
-    def score(artifact, step, ctx):
-        refs = step.get('reference_values', {})
-        tols = step.get('tolerances', {})
-        total = 0.0
-        cnt = 0
-        for key in refs:
-            if key in artifact:
-                val = float(artifact[key])
-                tol = float(tols[key])
-                diff = abs(val - refs[key])
-                if diff <= tol:
-                    total += 1.0
-                else:
-                    total += max(0.0, 1.0 - (diff - tol) / tol)
-                cnt += 1
-        return total / cnt if cnt > 0 else 0.0
+    refs = step.get('reference_values', {})
+    if not isinstance(artifact, dict) or not refs:
+        return 0.0
+    # Enforce presence of all required fields specified in the instruction
+    for key in refs:
+        if key not in artifact:
+            return 0.0
+    tols = step.get('tolerances', {})
+    total = 0.0
+    cnt = 0
+    for key in refs:
+        val = float(artifact[key])
+        tol = float(tols[key])
+        diff = abs(val - refs[key])
+        if diff <= tol:
+            total += 1.0
+        else:
+            total += max(0.0, 1.0 - (diff - tol) / tol)
+        cnt += 1
+    return total / cnt if cnt > 0 else 0.0
 
 
 _SCORERS = {

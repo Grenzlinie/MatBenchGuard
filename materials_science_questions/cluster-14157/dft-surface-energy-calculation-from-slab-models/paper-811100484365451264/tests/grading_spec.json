@@ -1,0 +1,131 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes surface energies from slab_energies.csv and bulk_energy.txt using E_surf = (E_slab - n*E_bulk)/(2A) and compares to paper-reported gold with tolerance; also verifies relative ordering.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "surface_energies.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "/tests/gold_surface_energies.json",
+      "purpose": "Reference surface energies for B4C orientations and their expected ordering.",
+      "source_provenance": "Paper Table 1: E_cleav (eV/Å²) for six orientations.",
+      "generation_method": "Hardcoded from the published paper values.",
+      "why_not_fabricated": "Values are exactly the DFT-calculated surface energies reported in the paper's Table 1, traceable."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "surface_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "orientation",
+            "surface_energy"
+          ],
+          "units": {
+            "surface_energy": "eV/Å²"
+          }
+        },
+        "description": "Specific surface energies for six B4C slab orientations. The checker recomputes surface energies from the agent's intermediate bulk and slab energies and compares to this file."
+      },
+      {
+        "file": "bulk_energy.txt",
+        "format": "txt",
+        "purpose": "intermediate",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "value",
+          "required_fields": []
+        },
+        "description": "Bulk energy per atom in eV, as computed from the bulk DFT calculation."
+      },
+      {
+        "file": "slab_energies.csv",
+        "format": "csv",
+        "purpose": "intermediate",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "orientation",
+            "E_slab",
+            "n_atoms",
+            "area"
+          ]
+        },
+        "description": "Raw slab energies, atom counts, and areas for each orientation."
+      }
+    ],
+    "notes": "The checker also reads the intermediate process files bulk_energy.txt and slab_energies.csv to recompute surface energies, but those are not part of the scored contract."
+  },
+  "tolerance_relative": 0.05,
+  "tolerance_absolute": 0.02,
+  "comparisons": [
+    {
+      "lower": "10-11",
+      "higher": "20-23",
+      "epsilon": 0.005
+    },
+    {
+      "lower": "10-11",
+      "higher": "01-12",
+      "epsilon": 0.005
+    },
+    {
+      "lower": "10-11",
+      "higher": "20-21",
+      "epsilon": 0.005
+    },
+    {
+      "lower": "10-11",
+      "higher": "01-10",
+      "epsilon": 0.005
+    },
+    {
+      "lower": "10-11",
+      "higher": "0001",
+      "epsilon": 0.005
+    },
+    {
+      "lower": "20-23",
+      "higher": "20-21",
+      "epsilon": 0.01
+    },
+    {
+      "lower": "01-12",
+      "higher": "20-21",
+      "epsilon": 0.01
+    },
+    {
+      "lower": "20-21",
+      "higher": "01-10",
+      "epsilon": 0.01
+    },
+    {
+      "lower": "01-10",
+      "higher": "0001",
+      "epsilon": 0.01
+    }
+  ],
+  "steps": [
+    {
+      "id": "surface_energies_values",
+      "output_file": "surface_energies.csv",
+      "kind": "recompute_metric",
+      "weight": 0.7,
+      "description": "Recompute surface energies from raw slab/bulk data and compare to paper gold."
+    },
+    {
+      "id": "surface_energies_ordering",
+      "output_file": "surface_energies.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "description": "Verify relative ordering of surface energies."
+    }
+  ]
+}

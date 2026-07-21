@@ -1,0 +1,105 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Fixed strain ratios compared to paper-reported model results (CAL1 96.4%, CAL2 66.9%) with tolerance. Residual curves validated structurally because precise digitized curves are not available, and the structural checks (monotonic, crossover, final recovery) suffice for reproduction validation.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "fixed_strain_ratios.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "EXP1": "float",
+            "EXP2": "float"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "EXP1": "%",
+            "EXP2": "%"
+          }
+        },
+        "description": "Fixed strain ratio for EXP1 and EXP2, compared to hidden gold values with a tolerance of ±2 percentage points."
+      },
+      {
+        "file": "residual_fixed_strain_ratios.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required": {},
+          "items": {},
+          "required_columns": [
+            "temperature",
+            "exp1_ratio",
+            "exp2_ratio"
+          ],
+          "units": {
+            "temperature": "°C",
+            "exp1_ratio": "%",
+            "exp2_ratio": "%"
+          }
+        },
+        "description": "Residual fixed strain ratio curves for EXP1 and EXP2. Checker verifies that exp1_ratio > exp2_ratio for all temperatures below 40°C and that the curves satisfy monotonicity and crossover properties."
+      }
+    ],
+    "notes": "Fixed strain ratios checked with exact_match (tolerance ±2 pp). Residual curves checked via structural_audit (EXP1 always above EXP2 below 40°C, monotonic, crossover)."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold fixed strain ratios from paper's model simulation (CAL1 and CAL2)",
+      "source_provenance": "Paper text Section 6.2: CAL1 96.4%, CAL2 66.9%",
+      "generation_method": "Manually extracted from paper",
+      "why_not_fabricated": "Values are the paper's reported model results for EXP1 and EXP2 simulations."
+    }
+  ],
+  "steps": [
+    {
+      "id": "fixed_ratios_check_exp1",
+      "output_file": "fixed_strain_ratios.json",
+      "kind": "numeric",
+      "field": "EXP1",
+      "target": 96.4,
+      "tolerance": 2.0,
+      "weight": 0.3
+    },
+    {
+      "id": "fixed_ratios_check_exp2",
+      "output_file": "fixed_strain_ratios.json",
+      "kind": "numeric",
+      "field": "EXP2",
+      "target": 66.9,
+      "tolerance": 2.0,
+      "weight": 0.3
+    },
+    {
+      "id": "residual_curves_check",
+      "output_file": "residual_fixed_strain_ratios.csv",
+      "kind": "structural",
+      "weight": 0.4,
+      "checks": {
+        "initial_100": {
+          "description": "At T=0, both ratios are 100% ± 2pp",
+          "weight": 0.25
+        },
+        "monotonic": {
+          "description": "Each ratio curve is non-increasing",
+          "weight": 0.25
+        },
+        "crossover": {
+          "description": "exp1_ratio > exp2_ratio for all T < 40°C",
+          "weight": 0.25
+        },
+        "final_recovery": {
+          "description": "At T=50°C, both ratios < 5%",
+          "weight": 0.25
+        }
+      }
+    }
+  ]
+}

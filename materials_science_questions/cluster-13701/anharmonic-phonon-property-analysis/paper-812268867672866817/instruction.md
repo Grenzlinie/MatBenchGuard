@@ -9,6 +9,8 @@ The isobaric temperature derivative (∂lnω/∂T)_P can be written as the sum o
 ## Reproduction target
 For the four Raman modes v1 (639 cm⁻¹), v4 (399 cm⁻¹), v5 (197 cm⁻¹), and v6 (144 cm⁻¹) of anatase TiO₂ at 293 K, compute the pure-volume contribution (in units of 10⁻⁵ K⁻¹) and the pure-temperature contribution (in the same units) using the provided β, κ, and mode-specific derivative values. Write the results as a CSV file with columns: mode (string), frequency (float, cm⁻¹), pure_volume_contribution (float, 10⁻⁵ K⁻¹), pure_temperature_contribution (float, 10⁻⁵ K⁻¹).
 
+**Unit conversion**: The formulas directly yield values in units of K⁻¹. To obtain the required output units of 10⁻⁵ K⁻¹, divide each computed value (in K⁻¹) by 10⁻⁵ (equivalently, multiply by 10⁵).
+
 ## Assets
 No external datasets, files, or tools are needed. All required numerical inputs (β, κ, and the per‑mode frequency and derivative values) are provided directly in the workflow step. Only standard Python libraries (e.g., csv or pandas) are needed to read the inputs and write the CSV output.
 
@@ -21,10 +23,10 @@ No external datasets, files, or tools are needed. All required numerical inputs 
   • v4: ω=399 cm⁻¹, (∂lnω/∂T)ₚ = −0.25×10⁻⁵ K⁻¹, (∂lnω/∂P)ₜ = 0.68×10⁻³ kbar⁻¹
   • v5: ω=197 cm⁻¹, (∂lnω/∂T)ₚ = 4.78×10⁻⁵ K⁻¹, (∂lnω/∂P)ₜ = −0.12×10⁻³ kbar⁻¹
   • v6: ω=144 cm⁻¹, (∂lnω/∂T)ₚ = 21.96×10⁻⁵ K⁻¹, (∂lnω/∂P)ₜ = 2.17×10⁻³ kbar⁻¹
-Compute, for each mode, the pure‑volume contribution = −(β/κ) × (∂lnω/∂P)ₜ and the pure‑temperature contribution = (∂lnω/∂T)ₚ − (pure‑volume contribution). Write the results to decomposition_293K.csv.
+Compute, for each mode, the raw pure‑volume contribution = −(β/κ) × (∂lnω/∂P)ₜ (unit K⁻¹) and the raw pure‑temperature contribution = (∂lnω/∂T)ₚ − (raw pure‑volume contribution) (unit K⁻¹). Then convert each to the required units of 10⁻⁵ K⁻¹ by dividing by 10⁻⁵ (multiplying by 10⁵). Write the results to decomposition_293K.csv.
 - Output file: `/app/outputs/decomposition_293K.csv`
 - Format: csv
-- Contract: CSV with columns: mode (string), frequency (float, cm⁻¹), pure_volume_contribution (float, 10⁻⁵ K⁻¹), pure_temperature_contribution (float, 10⁻⁵ K⁻¹).
+- Contract: CSV with columns: mode (string), frequency (float, cm⁻¹), pure_volume_contribution (float, 10⁻⁵ K⁻¹), pure_temperature_contribution (float, 10⁻⁵ K⁻¹). All values in the output columns must be expressed after the unit conversion.
 - Scoring: scored by hidden verifier
 
 ## Output files
@@ -40,7 +42,7 @@ Every file the hidden verifier reads is described below. Write each file under `
 - format: csv
 - purpose: scored
 - target_policy: exact_match
-- description: Computed pure-volume and pure-temperature contributions for each mode.
+- description: Computed pure-volume and pure-temperature contributions for each mode, reported in units of 10⁻⁵ K⁻¹ (i.e., the raw K⁻¹ values divided by 10⁻⁵).
 - schema:
   - `type`: table
   - `required_columns`: `mode`, `frequency`, `pure_volume_contribution`, `pure_temperature_contribution`
@@ -79,7 +81,7 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
           "pure_temperature_contribution": "10⁻⁵ K⁻¹"
         }
       },
-      "description": "Computed pure-volume and pure-temperature contributions for each mode."
+      "description": "Computed pure-volume and pure-temperature contributions for each mode, reported in units of 10⁻⁵ K⁻¹ (i.e., the raw K⁻¹ values divided by 10⁻⁵)."
     }
   ],
   "notes": "All required numerical inputs are provided explicitly in the task instruction and workflow step."

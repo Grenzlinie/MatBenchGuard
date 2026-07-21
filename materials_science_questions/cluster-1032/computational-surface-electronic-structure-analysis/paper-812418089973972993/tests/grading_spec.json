@@ -1,0 +1,69 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "The headline quantities are the computed adsorption energies and energy variation from a fully deterministic semiempirical model; the checker compares the agent's reported values to the paper's published values with tolerance.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold adsorption energies and energy variation threshold for H/Ni as reported in paper Table II and text.",
+      "source_provenance": "Paper Table II (theoretical adsorption energies for H/Ni: 77, 80.5, 80 kcal/mol) and text describing energy variation on Ni(111) < 3 kcal/mol.",
+      "generation_method": "Extracted directly from the paper's published computed results.",
+      "why_not_fabricated": "Values are exactly the paper's reported model outputs; they are not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adsorption_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "surface",
+            "adsorption_energy_kcal_per_mol"
+          ],
+          "description": "Each row gives the surface label and the computed adsorption energy in kcal/mol for that face at its most favorable site."
+        },
+        "description": "The theoretical adsorption energies of hydrogen on Ni(111), Ni(100), and Ni(110) at the energetically most favorable site, as computed by the semiempirical model. The checker will compare each surface’s energy to a hidden reference value (paper Table II) with a tolerance, giving full credit if the absolute deviation is within the tolerance and no credit if outside."
+      },
+      {
+        "file": "energy_variation_n111.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "max_variation_kcal_per_mol"
+          ],
+          "description": "A single row containing the maximum variation of the adsorption energy across the Ni(111) surface unit cell (max – min) in kcal/mol."
+        },
+        "description": "The greatest energy barrier for hydrogen diffusion on Ni(111) computed from the energy profile. The checker will verify that the reported value is ≤ 3.0 kcal/mol (paper’s limit for high mobility), awarding full credit if satisfied."
+      }
+    ],
+    "notes": "The model parameters and wavefunctions are fully specified in the paper; no external data files are needed. The agent must implement the Hamiltonian and the two-dimensional scans from the description. The checker performs a result-level compare: for adsorption energies it compares each surface’s value against the paper’s computed values (77, 80.5, 80 kcal/mol) with a tolerance of ±2 kcal/mol, and for the variation it accepts any value ≤ 3.0 kcal/mol. All gold values and tolerances are hidden."
+  },
+  "steps": [
+    {
+      "id": "write_energies",
+      "output_file": "adsorption_energies.csv",
+      "kind": "numeric",
+      "weight": 0.6,
+      "gold_energies": {
+        "Ni(111)": 77,
+        "Ni(100)": 80.5,
+        "Ni(110)": 80
+      },
+      "tolerance_kcal": 2.0
+    },
+    {
+      "id": "write_variation",
+      "output_file": "energy_variation_n111.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "threshold_kcal": 3.0
+    }
+  ]
+}

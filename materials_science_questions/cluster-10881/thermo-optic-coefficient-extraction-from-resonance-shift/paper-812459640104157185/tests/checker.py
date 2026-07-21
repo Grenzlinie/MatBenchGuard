@@ -100,32 +100,8 @@ def prepare(outputs_dir, spec):
 def score_0(artifact, step, ctx):
     import math
     config = step.get('config', {})
-    alpha_W = config['alpha_W']
-    Gamma = config['Gamma']
-    g = config['g']
-    P1_0 = config['P1_0']
-    P2_0 = config['P2_0']
-    P1_10 = config['P1_10']
-    P2_10 = config['P2_10']
-    tol = config['tolerance']
-    expected_pairs = config['expected_pairs']
-
-    def compute_Jth(R_um, eps):
-        R_cm = R_um * 1e-4
-        A_cm2 = math.pi * R_cm**2 / (1 + 2*eps)
-        sqrt_A_pi = math.sqrt(A_cm2 * math.pi)
-        if eps == 0.0:
-            P1, P2 = P1_0, P2_0
-        elif eps == 0.10:
-            P1, P2 = P1_10, P2_10
-        else:
-            return None
-        alpha_M = -math.log(P1) / (2 * sqrt_A_pi * (1 - P2))
-        return (alpha_W + alpha_M) / (g * Gamma)
-
-    expected = {}
-    for R_um, eps in expected_pairs:
-        expected[(R_um, eps)] = compute_Jth(R_um, eps)
+    tol = float(config['tolerance'])
+    reference_data = config['reference_data']  # list of dicts with R, epsilon, Jth_measured
 
     rows = artifact  # list of dictreader dicts
     if not rows:
@@ -139,9 +115,15 @@ def score_0(artifact, step, ctx):
             Jth = float(row['computed_Jth'])
         except (KeyError, ValueError):
             return 0.0
-        key = (R, eps)
-        if key in expected:
-            errors.append(abs(Jth - expected[key]))
+        # find matching reference data entry
+        match = None
+        for ref in reference_data:
+            if float(ref['R']) == R and float(ref['epsilon']) == eps:
+                match = ref
+                break
+        if match is None:
+            return 0.0
+        errors.append(abs(Jth - float(match['Jth_measured'])))
 
     if not errors:
         return 0.0

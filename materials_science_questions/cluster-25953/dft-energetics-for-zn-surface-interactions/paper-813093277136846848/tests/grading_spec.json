@@ -1,0 +1,58 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All trend checks are recomputed directly from the agent's CSV; no trust is placed on self-reported numbers.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "adsorption_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "trend_thresholds_derived_from_paper",
+      "source_provenance": "Table 4 of the source paper (adsorption energies and bond lengths for I3- on CZTS and CZTSSe)",
+      "generation_method": "extracted from the paper's reported values and used to define expected direction, magnitude thresholds, and relative ordering",
+      "why_not_fabricated": "Directly based on published experimental DFT results; the thresholds are the minimum required to enforce the paper's stated physical trends."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adsorption_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "file_format": "csv",
+          "required_columns": [
+            "system",
+            "site",
+            "adsorption_energy_eV",
+            "I1_I2_bond_length_A"
+          ],
+          "units": {
+            "adsorption_energy_eV": "eV",
+            "I1_I2_bond_length_A": "Angstrom"
+          }
+        },
+        "description": "CSV file containing the computed adsorption energies (eV) and I1–I2 bond lengths (Å) for I3- on Zn, Cu, and Sn sites of CZTS and CZTSSe surfaces. The checker compares relative trends (e.g., Zn-site adsorption energy more negative in CZTSSe than in CZTS, Cu/Sn changes smaller, and bond length elongation on Zn) against hidden reference values derived from the paper’s DFT data."
+      }
+    ],
+    "notes": "The task is scoped to the separable DFT adsorption energy calculations. The companion quantities (atomic/bond populations, DOS, EDD) are not required as they are explanatory details. The agent may use any open-source periodic DFT code and must construct the CZTS and CZTSSe slab models from public structure data."
+  },
+  "steps": [
+    {
+      "id": "adsorption_trends",
+      "output_file": "adsorption_results.csv",
+      "weight": 1.0,
+      "kind": "trend_recompute",
+      "description": "Checks trends in adsorption energies and bond lengths",
+      "trend_thresholds": {
+        "zn_energy_shift_min": -0.5,
+        "cu_sn_energy_shift_max_magnitude": 0.8,
+        "zn_bond_elong_min": 0.05,
+        "zn_bond_lead_min_diff": 0.02
+      }
+    }
+  ]
+}

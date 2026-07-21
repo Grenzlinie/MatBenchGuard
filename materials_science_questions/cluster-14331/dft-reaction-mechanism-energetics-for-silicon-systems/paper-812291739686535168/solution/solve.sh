@@ -17,6 +17,7 @@ cat > /app/outputs/derived_quantities.json <<'FFEOF'
   "E2_inf": 25.0,
   "E8_inf": 35.6,
   "delta_Hf_EtSiH": 47.7,
-  "group_additivity_C_H2_C_Si": -1.3
+  "group_additivity_C_H2_C_Si": -1.3,
+  "predicted_ES_conversion_pct_600s": 44.3
 }
 FFEOF

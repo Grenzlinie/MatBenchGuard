@@ -1,0 +1,277 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute from DFT raw outputs infeasible in checker sandbox; score structural relationships (sign, ranges) and proximity to paper's reference values with generous tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step01_LDA_results.json": "reference_match",
+    "step02_GGA_results.json": "reference_match",
+    "step03_B3LYP_results.json": "reference_match",
+    "step04_B3LYP_magnetic.json": "structural_audit",
+    "step05_HF_results.json": "reference_match",
+    "step06_HF_magnetic.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for non-magnetic properties (LDA, GGA, B3LYP, HF) from paper Table 4.",
+      "source_provenance": "Paper Table 4; values verified against solve.sh oracle.",
+      "generation_method": "Copied from paper (Table 4) as trusted hidden gold.",
+      "why_not_fabricated": "These are the paper's reported numbers, which are the target of reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step01_LDA_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "a",
+            "B",
+            "u_Fe",
+            "u_Si",
+            "Delta_ind"
+          ],
+          "items": {},
+          "units": {
+            "a": "Å",
+            "B": "GPa",
+            "u_Fe": "dimensionless",
+            "u_Si": "dimensionless",
+            "Delta_ind": "eV"
+          }
+        },
+        "description": "LDA‑optimized structural and electronic properties"
+      },
+      {
+        "file": "step02_GGA_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "a",
+            "B",
+            "u_Fe",
+            "u_Si",
+            "Delta_ind"
+          ],
+          "items": {},
+          "units": {
+            "a": "Å",
+            "B": "GPa",
+            "u_Fe": "dimensionless",
+            "u_Si": "dimensionless",
+            "Delta_ind": "eV"
+          }
+        },
+        "description": "GGA‑optimized structural and electronic properties"
+      },
+      {
+        "file": "step03_B3LYP_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "a",
+            "B",
+            "u_Fe",
+            "u_Si",
+            "Delta_ind"
+          ],
+          "items": {},
+          "units": {
+            "a": "Å",
+            "B": "GPa",
+            "u_Fe": "dimensionless",
+            "u_Si": "dimensionless",
+            "Delta_ind": "eV"
+          }
+        },
+        "description": "B3LYP (non‑magnetic) optimized structural and electronic properties"
+      },
+      {
+        "file": "step04_B3LYP_magnetic.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "energy_diff_FM_NM",
+            "moment_Fe"
+          ],
+          "items": {},
+          "units": {
+            "energy_diff_FM_NM": "eV per unit cell",
+            "moment_Fe": "μ_B"
+          }
+        },
+        "description": "B3LYP ferromagnetic‑vs‑nonmagnetic energy difference and Fe moment"
+      },
+      {
+        "file": "step05_HF_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "a",
+            "B",
+            "u_Fe",
+            "u_Si",
+            "Delta_ind"
+          ],
+          "items": {},
+          "units": {
+            "a": "Å",
+            "B": "GPa",
+            "u_Fe": "dimensionless",
+            "u_Si": "dimensionless",
+            "Delta_ind": "eV"
+          }
+        },
+        "description": "Hartree‑Fock (non‑magnetic) optimized structural and electronic properties"
+      },
+      {
+        "file": "step06_HF_magnetic.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "energy_diff_FM_NM",
+            "moment_Fe"
+          ],
+          "items": {},
+          "units": {
+            "energy_diff_FM_NM": "eV per unit cell",
+            "moment_Fe": "μ_B"
+          }
+        },
+        "description": "Hartree‑Fock ferromagnetic‑vs‑nonmagnetic energy difference and Fe moment"
+      }
+    ],
+    "notes": "Structural T3 scoring: the checker verifies relative ordering of lattice constants (LDA < GGA ≤ B3LYP << HF) and indirect gaps (LDA < GGA << B3LYP << HF), and that the B3LYP ferromagnetic state is metastable (energy_diff > 0) with a moment ~1.6 μ_B while the HF ferromagnetic state is stable (energy_diff < 0) with a moment ~3.8 μ_B. Tolerances are generous to absorb implementation‑dependent spread."
+  },
+  "steps": [
+    {
+      "id": "step01_LDA",
+      "output_file": "step01_LDA_results.json",
+      "kind": "reference_match",
+      "weight": 0.1,
+      "reference": {
+        "a": 4.39,
+        "B": 264,
+        "u_Fe": 0.14,
+        "u_Si": 0.843,
+        "Delta_ind": 0.121
+      },
+      "tolerances": {
+        "a": 0.2,
+        "B": 50,
+        "u_Fe": 0.01,
+        "u_Si": 0.01,
+        "Delta_ind": 0.5
+      }
+    },
+    {
+      "id": "step02_GGA",
+      "output_file": "step02_GGA_results.json",
+      "kind": "reference_match",
+      "weight": 0.1,
+      "reference": {
+        "a": 4.46,
+        "B": 224,
+        "u_Fe": 0.139,
+        "u_Si": 0.842,
+        "Delta_ind": 0.151
+      },
+      "tolerances": {
+        "a": 0.2,
+        "B": 50,
+        "u_Fe": 0.01,
+        "u_Si": 0.01,
+        "Delta_ind": 0.5
+      }
+    },
+    {
+      "id": "step03_B3LYP",
+      "output_file": "step03_B3LYP_results.json",
+      "kind": "reference_match",
+      "weight": 0.2,
+      "reference": {
+        "a": 4.45,
+        "B": 230,
+        "u_Fe": 0.135,
+        "u_Si": 0.84,
+        "Delta_ind": 1.531
+      },
+      "tolerances": {
+        "a": 0.25,
+        "B": 60,
+        "u_Fe": 0.015,
+        "u_Si": 0.015,
+        "Delta_ind": 1.0
+      }
+    },
+    {
+      "id": "step04_B3LYP_magnetic",
+      "output_file": "step04_B3LYP_magnetic.json",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "checks": {
+        "energy_diff_FM_NM": {
+          "min": 0.0
+        },
+        "moment_Fe": {
+          "min": 0.5,
+          "max": 3.0
+        }
+      }
+    },
+    {
+      "id": "step05_HF",
+      "output_file": "step05_HF_results.json",
+      "kind": "reference_match",
+      "weight": 0.1,
+      "reference": {
+        "a": 4.81,
+        "B": 53,
+        "u_Fe": 0.152,
+        "u_Si": 0.846,
+        "Delta_ind": 3.362
+      },
+      "tolerances": {
+        "a": 0.3,
+        "B": 30,
+        "u_Fe": 0.02,
+        "u_Si": 0.02,
+        "Delta_ind": 1.5
+      }
+    },
+    {
+      "id": "step06_HF_magnetic",
+      "output_file": "step06_HF_magnetic.json",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "checks": {
+        "energy_diff_FM_NM": {
+          "max": -0.5
+        },
+        "moment_Fe": {
+          "min": 2.0,
+          "max": 6.0
+        }
+      }
+    }
+  ]
+}

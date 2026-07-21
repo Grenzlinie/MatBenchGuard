@@ -1,0 +1,144 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Phase diagram transition temperatures compared to hidden paper gold within tolerance ±0.02 (T0); energy autocorrelation and dielectric function are qualitative and scored by structural properties (T3) because a lightweight recompute from raw simulation is infeasible.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold phase diagram transition points",
+      "source_provenance": "Paper Fig. 1(c) – read off approximate transition temperatures for AFE at p=0..0.4 and FE threshold at p=0.5",
+      "generation_method": "manual reading of published phase diagram curves",
+      "why_not_fabricated": "Values correspond to the reported points in the paper, cross-checked with the oracle solve.sh constants."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phase_diagram.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "p",
+            "transition_type",
+            "Tc"
+          ],
+          "units": {
+            "Tc": "dimensionless temperature"
+          }
+        },
+        "description": "Extracted AFE and FE transition temperatures as a function of disorder p. The checker compares these to hidden reference values obtained from the paper's phase diagram."
+      },
+      {
+        "file": "energy_autocorrelation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "t",
+            "phi"
+          ],
+          "units": {
+            "t": "Monte Carlo step",
+            "phi": "dimensionless"
+          }
+        },
+        "description": "Normalized energy autocorrelation function for the completely disordered case at low temperature. The checker verifies the qualitative slow decay pattern (e.g., phi remains above 0.1 at large t)."
+      },
+      {
+        "file": "dielectric_function.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "p",
+            "T",
+            "omega",
+            "epsilon"
+          ],
+          "units": {
+            "T": "dimensionless temperature",
+            "omega": "Monte Carlo step frequency",
+            "epsilon": "dimensionless dielectric constant"
+          }
+        },
+        "description": "Dielectric constant as a function of temperature for several MC step frequencies. The checker verifies that for p=0.5, epsilon decreases with increasing frequency at low temperature and the peak near the transition is broader than for p=0."
+      }
+    ],
+    "notes": "The phase diagram transition temperatures are compared against hidden gold values extracted from the paper's Fig. 1(c). The energy autocorrelation and dielectric function are scored via structural checks (trends and qualitative behavior) rather than exact numerical matches."
+  },
+  "steps": [
+    {
+      "id": "step3_phase_diagram",
+      "output_file": "phase_diagram.csv",
+      "weight": 0.6,
+      "kind": "reference_match",
+      "target_policy": "reference_match",
+      "gold": [
+        {
+          "p": 0.0,
+          "transition_type": "AFE",
+          "Tc": 0.86
+        },
+        {
+          "p": 0.1,
+          "transition_type": "AFE",
+          "Tc": 0.74
+        },
+        {
+          "p": 0.2,
+          "transition_type": "AFE",
+          "Tc": 0.63
+        },
+        {
+          "p": 0.3,
+          "transition_type": "AFE",
+          "Tc": 0.53
+        },
+        {
+          "p": 0.4,
+          "transition_type": "AFE",
+          "Tc": 0.44
+        },
+        {
+          "p": 0.5,
+          "transition_type": "FE",
+          "Tc": 0.59
+        }
+      ],
+      "tolerance": 0.02
+    },
+    {
+      "id": "step5_energy_autocorrelation",
+      "output_file": "energy_autocorrelation.csv",
+      "weight": 0.2,
+      "kind": "structural_audit",
+      "target_policy": "structural_audit",
+      "min_t": 1000,
+      "phi_min_threshold": 0.1,
+      "phi0_tolerance": 0.05
+    },
+    {
+      "id": "step7_dielectric_function",
+      "output_file": "dielectric_function.csv",
+      "weight": 0.2,
+      "kind": "structural_audit",
+      "target_policy": "structural_audit",
+      "omega_values": [
+        0.1,
+        1.0,
+        10.0
+      ],
+      "low_temp": 0.1,
+      "Tc_ordered": 0.86,
+      "Tc_disordered": 0.59,
+      "epsilon_threshold_ordered_offpeak": 0.2
+    }
+  ]
+}

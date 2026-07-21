@@ -1,0 +1,65 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker independently computes Q^ES from the paper’s analytic formulas (Mie coefficients + radial integrals) and compares to the agent’s reported values.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "q_es_values.csv": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "q_es_values.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": ["alpha", "Q_ES"],
+          "units": {
+            "alpha": "dimensionless",
+            "Q_ES": "dimensionless"
+          }
+        },
+        "description": "The computed electrostrictive hemisphere force coefficient Q^ES for the front hemisphere at specified size parameters. The hidden checker independently computes Q^ES from the analytic formulas and compares the agent’s reported value; it must match within a tolerance."
+      },
+      {
+        "file": "mie_internal_data.csv",
+        "format": "csv",
+        "purpose": "evidence",
+        "target_policy": "none",
+        "schema": {
+          "type": "table",
+          "required_columns": ["alpha", "c1_real", "c1_imag", "d1_real", "d1_imag", "I1", "I2", "I3"],
+          "units": {
+            "alpha": "dimensionless",
+            "c1_real": "dimensionless",
+            "c1_imag": "dimensionless",
+            "d1_real": "dimensionless",
+            "d1_imag": "dimensionless",
+            "I1": "dimensionless",
+            "I2": "dimensionless",
+            "I3": "dimensionless"
+          }
+        },
+        "description": "Mie internal coefficients and radial integrals that demonstrate the computation pipeline."
+      }
+    ],
+    "notes": "Both the scored artifact and the intermediate evidence are listed. The checker verifies the shape of both files but only scores q_es_values.csv."
+  },
+  "steps": [
+    {
+      "id": "q_es_step",
+      "output_file": "q_es_values.csv",
+      "kind": "numeric_vector",
+      "weight": 1.0,
+      "description": "Independently compute Q_ES from first principles using Mie theory and radial integrals, then compare the agent’s reported values for each α.",
+      "parameters": {
+        "alphas": [2, 4, 6, 8, 10],
+        "n": 1.33,
+        "rtol": 0.001,
+        "atol": 1e-05
+      }
+    }
+  ]
+}

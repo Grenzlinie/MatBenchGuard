@@ -1,0 +1,114 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes expected zero-temperature energies from the model (Δ=0.2) and identifies the Néel temperature from the CSV; structural checks verify ordering and specific-heat discontinuity.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for zero-temperature energies and Néel temperature",
+      "source_provenance": "paper equations (24),(25) with Δ=0.2, and textual statement 'k_B T_N ≈ 0.052 I'",
+      "generation_method": "exact analytic formulas: E_SDW=-Δ²/I=−0.04, E_F=0, E_P=-Δ+I/4=0.05, μ_SDW=√(1−(2Δ/I)²)≈0.9165, μ_F=1; T_N=0.052 from paper",
+      "why_not_fabricated": "Directly from the published model and reported numerical results in the paper."
+    }
+  ],
+  "target_policies": {
+    "thermodynamic_data.csv": "metric_recompute"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermodynamic_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "E_P",
+            "E_F",
+            "E_SDW",
+            "mu_F",
+            "mu_SDW",
+            "C_P",
+            "C_F",
+            "C_SDW",
+            "S_P",
+            "S_SDW"
+          ],
+          "units": {
+            "T": "1/k_B",
+            "E_P": "energy per atom in units of I",
+            "E_F": "energy per atom in units of I",
+            "E_SDW": "energy per atom in units of I",
+            "mu_F": "dimensionless",
+            "mu_SDW": "dimensionless",
+            "C_P": "specific heat in units of k_B",
+            "C_F": "specific heat in units of k_B",
+            "C_SDW": "specific heat in units of k_B",
+            "S_P": "entropy in units of k_B",
+            "S_SDW": "entropy in units of k_B"
+          }
+        },
+        "description": "Temperature‑dependent Hartree‑Fock thermodynamic quantities for paramagnetic, ferromagnetic, and spin‑density‑wave states at half‑filling with Δ=0.2I."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "zero_temp_energies",
+      "output_file": "thermodynamic_data.csv",
+      "weight": 0.4,
+      "config": {
+        "expected": {
+          "E_SDW": -0.04,
+          "E_F": 0.0,
+          "E_P": 0.05,
+          "mu_SDW": 0.916515,
+          "mu_F": 1.0
+        },
+        "tolerances": {
+          "E_SDW_rel": 0.01,
+          "E_P_rel": 0.01,
+          "E_F_abs": 0.001,
+          "mu_SDW_rel": 0.01,
+          "mu_F_rel": 0.01
+        },
+        "zero_t_threshold": 0.0001
+      }
+    },
+    {
+      "id": "critical_temperature",
+      "output_file": "thermodynamic_data.csv",
+      "weight": 0.3,
+      "config": {
+        "T_N_gold": 0.052,
+        "T_N_tol_rel": 0.05,
+        "mu_threshold": 0.0001,
+        "min_rows": 2
+      }
+    },
+    {
+      "id": "energy_ordering_and_specific_heat",
+      "output_file": "thermodynamic_data.csv",
+      "weight": 0.2,
+      "config": {
+        "mu_threshold": 0.0001,
+        "ordering_tolerance_rel": 0.001,
+        "specific_heat_jump_threshold": 0.3,
+        "window_frac": 0.02
+      }
+    },
+    {
+      "id": "temperature_range",
+      "output_file": "thermodynamic_data.csv",
+      "weight": 0.1,
+      "config": {
+        "T_N_gold": 0.052,
+        "factor": 1.5,
+        "zero_t_threshold": 1e-06
+      }
+    }
+  ]
+}

@@ -1,0 +1,815 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Agent outputs only aggregated final values; no raw intermediate artifact to recompute from; compare reported values against paper's reported numbers with appropriate tolerances and structural checks.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for metallic phase boundary, magnetization, occupations, and Kondo insulator gap, extracted from paper's figures and tables.",
+      "source_provenance": "paper figures/tables: Fig.5 (phase boundaries), Fig.2 (magnetization), Fig.3/Fig.4 (occupations), Fig.1 (Kondo insulator). Numerically digitized and verified consistent with reference solve.sh.",
+      "generation_method": "Digitized from published figures and cross-checked with the reference oracle output.",
+      "why_not_fabricated": "Values correspond to the paper's quantitative claims; the checker compares agent's computation to these published results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "all_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "metallic_phase_boundary",
+            "metallic_magnetization",
+            "metallic_occupations",
+            "kondo_insulator"
+          ],
+          "metallic_phase_boundary": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "N",
+                "epsilon_f_over_V",
+                "U_c_over_V"
+              ],
+              "properties": {
+                "N": {
+                  "type": "integer"
+                },
+                "epsilon_f_over_V": {
+                  "type": "number"
+                },
+                "U_c_over_V": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "metallic_magnetization": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "N",
+                "epsilon_f_over_V",
+                "B_over_V",
+                "magnetization"
+              ],
+              "properties": {
+                "N": {
+                  "type": "integer"
+                },
+                "epsilon_f_over_V": {
+                  "type": "number"
+                },
+                "B_over_V": {
+                  "type": "number"
+                },
+                "magnetization": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "metallic_occupations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "N",
+                "epsilon_f_over_V",
+                "e2",
+                "p2",
+                "d2",
+                "n_f"
+              ],
+              "properties": {
+                "N": {
+                  "type": "integer"
+                },
+                "epsilon_f_over_V": {
+                  "type": "number"
+                },
+                "e2": {
+                  "type": "number"
+                },
+                "p2": {
+                  "type": "number"
+                },
+                "d2": {
+                  "type": "number"
+                },
+                "n_f": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "kondo_insulator": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "U_over_V",
+                "e2",
+                "p2",
+                "d2",
+                "gap_over_V"
+              ],
+              "properties": {
+                "U_over_V": {
+                  "type": "number"
+                },
+                "e2": {
+                  "type": "number"
+                },
+                "p2": {
+                  "type": "number"
+                },
+                "d2": {
+                  "type": "number"
+                },
+                "gap_over_V": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "description": "Numerically computed quantities from the slave-boson mean-field theory, covering metallic phase boundary, magnetization, occupation probabilities, and Kondo insulator gap. The checker will compare each field's values to the paper-reported numbers with appropriate tolerances."
+      }
+    ],
+    "notes": "The task is purely computational; all parameters and equations are given in the method description. The agent must implement the mean-field equations and solve them over the specified parameter ranges."
+  },
+  "steps": [
+    {
+      "id": "phase_boundary",
+      "output_file": "all_results.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "target_policy": "reference_match",
+      "tolerance_Uc": 0.5,
+      "gold": [
+        {
+          "N": 1,
+          "epsilon_f_over_V": -3.0,
+          "U_c_over_V": 7.0
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": -2.0,
+          "U_c_over_V": 5.5
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": -1.0,
+          "U_c_over_V": 4.0
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 0.0,
+          "U_c_over_V": 2.8
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 1.0,
+          "U_c_over_V": 1.7
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 2.0,
+          "U_c_over_V": 0.8
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 3.0,
+          "U_c_over_V": 0.2
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": -3.0,
+          "U_c_over_V": 12.5
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": -2.0,
+          "U_c_over_V": 10.0
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": -1.0,
+          "U_c_over_V": 7.5
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": 0.0,
+          "U_c_over_V": 5.2
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": 1.0,
+          "U_c_over_V": 3.2
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": 2.0,
+          "U_c_over_V": 1.5
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": 3.0,
+          "U_c_over_V": 0.4
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": -3.0,
+          "U_c_over_V": 18.0
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": -2.0,
+          "U_c_over_V": 14.5
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": -1.0,
+          "U_c_over_V": 11.0
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": 0.0,
+          "U_c_over_V": 8.0
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": 1.0,
+          "U_c_over_V": 5.0
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": 2.0,
+          "U_c_over_V": 2.5
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": 3.0,
+          "U_c_over_V": 0.7
+        }
+      ]
+    },
+    {
+      "id": "magnetization",
+      "output_file": "all_results.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "target_policy": "reference_match",
+      "tolerance_m": 0.05,
+      "gold": [
+        {
+          "N": 1,
+          "epsilon_f_over_V": 5.0,
+          "B_over_V": 0.0,
+          "magnetization": 0.0
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 5.0,
+          "B_over_V": 0.02,
+          "magnetization": 0.01
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 5.0,
+          "B_over_V": 0.05,
+          "magnetization": 0.02
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 5.0,
+          "B_over_V": 0.1,
+          "magnetization": 0.04
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 4.5,
+          "B_over_V": 0.0,
+          "magnetization": 0.0
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 4.5,
+          "B_over_V": 0.02,
+          "magnetization": 0.02
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 4.5,
+          "B_over_V": 0.05,
+          "magnetization": 0.04
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 4.5,
+          "B_over_V": 0.1,
+          "magnetization": 0.07
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 4.0,
+          "B_over_V": 0.0,
+          "magnetization": 0.0
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 4.0,
+          "B_over_V": 0.02,
+          "magnetization": 0.03
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 4.0,
+          "B_over_V": 0.05,
+          "magnetization": 0.06
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 4.0,
+          "B_over_V": 0.1,
+          "magnetization": 0.1
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 3.5,
+          "B_over_V": 0.0,
+          "magnetization": 0.05
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 3.5,
+          "B_over_V": 0.02,
+          "magnetization": 0.07
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 3.5,
+          "B_over_V": 0.05,
+          "magnetization": 0.1
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 3.5,
+          "B_over_V": 0.1,
+          "magnetization": 0.14
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 3.0,
+          "B_over_V": 0.0,
+          "magnetization": 0.12
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 3.0,
+          "B_over_V": 0.02,
+          "magnetization": 0.14
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 3.0,
+          "B_over_V": 0.05,
+          "magnetization": 0.17
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 3.0,
+          "B_over_V": 0.1,
+          "magnetization": 0.2
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 2.5,
+          "B_over_V": 0.0,
+          "magnetization": 0.2
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 2.5,
+          "B_over_V": 0.02,
+          "magnetization": 0.22
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 2.5,
+          "B_over_V": 0.05,
+          "magnetization": 0.25
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 2.5,
+          "B_over_V": 0.1,
+          "magnetization": 0.28
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 2.0,
+          "B_over_V": 0.0,
+          "magnetization": 0.28
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 2.0,
+          "B_over_V": 0.02,
+          "magnetization": 0.3
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 2.0,
+          "B_over_V": 0.05,
+          "magnetization": 0.32
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 2.0,
+          "B_over_V": 0.1,
+          "magnetization": 0.35
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 1.5,
+          "B_over_V": 0.0,
+          "magnetization": 0.34
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 1.5,
+          "B_over_V": 0.02,
+          "magnetization": 0.36
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 1.5,
+          "B_over_V": 0.05,
+          "magnetization": 0.38
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 1.5,
+          "B_over_V": 0.1,
+          "magnetization": 0.4
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 1.0,
+          "B_over_V": 0.0,
+          "magnetization": 0.38
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 1.0,
+          "B_over_V": 0.02,
+          "magnetization": 0.4
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 1.0,
+          "B_over_V": 0.05,
+          "magnetization": 0.42
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 1.0,
+          "B_over_V": 0.1,
+          "magnetization": 0.44
+        }
+      ]
+    },
+    {
+      "id": "occupations",
+      "output_file": "all_results.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "target_policy": "reference_match",
+      "tolerance_prob": 0.02,
+      "gold": [
+        {
+          "N": 1,
+          "epsilon_f_over_V": -2.0,
+          "e2": 0.05,
+          "p2": 0.3,
+          "d2": 0.65,
+          "n_f": 1.6
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": -1.0,
+          "e2": 0.1,
+          "p2": 0.38,
+          "d2": 0.52,
+          "n_f": 1.42
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 0.0,
+          "e2": 0.2,
+          "p2": 0.35,
+          "d2": 0.45,
+          "n_f": 1.25
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 0.5,
+          "e2": 0.28,
+          "p2": 0.3,
+          "d2": 0.42,
+          "n_f": 1.14
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 1.0,
+          "e2": 0.4,
+          "p2": 0.25,
+          "d2": 0.35,
+          "n_f": 0.95
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 1.5,
+          "e2": 0.55,
+          "p2": 0.2,
+          "d2": 0.25,
+          "n_f": 0.7
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 2.0,
+          "e2": 0.7,
+          "p2": 0.15,
+          "d2": 0.15,
+          "n_f": 0.45
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 2.5,
+          "e2": 0.8,
+          "p2": 0.1,
+          "d2": 0.1,
+          "n_f": 0.3
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 3.0,
+          "e2": 0.88,
+          "p2": 0.07,
+          "d2": 0.05,
+          "n_f": 0.17
+        },
+        {
+          "N": 1,
+          "epsilon_f_over_V": 4.0,
+          "e2": 0.95,
+          "p2": 0.03,
+          "d2": 0.02,
+          "n_f": 0.07
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": -2.0,
+          "e2": 0.02,
+          "p2": 0.35,
+          "d2": 0.63,
+          "n_f": 1.61
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": -1.0,
+          "e2": 0.04,
+          "p2": 0.4,
+          "d2": 0.56,
+          "n_f": 1.52
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": 0.0,
+          "e2": 0.08,
+          "p2": 0.38,
+          "d2": 0.54,
+          "n_f": 1.46
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": 0.5,
+          "e2": 0.12,
+          "p2": 0.35,
+          "d2": 0.53,
+          "n_f": 1.41
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": 1.0,
+          "e2": 0.2,
+          "p2": 0.3,
+          "d2": 0.5,
+          "n_f": 1.3
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": 1.5,
+          "e2": 0.3,
+          "p2": 0.25,
+          "d2": 0.45,
+          "n_f": 1.15
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": 2.0,
+          "e2": 0.45,
+          "p2": 0.2,
+          "d2": 0.35,
+          "n_f": 0.9
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": 2.5,
+          "e2": 0.6,
+          "p2": 0.15,
+          "d2": 0.25,
+          "n_f": 0.65
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": 3.0,
+          "e2": 0.75,
+          "p2": 0.1,
+          "d2": 0.15,
+          "n_f": 0.4
+        },
+        {
+          "N": 3,
+          "epsilon_f_over_V": 4.0,
+          "e2": 0.9,
+          "p2": 0.05,
+          "d2": 0.05,
+          "n_f": 0.15
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": -2.0,
+          "e2": 0.01,
+          "p2": 0.3,
+          "d2": 0.69,
+          "n_f": 1.68
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": -1.0,
+          "e2": 0.02,
+          "p2": 0.35,
+          "d2": 0.63,
+          "n_f": 1.61
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": 0.0,
+          "e2": 0.05,
+          "p2": 0.33,
+          "d2": 0.62,
+          "n_f": 1.57
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": 0.5,
+          "e2": 0.08,
+          "p2": 0.3,
+          "d2": 0.62,
+          "n_f": 1.54
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": 1.0,
+          "e2": 0.15,
+          "p2": 0.25,
+          "d2": 0.6,
+          "n_f": 1.45
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": 1.5,
+          "e2": 0.25,
+          "p2": 0.22,
+          "d2": 0.53,
+          "n_f": 1.28
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": 2.0,
+          "e2": 0.4,
+          "p2": 0.18,
+          "d2": 0.42,
+          "n_f": 1.02
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": 2.5,
+          "e2": 0.55,
+          "p2": 0.12,
+          "d2": 0.33,
+          "n_f": 0.78
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": 3.0,
+          "e2": 0.7,
+          "p2": 0.08,
+          "d2": 0.22,
+          "n_f": 0.52
+        },
+        {
+          "N": 5,
+          "epsilon_f_over_V": 4.0,
+          "e2": 0.88,
+          "p2": 0.04,
+          "d2": 0.08,
+          "n_f": 0.2
+        }
+      ]
+    },
+    {
+      "id": "kondo_insulator",
+      "output_file": "all_results.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "target_policy": "reference_match",
+      "tolerance_prob": 0.02,
+      "tol_gap_abs": 0.015,
+      "tol_gap_rel": 0.15,
+      "gold": [
+        {
+          "U_over_V": 0.0,
+          "e2": 0.0625,
+          "p2": 0.0625,
+          "d2": 0.0625,
+          "gap_over_V": 0.2
+        },
+        {
+          "U_over_V": 1.0,
+          "e2": 0.05,
+          "p2": 0.06,
+          "d2": 0.07,
+          "gap_over_V": 0.16
+        },
+        {
+          "U_over_V": 2.0,
+          "e2": 0.06,
+          "p2": 0.05,
+          "d2": 0.08,
+          "gap_over_V": 0.13
+        },
+        {
+          "U_over_V": 3.0,
+          "e2": 0.045,
+          "p2": 0.05,
+          "d2": 0.085,
+          "gap_over_V": 0.1
+        },
+        {
+          "U_over_V": 5.0,
+          "e2": 0.08,
+          "p2": 0.03,
+          "d2": 0.1,
+          "gap_over_V": 0.06
+        },
+        {
+          "U_over_V": 7.0,
+          "e2": 0.06,
+          "p2": 0.02,
+          "d2": 0.12,
+          "gap_over_V": 0.03
+        },
+        {
+          "U_over_V": 10.0,
+          "e2": 0.04,
+          "p2": 0.01,
+          "d2": 0.14,
+          "gap_over_V": 0.01
+        },
+        {
+          "U_over_V": 15.0,
+          "e2": 0.015,
+          "p2": 0.005,
+          "d2": 0.155,
+          "gap_over_V": 0.002
+        },
+        {
+          "U_over_V": 20.0,
+          "e2": 0.003,
+          "p2": 0.002,
+          "d2": 0.163,
+          "gap_over_V": 0.0005
+        }
+      ]
+    }
+  ]
+}

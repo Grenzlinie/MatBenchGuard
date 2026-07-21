@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step1",
+    "title": "Compute homogenized stiffness tensor via modified two-step mean-field procedure",
+    "role": "process",
+    "action": "Implement the full modified two-step mean-field homogenization method: compute the Eshelby tensor for equivalent aspect ratio α = 1.25·(l/d) and matrix Poisson's ratio νm; form the single-inclusion strain concentration tensor H^ε; build the Mori–Tanaka and double-inclusion strain concentration tensors B_MT and B_DI; interpolate via the quadratic model to obtain the pseudo-grain strain concentration tensor; compute the effective stiffness tensor of a pseudo-grain; integrate over all orientations assuming a random uniform orientation distribution function to obtain the Voigt and Reuss averages; apply the second-step Voigt-Reuss interpolative model ⟨C⟩_ω = 0.5*(⟨C⟩_ω^Reuss + ⟨C⟩_ω^Voigt) to obtain the final 6×6 stiffness tensor in Voigt notation. Use the following material and geometric parameters: matrix Em = 45 GPa, νm = 0.35; fiber Ef = 230 GPa, νf = 0.25; fiber aspect ratio l/d = 15; equivalent aspect ratio factor f = 1.25; fiber volume fraction v_f = 0.10; random uniform orientation distribution.",
+    "output_file": "",
+    "evidence": "homogenization_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Internal process step that executes the full homogenization method. No permanent file is required.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Save effective stiffness tensor to stiffness_matrix.json",
+    "role": "scored",
+    "action": "Write the computed effective stiffness tensor (in GPa) to a JSON file with keys C11, C22, C33, C12, C13, C23, C44, C55, C66. All off-diagonal entries not listed are zero or negligible.",
+    "output_file": "stiffness_matrix.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The file contains the 9 independent components of the 6x6 homogenized stiffness matrix in Voigt notation. Each component is a floating-point number in GPa.",
+    "output_schema": "{\"type\":\"object\",\"required\":{\"C11\":\"float\",\"C22\":\"float\",\"C33\":\"float\",\"C12\":\"float\",\"C13\":\"float\",\"C23\":\"float\",\"C44\":\"float\",\"C55\":\"float\",\"C66\":\"float\"}}"
+  },
+  {
+    "id": "step3",
+    "title": "Extract effective isotropic elastic constants and save to effective_constants.json",
+    "role": "scored",
+    "action": "From stiffness_matrix.json, compute the effective isotropic constants using the following method: (1) compute the bulk modulus K = (C11 + 2*C12)/3, using C12 as the mean of the three off-diagonal entries if they differ; (2) compute the shear modulus G = (C44 + C55 + C66)/3; (3) compute Young's modulus E = 9*K*G/(3*K + G) and Poisson's ratio ν = (3*K - 2*G)/(2*(3*K + G)). Write E (GPa), G (GPa), and ν (dimensionless) to effective_constants.json.",
+    "output_file": "effective_constants.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The file contains the isotropic effective elastic constants derived from the homogenized stiffness tensor: Young's modulus E in GPa, shear modulus G in GPa, and Poisson's ratio ν.",
+    "output_schema": "{\"type\":\"object\",\"required\":{\"E\":\"float\",\"G\":\"float\",\"nu\":\"float\"}}"
+  }
+]

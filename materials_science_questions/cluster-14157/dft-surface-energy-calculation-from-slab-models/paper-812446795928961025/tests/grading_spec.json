@@ -1,0 +1,118 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "For critical_charge_Na.csv, the expected Z* is recomputed from the agent's reported R and the known ion work function (hidden gold). For surface energy coefficients, result-level comparison with tolerances is used because a full DFT variational recomputation in the verifier sandbox is infeasible, but the paper-reported values are the target.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "surface_energy_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "metal",
+            "n_plus",
+            "b0",
+            "b1",
+            "sigma0",
+            "sigma1",
+            "mu1"
+          ],
+          "units": {
+            "n_plus": "atomic units",
+            "b0": "atomic units",
+            "b1": "atomic units",
+            "sigma0": "atomic units",
+            "sigma1": "atomic units",
+            "mu1": "atomic units"
+          }
+        },
+        "description": "Computed planar surface energy σ⁰, first-order curvature correction σ¹, optimal surface-layer inverse thickness b⁰ and its first-order correction b¹, and chemical potential correction μ¹ for Cs, Rb, K, Na, Li (from the DFT variational model)."
+      },
+      {
+        "file": "critical_charge_Na.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "R",
+            "Z_star"
+          ],
+          "units": {
+            "R": "atomic units",
+            "Z_star": "dimensionless"
+          }
+        },
+        "description": "Critical charge Z* for a positively charged sodium particle as a function of ionic radius R, computed from macroscopic electrodynamics formula Z* = W+ R + 1/2 with W+ = 3.7 eV."
+      }
+    ],
+    "notes": "All values are in atomic units unless noted otherwise."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold surface energy coefficients for Cs,Rb,K,Na,Li from paper Table 2",
+      "source_provenance": "paper (Table 2)",
+      "generation_method": "direct transcription of the paper's computed values",
+      "why_not_fabricated": "values are the exact numbers reported in the paper; they are the target for the agent's reproduction"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "ion work function W+ = 3.7 eV and eV-to-a.u. conversion factor for Na critical charge",
+      "source_provenance": "paper (section 5) stating W+ ≈ 3.7 eV for Na",
+      "generation_method": "extracted from paper text; conversion factor is standard physical constant",
+      "why_not_fabricated": "value is the one used in the paper's estimate of Z*; correct reproduction must reproduce that value"
+    }
+  ],
+  "steps": [
+    {
+      "id": "check_surface_energies",
+      "output_file": "surface_energy_results.csv",
+      "weight": 0.7,
+      "gold_table": {
+        "Cs": {
+          "sigma0": 3.13e-05,
+          "sigma1": 4.01e-05,
+          "mu1": -0.0539
+        },
+        "Rb": {
+          "sigma0": 3.84e-05,
+          "sigma1": 5.05e-05,
+          "mu1": -0.0554
+        },
+        "K": {
+          "sigma0": 4.38e-05,
+          "sigma1": 5.89e-05,
+          "mu1": -0.0565
+        },
+        "Na": {
+          "sigma0": 7.07e-05,
+          "sigma1": 0.000111,
+          "mu1": -0.0619
+        },
+        "Li": {
+          "sigma0": 8.6e-05,
+          "sigma1": 0.000187,
+          "mu1": -0.0648
+        }
+      },
+      "tolerances": {
+        "sigma0_relative": 0.05,
+        "sigma1_relative": 0.1,
+        "mu1_relative": 0.1
+      }
+    },
+    {
+      "id": "check_critical_charge_na",
+      "output_file": "critical_charge_Na.csv",
+      "weight": 0.3,
+      "W_plus_eV": 3.7,
+      "eV_to_au": 0.036749322,
+      "Z_star_tolerance_abs": 1e-06
+    }
+  ]
+}

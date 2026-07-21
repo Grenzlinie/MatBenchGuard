@@ -1,0 +1,240 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Analytical reversal times recomputed from agent barriers using Eq.5; barriers compared to paper reference; kMC columns compared to analytically expected values (from barriers/parameters) with generous tolerances.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Fe": "object",
+            "Co": "object"
+          },
+          "items": {
+            "E1": "number (meV)",
+            "E2": "number (meV)",
+            "E3": "number (meV)"
+          }
+        },
+        "description": "Diffusion barriers for Fe and Co chains from GNEB calculations."
+      },
+      {
+        "file": "fe_reversal_times.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "chain_length_N",
+            "tau_simple",
+            "tau_improvedI",
+            "tau_analytical"
+          ],
+          "units": {
+            "temperature_K": "kelvin",
+            "chain_length_N": "atoms",
+            "tau_simple": "seconds",
+            "tau_improvedI": "seconds",
+            "tau_analytical": "seconds"
+          }
+        },
+        "description": "Magnetization reversal times for Fe chains."
+      },
+      {
+        "file": "co_reversal_times.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "chain_length_N",
+            "tau_simple",
+            "tau_improvedII",
+            "tau_analytical"
+          ],
+          "units": {
+            "temperature_K": "kelvin",
+            "chain_length_N": "atoms",
+            "tau_simple": "seconds",
+            "tau_improvedII": "seconds",
+            "tau_analytical": "seconds"
+          }
+        },
+        "description": "Magnetization reversal times for Co chains."
+      }
+    ],
+    "notes": "The checker will compare barriers to reference values within tolerance and reversal times to expected values with appropriate tolerances, including trend checks."
+  },
+  "target_policies": {
+    "barriers.json": "exact_match",
+    "fe_reversal_times.csv": "reference_match",
+    "co_reversal_times.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported barrier values and conditions for analytical recomputation",
+      "source_provenance": "Extracted from paper: Fig.1 caption for Fe barriers, text for Co barriers; conditions from Sec.III",
+      "generation_method": "Hardcoded from paper values",
+      "why_not_fabricated": "These are the published reference values; the checker recomputes expected reversal times analytically using these barriers and parameters to compare agent's CSV columns."
+    }
+  ],
+  "steps": [
+    {
+      "id": "barriers_shape",
+      "output_file": "barriers.json",
+      "weight": 0.05,
+      "kind": "json_shape",
+      "expected_keys": [
+        "Fe",
+        "Co"
+      ],
+      "expected_sub_keys": {
+        "Fe": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "Co": [
+          "E1",
+          "E2",
+          "E3"
+        ]
+      }
+    },
+    {
+      "id": "barriers_values",
+      "output_file": "barriers.json",
+      "weight": 0.35,
+      "kind": "barrier_compare",
+      "gold": {
+        "Fe": {
+          "E1": 4.32,
+          "E2": 1.72,
+          "E3": 2.76
+        },
+        "Co": {
+          "E1": 10.7,
+          "E2": 0.0034,
+          "E3": 0.0065
+        }
+      },
+      "tolerance": {
+        "abs": 0.2,
+        "relative": 0.2
+      }
+    },
+    {
+      "id": "fe_csv_check",
+      "output_file": "fe_reversal_times.csv",
+      "weight": 0.3,
+      "kind": "fe_recompose",
+      "nu0": 1000000000.0,
+      "kB_meV": 0.08617333262145,
+      "n_improved": 2,
+      "n_simple": 2,
+      "simple_barriers": {
+        "E1": 4.73,
+        "E2": 2.0,
+        "E3": 3.03
+      },
+      "conditions": [
+        {
+          "temperature_K": 4,
+          "chain_length_N": 5
+        },
+        {
+          "temperature_K": 4,
+          "chain_length_N": 10
+        },
+        {
+          "temperature_K": 4,
+          "chain_length_N": 15
+        },
+        {
+          "temperature_K": 4,
+          "chain_length_N": 20
+        },
+        {
+          "temperature_K": 4,
+          "chain_length_N": 30
+        },
+        {
+          "temperature_K": 4,
+          "chain_length_N": 40
+        },
+        {
+          "temperature_K": 5,
+          "chain_length_N": 10
+        },
+        {
+          "temperature_K": 6,
+          "chain_length_N": 10
+        },
+        {
+          "temperature_K": 7,
+          "chain_length_N": 10
+        }
+      ],
+      "tolerance_analytical": 0.0001,
+      "tolerance_kMC_rel": 2.0
+    },
+    {
+      "id": "co_csv_check",
+      "output_file": "co_reversal_times.csv",
+      "weight": 0.3,
+      "kind": "co_recompose",
+      "nu0": 1000000000.0,
+      "kB_meV": 0.08617333262145,
+      "n_improved": 4,
+      "n_simple": 2,
+      "J_Co": 7.5,
+      "K_Co": 2.0,
+      "conditions": [
+        {
+          "temperature_K": 10,
+          "chain_length_N": 20
+        },
+        {
+          "temperature_K": 10,
+          "chain_length_N": 30
+        },
+        {
+          "temperature_K": 10,
+          "chain_length_N": 40
+        },
+        {
+          "temperature_K": 10,
+          "chain_length_N": 50
+        },
+        {
+          "temperature_K": 10,
+          "chain_length_N": 60
+        },
+        {
+          "temperature_K": 4,
+          "chain_length_N": 40
+        },
+        {
+          "temperature_K": 20,
+          "chain_length_N": 40
+        },
+        {
+          "temperature_K": 30,
+          "chain_length_N": 40
+        }
+      ],
+      "tolerance_analytical": 0.0001,
+      "tolerance_kMC_rel": 2.0
+    }
+  ]
+}

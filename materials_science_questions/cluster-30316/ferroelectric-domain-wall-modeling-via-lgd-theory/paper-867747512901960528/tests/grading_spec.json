@@ -1,0 +1,150 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Velocities recomputed from agent's torque/force CSV against analytic gold; torque/force curves checked for structural agreement with paper's approximations; recompute feasible from raw artifacts.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "scattering_parameters.json": "structural_audit",
+    "torque_force_values.csv": "reference_match",
+    "domain_wall_velocities.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold velocities and analytic torque/force reference curves",
+      "source_provenance": "Derived from paper Equations (5),(6),(13),(14),(17),(18) with parameters κ=0.2, λ=1e-9 m, etc.",
+      "generation_method": "Direct calculation using the analytic formulas and the specified physical constants; no arbitrary numbers added.",
+      "why_not_fabricated": "The values are the unique output of the paper's own analytic model for the given input parameters; they are not invented post-hoc."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "scattering_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "k_lambda": "list of floats",
+            "u_trans_amplitude": "list of floats",
+            "u_trans_phase": "list of floats (radians)",
+            "u_refl_amplitude": "list of floats",
+            "u_refl_phase": "list of floats (radians)",
+            "v_trans_amplitude": "list of floats",
+            "v_trans_phase": "list of floats (radians)",
+            "v_refl_amplitude": "list of floats",
+            "v_refl_phase": "list of floats (radians)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "u_trans_phase": "radian",
+            "v_trans_phase": "radian",
+            "u_refl_phase": "radian",
+            "v_refl_phase": "radian"
+          }
+        },
+        "description": "Numerical scattering amplitudes and phase shifts for u and v polarizations, used for structural audits (unitarity, WKB phase consistency)."
+      },
+      {
+        "file": "torque_force_values.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required": {},
+          "items": {},
+          "required_columns": [
+            "k_lambda",
+            "tau_dimless",
+            "F_dimless",
+            "tau_approx_dimless",
+            "F_approx_dimless"
+          ],
+          "units": {
+            "k_lambda": "dimensionless",
+            "tau_dimless": "dimensionless",
+            "F_dimless": "dimensionless",
+            "tau_approx_dimless": "dimensionless",
+            "F_approx_dimless": "dimensionless"
+          }
+        },
+        "description": "Tabulated dimensionless torque and force, compared against analytic approximations (windowed tolerance)."
+      },
+      {
+        "file": "domain_wall_velocities.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "k_lambda_torque": "float",
+            "ferromagnetic_velocity_ms": "float",
+            "k_lambda_force": "float",
+            "antiferromagnetic_velocity_ms": "float"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "ferromagnetic_velocity_ms": "m/s",
+            "antiferromagnetic_velocity_ms": "m/s"
+          }
+        },
+        "description": "Steady-state domain-wall velocities recomputed from the agent's own torque/force data and checked against hidden reference values derived from the paper's formulas."
+      }
+    ],
+    "notes": "The checker will verify scattering parameters structurally (no gold values). Torque and force are compared to the paper's analytic approximations. Velocities are recomputed from the agent's submitted torque/force values and then compared to hidden reference velocities derived from the paper's own formulas to ensure end-to-end consistency of the physics pipeline."
+  },
+  "steps": [
+    {
+      "id": "scattering_params",
+      "output_file": "scattering_parameters.json",
+      "weight": 0.1,
+      "kind": "structural_audit",
+      "description": "Check unitarity (t^2+r^2≈1) and approximate phase shift trends."
+    },
+    {
+      "id": "torque_force",
+      "output_file": "torque_force_values.csv",
+      "weight": 0.3,
+      "kind": "reference_match",
+      "description": "Compare numerical tau_dimless and F_dimless to the paper's analytic approximations (high‑k tau, low‑k F) with tolerance; verify oscillation period and power‑law.",
+      "analytic_params": {
+        "kappa": 0.2,
+        "tau_approx_formula": "1 - cos(k_lambda * log(1 - kappa))",
+        "F_approx_formula": "kappa**2 * k_lambda**2",
+        "tau_check_region": "k_lambda >= 2.0",
+        "F_check_region": "k_lambda <= 1.0"
+      }
+    },
+    {
+      "id": "velocities",
+      "output_file": "domain_wall_velocities.json",
+      "weight": 0.6,
+      "kind": "recompute_metric",
+      "description": "Recompute ferromagnetic and antiferromagnetic steady‑state velocities from torque_force_values.csv and compare to analytically derived gold velocities.",
+      "recompute": {
+        "source_csv": "torque_force_values.csv",
+        "torque_k_lambda": 5.0,
+        "force_k_lambda": 0.5,
+        "physical_params": {
+          "T_kappa": 0.001,
+          "a": 1e-10,
+          "lambda": 1e-09,
+          "A": 2e-17,
+          "M_s": 2000000.0,
+          "gamma": 176000000000.0,
+          "alpha": 0.01
+        },
+        "gold_velocities": {
+          "V_FM": 61800000.0,
+          "V_AFM": 5500000.0,
+          "tolerance_relative": 0.05
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes total potential energy from submitted atomic coordinates using the published two- and three-body potential, derives binding energy per atom, and compares to the paper's reported values; also checks symmetry and structural stationarity (forces/Hessian).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper reference binding energies and global-minimum symmetries for Si2–Si8",
+      "source_provenance": "Extracted from Table 2 of the source paper (DOI:10.1039/ft9928801229)",
+      "generation_method": "Directly read from Table 2: Si2 1.46 eV, Si3 1.97, Si4 2.67, Si5 3.01, Si6 3.25, Si7 3.38, Si8 3.59; symmetries as stated in the table.",
+      "why_not_fabricated": "These are the actual reported reference values from the paper, ensuring scoring against the true target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_cluster_details.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "array",
+          "items": {
+            "n_atoms": "integer",
+            "symmetry": "string",
+            "binding_energy_per_atom": "float (eV)",
+            "coordinates": "array of [\"Si\", x_Å, y_Å, z_Å]"
+          }
+        },
+        "description": "Global‑minimum structures, symmetries, and binding energies per atom for Si₂–Si₈. The checker recomputes the total potential energy from the submitted coordinates and derives the binding energy; it also verifies the symmetry against known global‑minimum symmetries and checks that the structure is a true minimum."
+      }
+    ],
+    "notes": "The paper reports binding energies per atom and symmetries for Si₂–Si₈ in Table 2. Only the small‑cluster part (n=2–8) is reproduced; larger shell‑cluster and fully‑optimised results (n>8) are excluded per the taskability scope. The checker will compare the agent's computed binding energy to the paper's values with a tolerance and independently confirm the symmetry."
+  },
+  "steps": [
+    {
+      "id": "step_01_cluster_details",
+      "output_file": "step_01_cluster_details.json",
+      "kind": "custom",
+      "weight": 1.0,
+      "description": "Recompute binding energy from coordinates using the published potential, verify symmetry, and check stationarity (forces, Hessian)",
+      "gold_binding_energy": {
+        "2": 1.46,
+        "3": 1.97,
+        "4": 2.67,
+        "5": 3.01,
+        "6": 3.25,
+        "7": 3.38,
+        "8": 3.59
+      },
+      "gold_symmetries": {
+        "2": [
+          "D∞h",
+          "Dinfh",
+          "D_inf_h"
+        ],
+        "3": [
+          "C2v"
+        ],
+        "4": [
+          "D4h"
+        ],
+        "5": [
+          "D3h"
+        ],
+        "6": [
+          "D2d"
+        ],
+        "7": [
+          "C2v"
+        ],
+        "8": [
+          "Oh"
+        ]
+      },
+      "tolerance_energy": 0.05
+    }
+  ]
+}

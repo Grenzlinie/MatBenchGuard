@@ -1,0 +1,199 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Effective elastic constants are compared against paper-derived hidden reference values (T0) with tolerance; fracture artifacts are verified by structural ordering (T3) as recomputing from raw fracture data is not feasible within the verifier sandbox.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference effective moduli (K, G) for bi-continuous and particulate systems at volume fractions 0.2,0.5,0.8 with interface types 1 and 2, approximated from paper Figures 4 and 6.",
+      "source_provenance": "Paper Figures 4 and 6",
+      "generation_method": "Values read from the figures and hardcoded as approximate table; used by reference solve.sh and hidden checker.",
+      "why_not_fabricated": "These are the paper-reported approximate values for the main elastic result, not invented; they are traceable to the paper's own plots and match the reference solve.sh's code comments."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference crack surface ratios (inclusion_ratio, matrix_ratio, total_ratio) for the three particulate microstructures.",
+      "source_provenance": "Paper text statistics given for crack surfaces",
+      "generation_method": "Exact values from the paper's text: ratios 1.2%, 1.3%, 1.6% for inclusion, 9.6%, 10.5%, 12.7% for matrix, 5.4%, 5.9%, 7.2% total.",
+      "why_not_fabricated": "Directly quoted from the paper, used only as a loose range check (not as a tight target) to ensure the reported ordering is plausible."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "effective_moduli.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "volume_fraction",
+            "interface_type",
+            "K",
+            "G"
+          ],
+          "units": {
+            "K": "GPa",
+            "G": "GPa"
+          }
+        },
+        "description": "Effective bulk modulus K and shear modulus G for all composite types, volume fractions, and interface types. Values are compared against hidden paper-derived references within tolerance."
+      },
+      {
+        "file": "fracture_crack_surface.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "microstructure_id",
+            "inclusion_ratio",
+            "matrix_ratio",
+            "total_ratio"
+          ],
+          "units": {
+            "inclusion_ratio": "%",
+            "matrix_ratio": "%",
+            "total_ratio": "%"
+          }
+        },
+        "description": "Crack surface voxel ratios for the three particulate microstructures. The checker verifies the ordering: total crack surface ratio increases from microstructure 1 to 2 to 3."
+      },
+      {
+        "file": "fracture_force_strain.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "microstructure_id",
+            "strain",
+            "force"
+          ],
+          "units": {
+            "force": "N"
+          }
+        },
+        "description": "Reaction force vs. applied strain curves for the three microstructures. The checker verifies that the extracted peak reaction force increases in the order microstructure 1 < 2 < 3."
+      }
+    ],
+    "notes": "The agent must implement the full lattice model, microstructure generation, and solvers from the method description. The scored artifacts are derived from full simulation runs; no pre-made model parameters or simulation results are provided."
+  },
+  "steps": [
+    {
+      "id": "effective_moduli_check",
+      "output_file": "effective_moduli.csv",
+      "weight": 0.5,
+      "kind": "numeric",
+      "gold_rows": [
+        [
+          "bi-continuous",
+          0.2,
+          1,
+          135.0,
+          65.0
+        ],
+        [
+          "bi-continuous",
+          0.2,
+          2,
+          125.0,
+          55.0
+        ],
+        [
+          "bi-continuous",
+          0.5,
+          1,
+          185.0,
+          115.0
+        ],
+        [
+          "bi-continuous",
+          0.5,
+          2,
+          165.0,
+          95.0
+        ],
+        [
+          "bi-continuous",
+          0.8,
+          1,
+          230.0,
+          190.0
+        ],
+        [
+          "bi-continuous",
+          0.8,
+          2,
+          195.0,
+          160.0
+        ],
+        [
+          "particulate",
+          0.2,
+          1,
+          132.0,
+          63.0
+        ],
+        [
+          "particulate",
+          0.2,
+          2,
+          122.0,
+          53.0
+        ],
+        [
+          "particulate",
+          0.5,
+          1,
+          180.0,
+          112.0
+        ],
+        [
+          "particulate",
+          0.5,
+          2,
+          160.0,
+          92.0
+        ],
+        [
+          "particulate",
+          0.8,
+          1,
+          225.0,
+          188.0
+        ],
+        [
+          "particulate",
+          0.8,
+          2,
+          190.0,
+          158.0
+        ]
+      ],
+      "relative_tolerance": 0.15,
+      "trend_check": true
+    },
+    {
+      "id": "fracture_crack_surface_check",
+      "output_file": "fracture_crack_surface.csv",
+      "weight": 0.3,
+      "kind": "structural",
+      "ordering_column": "total_ratio",
+      "expected_order": "strictly_increasing"
+    },
+    {
+      "id": "fracture_force_strain_check",
+      "output_file": "fracture_force_strain.csv",
+      "weight": 0.2,
+      "kind": "structural",
+      "ordering_column": "peak_force",
+      "compute_peak_from_curves": true,
+      "expected_order": "strictly_increasing"
+    }
+  ]
+}

@@ -27,13 +27,36 @@ All numerical values are obtained from the DFT total energies of the relaxed sup
 
 ### Step 1: Generate initial supercell structures
 - Role: process
-- Action: Create 4x4x1 AB-stacked graphite supercells for the perfect unsheared cell, perfect sheared cells (ABC-like and AA-like shifts of 0.71 Å), and defect configurations: grafted interstitial (unsheared), spiro interstitial (ABC-sheared), threefold interstitial (AA-sheared), V2^1(ββ) and V2^2(ββ) divacancies, the intimate Frenkel pair (interstitial adjacent to a vacancy in adjacent layers), and a separated interstitial+vacancy pair. Write the coordinate files for subsequent DFT steps.
+- Action: Create 4×4×1 supercells of AB-stacked hexagonal graphite (a=2.46 Å, c=6.70 Å) using the structure from the Materials Project entry mp-48. The supercell contains 64 carbon atoms arranged in two layers (32 atoms per layer) with the standard AB stacking sequence. Use these perfect coordinates as the baseline.
+
+  Construct the following defect supercells:
+
+  1. **Perfect unsheared AB cell**: No modifications; this is the reference for the total energy E_perfect_AB and for extracting μ_C = E_perfect_AB / 64.
+
+  2. **Sheared perfect cells (ABC-like and AA-like)**: Apply an in-plane rigid shift of one of the two layers by the vector d = 0.71 Å along the <1‾100> direction (half the bond length; equivalent to b/2). The shift that moves the stacking towards the ABC sequence (see Fig. 4 of the paper) yields the ABC-like cell used for the spiro interstitial. The opposite shift yields the AA-like cell used for the threefold interstitial. Do not insert any extra atoms; these cells are used only to compute stacking fault energies.
+
+  3. **Grafted two-bond interstitial**: In the perfect unsheared AB supercell, insert one additional carbon atom near the midpoint between two bonded atoms that belong to different layers (roughly halfway between the planes). Choose an interlayer contact in the AB stack and place the extra atom at the bond centre; the exact position will be relaxed by DFT.
+
+  4. **Spiro (fourfold) interstitial**: Take the ABC-like sheared cell from step 2 and insert one carbon atom at a site that allows the formation of four bonds with the surrounding atoms, mimicking the spiropentane core (see Fig. 3 of the paper). A suitable initial guess can be obtained by placing the atom near the centre of the tetrahedral cavity that appears in the ABC-shifted bilayer.
+
+  5. **Threefold interstitial**: Take the AA-like sheared cell and insert one carbon atom such that it can form three bonds: two within the plane of one layer and one bridging bond to an atom in the opposite layer. A reasonable starting guess is to place the extra atom close to a carbon atom in one layer, with a lateral offset that favours threefold coordination after relaxation.
+
+  6. **V2^1(ββ) divacancy**: In the perfect unsheared AB supercell, remove two carbon atoms to create a pair of vacancies. Both vacancies must be of the β‑type: a β‑type atom is one whose immediate neighbour across the van der Waals gap lies at the centre of a carbon hexagon in the opposite layer. Choose one β‑atom in the upper layer and the β‑atom in the lower layer that shares exactly the same in‑plane coordinates (i.e., they are vertically aligned), so that the two undercoordinated atoms that carry dangling bonds face each other. (If the layers are labelled A and B, a β‑atom in the A‑layer has an in‑plane position r such that the B‑layer has no atom at r but a ring centre; the corresponding β‑atom in the B‑layer sits at the same r where the A‑layer also has a ring centre. Remove both.) This configuration is the first‑nearest interplane neighbour divacancy.
+
+  7. **V2^2(ββ) divacancy**: As for V2^1(ββ), but choose two β‑atoms that reside in adjacent layers with in‑plane coordinates differing by one C–C bond length (~1.42 Å) — the second‑nearest interplane neighbour configuration. This creates a slightly twisted bridging bond and is more stable than V2^1(ββ).
+
+  8. **Intimate Frenkel pair**: Starting from a structure that contains a single vacancy (e.g., a cell with one monovacancy created by removing a β‑type atom), insert one carbon atom at the edge of the vacancy, near the boundary between the vacancy and the surrounding lattice, such that it can form three bonds: one bridging bond to the undercoordinated atom on the opposite layer and two bonds to atoms in the same layer. This yields a bound interstitial–vacancy pair.
+
+  9. **Separated interstitial + vacancy pair**: Create a supercell that contains one grafted interstitial and a single vacancy placed far apart (at least several Å) to serve as the end‑point state for the NEB barrier calculation of the intimate Frenkel pair.
+
+  Write the coordinate files in a format suitable for CP2K (e.g., XYZ or CP2K input) and proceed with DFT relaxations.
+
 - Evidence: none
 
 ### Step 2: Compute perfect unsheared reference energy
 - Role: process
-- Action: Run DFT relaxation of the perfect AB-stacked supercell to obtain the total energy E_perfect_AB and the number of atoms N. This energy serves as the reference for formation energy calculations.
-- Evidence: `/app/outputs/reference_energy.txt`
+- Action: Run DFT relaxation of the perfect AB-stacked supercell to obtain the total energy E_perfect_AB and the number of atoms N. This energy is used as the reference for all formation energy calculations (keep the value available for subsequent steps).
+- Evidence: none
 
 ### Step 3: Compute stacking fault energies
 - Role: scored
@@ -137,7 +160,7 @@ Every file the hidden verifier reads is described below. Write each file under `
   - `type`: table
   - `required_columns`: `interstitial_type`, `stabilization_energy_eV`
 
-Notes: All CSV artifacts must contain the required columns. The checker will compare the reported values against hidden reference within tolerances and verify relative ordering (spiro < threefold < grafted; V2^2 < V2^1; stabilization energies positive).
+Notes: All CSV artifacts must contain the required columns. The checker will compare the reported values against hidden reference within tolerances and verify that physically expected relative orderings hold.
 
 ## Self-check before finishing (optional, not scored)
 
@@ -218,9 +241,9 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
       "description": "Shear-conferred stabilization energies for the threefold and spiro interstitials."
     }
   ],
-  "notes": "All CSV artifacts must contain the required columns. The checker will compare the reported values against hidden reference within tolerances and verify relative ordering (spiro < threefold < grafted; V2^2 < V2^1; stabilization energies positive)."
+  "notes": "All CSV artifacts must contain the required columns. The checker will compare the reported values against hidden reference within tolerances and verify that physically expected relative orderings hold."
 }
 ```
 
 ## How you are scored
-Each scored artifact (the five CSV files) is evaluated independently by an automated verifier. The verifier reads the reported numeric values and compares them against hidden reference data using criteria that account for the expected spread between different DFT implementations. In addition to value comparisons, the verifier checks that certain physically expected relative orderings hold (e.g., a sheared interstitial configuration should be more stable than the unsheared grafted interstitial, and one divacancy variant should be lower in energy than the other). The total reward (a number between 0 and 1) is a weighted sum of the per-artifact scores, with the main interstitial and barrier calculations carrying the highest weights. To obtain a high score, you must perform the actual DFT calculations; simply hard-coding expected numbers is unlikely to pass because the tolerance windows are narrow enough to distinguish a genuine computation from a generic guess.
+Each scored artifact (the five CSV files) is evaluated independently by an automated verifier. The verifier reads the reported numeric values and compares them against hidden reference data using criteria that account for the expected spread between different DFT implementations. In addition to value comparisons, the verifier checks that results satisfy physically motivated trends (e.g., sheared interstitial configurations should exhibit lower formation energies than the unsheared grafted interstitial, and different divacancy variants should exhibit an energy ordering consistent with the underlying bonding topology). The total reward (a number between 0 and 1) is a weighted sum of the per-artifact scores, with the main interstitial and barrier calculations carrying the highest weights. To obtain a high score, you must perform the actual DFT calculations; simply hard-coding expected numbers is unlikely to pass because the tolerance windows are narrow enough to distinguish a genuine computation from a generic guess.

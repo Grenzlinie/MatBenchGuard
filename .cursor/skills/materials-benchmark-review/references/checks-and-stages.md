@@ -7,8 +7,8 @@
   Reproduction target and adjudicates (no keyword prescreen).
   ├─ NON_MAT ─────► fail-fast REJECT (C01 Hard Gate); paper is NOT read.
   └─ MAT_CORE / MAT_METHOD / MAT_WRAPPER / AMBIGUOUS → continue (Wrapper is a task).
-[Stage 1 Deterministic D-layer]  D1–D7, all repairable.
-[Stage 2 LLM A-layer]  A1–A5; each declares its input files; default paper-grounded.
+[Stage 1 Deterministic core lane]  D1–D6 plus code-defined runtime probes.
+[Stage 2 Agent quality lane]  scientific justification and quality results.
 [Stage 3 Score + disposition]  C01–C07 normalized + weighted total + Hard Gates +
   verdict + unified terminal fields.
   ├─ PASS           → publishable=true only when D1–D6=CLEAN
@@ -48,13 +48,19 @@ is `NOT_ASSESSABLE`.
 | D4 | weight normalization | `tests/grading_spec.json`, `tests/checker.py` | sum weights (tol 1e-6), flag zero-weight |
 | D5 | package file completeness (Harbor entry) | `instruction.md`, `tests/checker.py`, `tests/grading_spec.json`, `tests/test.sh`, `solution` | existence + parse_status |
 | D6 | checker core-task mapping (static) | `instruction.md`, `tests/checker.py`, `tests/grading_spec.json` | contract-chain map + AST binding |
-| D7 | dynamic robustness & discrimination | `tests/test.sh`, `tests/checker.py`, external fixture | run `tests/test.sh` + reward compare (negative / discrimination / equivalence / component-isolation) |
+| D7-quality | dynamic robustness & discrimination | `tests/test.sh`, `tests/checker.py`, Agent quality assessment | quality results remain separate and never assign D1–D6 ownership |
 
 Each D1–D6 check emits exactly one of `PASS`, `FAIL`, `BLOCKED`, or
 `NOT_ASSESSABLE`. Proven, OPEN, repairable D1–D6 findings are blocking; static
 warnings and unproven reachability risks are advisory. The deterministic repair
 summary is `CLEAN`, `REQUIRED`, or `NOT_APPLICABLE`, and `REQUIRED` contains
 the complete source queue, never a selected subset.
+
+Malformed, full-integration, partial, and all-wrong runtime cases are
+schema/step-derived code checks. The Agent does not author their files or
+interpret their values scientifically. Gold, target, unit, formula, tolerance,
+threshold, and scoring-direction justification belongs only to the Agent
+quality lane and requires source evidence.
 
 ## Checker execution precondition
 
@@ -65,8 +71,9 @@ Docker daemon reachability, the local image, and a writable uv cache are
 operator preconditions; a missing precondition aborts the run with the build
 hint. After preflight succeeds, dependency-install failures and checker
 crashes are package findings rather than `not-assessable` runtime results.
-Runtime provenance is always `sandbox`; fixture and Oracle provenance remains
-independent and is not collapsed into that runtime label.
+Runtime provenance is always `sandbox`; the isolated Oracle is only a positive
+mock source and generated probe cases live only in the external audit workspace.
+No human- or Agent-authored result directory is accepted.
 
 ## A-layer (LLM, code-verified quotes)
 
@@ -90,10 +97,10 @@ package/paper quote verified by deterministic code.
 | C01 domain admissibility | admissibility | — | A1 |
 | C02 design completeness & file consistency | deterministic | D1, D2, D4, D5 | — |
 | C03 scientific validity & solvability | scientific | — | A2 |
-| C04 scoring semantics | deterministic | D3, D6, D7 | A5 (part) |
+| C04 scoring semantics | deterministic + quality | D3, D6 | Agent quality results and A5 (part) |
 | C05 answer leakage | scientific | D6 (solution boundary) | A3 |
 | C06 reproducibility | scientific | D5 (resources), direct-input probe | A4 |
-| C07 difficulty & auditability | deterministic + scientific | D7 (discrimination/equivalence) | A2/A5 (part) |
+| C07 difficulty & auditability | deterministic + quality | quality results (discrimination/equivalence) | A2/A5 (part) |
 
 The four Hard Gates bind to dimensions: C01 (not a materials task / NON_MAT),
 C03 (scientifically invalid or unrecoverable missing definition), C04 (checker
@@ -112,10 +119,5 @@ terminal state.
 Every report and disposition carries `disposition` (PASS / CONDITIONAL / REJECT /
 NOT_ASSESSABLE), `publishable` (bool), and `repair_state` (NOT_REQUIRED at
 review time; REPAIRED / PARTIALLY_REPAIRED / ABANDONED / ROLLED_BACK after
-repair). `publication_route` mirrors the legacy publishability route
+repair). `publication_route` records the current publishability route
 (PUBLISH_CANDIDATE / REPAIR_QUEUE / QUARANTINE / EVIDENCE_PENDING).
-
-Historical unbound repair plans and bundles using schema `0.1` remain readable
-as evidence archives. New deterministic plans use
-`materials-deterministic-repair-plan/1.0`, bind the source deterministic
-schema/registry/digest and complete queue, and are validated fail-closed.

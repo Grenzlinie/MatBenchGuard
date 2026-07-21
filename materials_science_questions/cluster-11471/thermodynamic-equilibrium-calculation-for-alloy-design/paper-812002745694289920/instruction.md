@@ -17,7 +17,20 @@ where $\lambda$ is the thermal conductivity, $\rho c$ the volume heat capacity, 
 Boundary conditions:
 - At the chilled end ($x=0$): a temperature‑dependent heat transfer coefficient $h(T)$ is applied.
 - At the top of the bar ($x=140$ mm): insulated (adiabatic) boundary.
-The latent heat is released in three steps associated with the graphite/austenite eutectic ($L_1$), the ledeburite eutectic ($L_2$), and the eutectoid transformation ($L_3$). $f$ is the fraction of the respective phase that has transformed during the ongoing reaction.
+
+The latent heat is released in three steps associated with the graphite/austenite eutectic ($L_1$), the ledeburite eutectic ($L_2$), and the eutectoid transformation ($L_3$). The volumetric heat source term in Eq. (1) is computed as the sum of contributions from each active transformation:
+
+$$\frac{L}{\rho c} \frac{\partial f}{\partial t} = \frac{1}{\rho c} \left( L_1 \frac{\mathrm{d}\Phi}{\mathrm{d}t} + L_2 \frac{\mathrm{d}X}{\mathrm{d}t} + L_3 \frac{\mathrm{d}Z}{\mathrm{d}t} \right)$$
+
+where $\mathrm{d}\Phi/\mathrm{d}t$, $\mathrm{d}X/\mathrm{d}t$, and $\mathrm{d}Z/\mathrm{d}t$ are obtained from the state‑variable ODEs (Section 3) and are zero when the corresponding transformation is not active.
+
+The heat transfer coefficient $h(T)$ and the thermal conductivity $\lambda(T)$ vary with temperature according to the regimes listed in Table 1. The switching criteria are:
+- **Liquid metal** ($T > T_{n,s}$): $h = h_{1a}$, $\lambda = \lambda^*$
+- **Primary solidification** ($T_{e,s} \le T \le T_{n,s}$): $h = h_{1b}$, $\lambda = \lambda_s$
+- **Austenite regime** ($T_{eu} \le T < T_{e,s}$): $h = h_{2a}$, $\lambda = \lambda_s$
+- **Post‑eutectoid** ($T < T_{eu}$): $h = h_{2b}$, $\lambda = \lambda_s$
+
+The critical temperatures are $T_{n,s}=1160\;^\circ\mathrm{C}$, $T_{e,s}=1154\;^\circ\mathrm{C}$, $T_{e,m}=1148\;^\circ\mathrm{C}$, and $T_{eu}=740\;^\circ\mathrm{C}$. The volume heat capacity also switches from $\rho c$ (liquid) to $\rho c_s$ (solid) at $T = T_{n,s}$.
 
 ### 2. Fading model (inclusion coarsening)
 The local number density of graphite nodules $N(l)$ relative to the reference density $N_r$ at the chilled end follows:
@@ -28,7 +41,7 @@ where $d_0$ is the inclusion diameter at the chilled end and $d$ is the inclusio
 
 $$\frac{\mathrm{d} d}{\mathrm{d} t} = \frac{2 k_i}{d},$$
 
-with $k_i = 0.011\;\mu\text{m}^3\text{s}^{-1}$ (coarsening constant). The total growth is integrated over the time from pouring until the start of solidification, using the thermal history.
+with $k_i = 0.011\;\mu\text{m}^3\text{s}^{-1}$ (coarsening constant). The total growth is integrated from the pouring temperature ($T_{\text{pour}} = 1350\;^\circ\text{C}$) until the onset of solidification. The start of solidification is defined as the first time the local temperature drops below the graphite nucleation temperature $T_{n,s}=1160\;^\circ\text{C}$. The inclusion diameter at any position is thus $d = \sqrt{d_0^2 + 4 k_i \Delta t}$, where $\Delta t$ is the elapsed time from pour to that local cooling event.
 
 ### 3. State‑variable ODEs
 The microstructural state is described by four variables $\Phi$, $X$, $Y$, $Z$, whose time evolution is given by simple first‑order kinetics:
@@ -50,11 +63,7 @@ The time constants $\tau_i$ depend on the local nodule count $N$ and cooling rat
 
 $$\tau_1 = \frac{A_1}{N^{1/3} \, (-\dot{T})}, \quad \tau_2 = \frac{A_2}{N^{1/3} \, (-\dot{T})}, \quad \tau_3 = \frac{A_3}{N^{1/3} \, (-\dot{T})}, \quad \tau_4 = \frac{A_4}{N^{1/3} \, (-\dot{T})}$$
 
-with $A_1 = 1.2\times10^9\;\text{s}^{2/3}$, $A_2 = 1.0\times10^9\;\text{s}^{2/3}$, $A_3 = 0.8\times10^9\;\text{s}^{2/3}$, $A_4 = 4.5\times N_r^{1/3}\;\text{s}^{2/3}$ (where $N_r$ is the reference nodule count). The cooling rate $-\dot{T}$ is evaluated locally at the start of the transformation from the heat‑flow solution. The critical temperatures are:
-- $T_{e,s} = 1154\;^\circ\text{C}$ (stable eutectic temperature)
-- $T_{e,m} = 1148\;^\circ\text{C}$ (metastable eutectic temperature)
-- $T_{eu} = 740\;^\circ\text{C}$ (eutectoid temperature)
-- Graphite nucleation temperature $T_{n,s} = 1160\;^\circ\text{C}$.
+with $A_1 = 1.2\times10^9\;\text{s}^{2/3}$, $A_2 = 1.0\times10^9\;\text{s}^{2/3}$, $A_3 = 0.8\times10^9\;\text{s}^{2/3}$, $A_4 = 4.5\times N_r^{1/3}\;\text{s}^{2/3}$ (where $N_r$ is the reference nodule count). The cooling rate $-\dot{T}$ is evaluated locally at the start of the transformation from the heat‑flow solution.
 
 ### 4. Response equations
 The final volume fractions (in vol%) are obtained from the terminal values of the state variables after cooling to room temperature:
@@ -72,35 +81,40 @@ where $\Phi_{\text{end}}$, etc., are the values at the end of the simulation. Th
 
 ### 5. Thermal and process parameters (Tables 1–2)
 
-**Table 1. Heat transfer coefficients**
-| Symbol | Value (J s⁻¹ m⁻² K⁻¹) | Regime |
-|--------|------------------------|--------|
-| h₁a    | 1200 | liquid metal |
-| h₁b    | 1000 | solidification (primary) |
-| h₂a    | 800  | austenite regime |
-| h₂b    | 400  | post‑eutectoid |
+**Table 1. Heat transfer coefficients and regime thresholds**
+| Symbol | Value (J s⁻¹ m⁻² K⁻¹) | Temperature range |
+|--------|------------------------|-------------------|
+| h₁a    | 1200 | $T > T_{n,s}$ (liquid metal) |
+| h₁b    | 1000 | $T_{e,s} \le T \le T_{n,s}$ (primary solidification) |
+| h₂a    | 800  | $T_{eu} \le T < T_{e,s}$ (austenite regime) |
+| h₂b    | 400  | $T < T_{eu}$ (post‑eutectoid) |
 
 **Table 2. Thermal properties**
 | Property | Symbol | Value |
 |----------|--------|-------|
-| Liquid thermal conductivity | λ* | 200 J s⁻¹ m⁻¹ K⁻¹ |
-| Solid thermal conductivity | λ  | 35 J s⁻¹ m⁻¹ K⁻¹ |
-| Volume heat capacity (liquid) | ρc | 6.125 × 10⁶ J m⁻³ K⁻¹ |
-| Volume heat capacity (solid) | ρc_s | 6.110 × 10⁶ J m⁻³ K⁻¹ |
-| Latent heat, stable eutectic | L₁ | 1.23 × 10⁹ J m⁻³ |
-| Latent heat, metastable eutectic | L₂ | 1.0 × 10⁹ J m⁻³ |
-| Latent heat, eutectoid | L₃ | 1.53 × 10⁸ J m⁻³ |
+| Liquid thermal conductivity | $\lambda^*$ | 200 J s⁻¹ m⁻¹ K⁻¹ |
+| Solid thermal conductivity | $\lambda_s$ | 35 J s⁻¹ m⁻¹ K⁻¹ |
+| Volume heat capacity (liquid) | $\rho c$ | 6.125 × 10⁶ J m⁻³ K⁻¹ |
+| Volume heat capacity (solid) | $\rho c_s$ | 6.110 × 10⁶ J m⁻³ K⁻¹ |
+| Latent heat, stable eutectic | $L_1$ | 1.23 × 10⁹ J m⁻³ |
+| Latent heat, metastable eutectic | $L_2$ | 1.0 × 10⁹ J m⁻³ |
+| Latent heat, eutectoid | $L_3$ | 1.53 × 10⁸ J m⁻³ |
+
+Switching rules:
+- $\lambda = \lambda^*$ for $T > T_{n,s}$; $\lambda = \lambda_s$ for $T \le T_{n,s}$.
+- $\rho c$ uses the liquid value for $T > T_{n,s}$ and the solid value for $T \le T_{n,s}$.
 
 **Other parameters**
 - Reference nodule count $N_r = 9.1\; \times 10^9\;\text{m}^{-3}$ (9100 mm⁻³)
 - Initial inclusion diameter $d_0 = 1\;\mu\text{m}$
 - Coarsening constant $k_i = 0.011\;\mu\text{m}^3\text{s}^{-1}$
 - Graphite nucleation temperature $T_{n,s} = 1160\;^\circ\text{C}$
+- Critical temperatures: $T_{e,s}=1154\;^\circ\text{C}$, $T_{e,m}=1148\;^\circ\text{C}$, $T_{eu}=740\;^\circ\text{C}$
 - Bar geometry: length 140 mm, diameter 40 mm; one‑dimensional model with cross‑sectional area corresponding to the mould diameter (approximate as a slab of equal volume).
 - Pouring temperature $T_{\text{pour}} = 1350\;^\circ\text{C}$, mould initial temperature 30 °C, time step 0.1 s.
 
 ## Reproduction target
-Implement the coupled heat‑flow and microstructural model for the reference casting: a 40‑mm‑diameter, 140‑mm‑long insulated mold cooled from the bottom by a water‑cooled copper chill, using the reference iron composition (C 3.51, Si 2.13, Mn <0.03, S 0.007, P 0.025, Mg 0.042, Ti 0.016, Al 0.014, Pb <0.006 wt%). Compute the final volume fractions of graphite, ferrite, pearlite, and iron carbide at positions l = 10, 15, 35, 55, and 95 mm from the chilled end. Write the predictions to `/app/outputs/step_01_predictions.csv` with columns `l` (mm), `graphite` (vol%), `ferrite` (vol%), `pearlite` (vol%), and `iron_carbide` (vol%); one row per position. The intermediate cooling curves, nodule counts, and state‑variable trajectories must be saved as evidence in `/app/outputs/temperature_profiles.csv`, `/app/outputs/nodule_count.csv`, and `/app/outputs/state_variables.csv`, respectively, but only the final volume‑fraction predictions will be scored.
+Implement the coupled heat‑flow and microstructural model for the reference casting: a 40‑mm‑diameter, 140‑mm‑long insulated mold cooled from the bottom by a water‑cooled copper chill, using the reference iron composition (C 3.51, Si 2.13, Mn <0.03, S 0.007, P 0.025, Mg 0.042, Ti 0.016, Al 0.014, Pb <0.006 wt%). Compute the final volume fractions of graphite, ferrite, pearlite, and iron carbide at positions l = 10, 15, 35, 55, and 95 mm from the chilled end. Write the predictions to `/app/outputs/step_01_predictions.csv` with columns `l` (mm), `graphite` (vol%), `ferrite` (vol%), `pearlite` (vol%), and `iron_carbide` (vol%); one row per position. The intermediate cooling curves, nodule counts, and state‑variable trajectories should be saved for completeness in `/app/outputs/temperature_profiles.csv`, `/app/outputs/nodule_count.csv`, and `/app/outputs/state_variables.csv` respectively, but only the final volume‑fraction predictions will be scored.
 
 ## Assets
 No external datasets or pre‑trained models are required. All numerical parameters (thermal properties, heat transfer coefficients, nucleation temperature, time constants, inclusion coarsening constant) are fully specified in the problem description and the reference casting conditions above. The implementation is expected to be in Python (≥3.8) using standard scientific libraries such as NumPy and SciPy.
@@ -110,17 +124,17 @@ No external datasets or pre‑trained models are required. All numerical paramet
 ### Step 1: Numerical heat flow simulation
 - Role: process
 - Action: Solve the 1‑D heat conduction equation with latent heat release using the finite difference method, applying the paper‑specified thermal properties, heat transfer coefficients, and boundary conditions. Obtain temperature‑time profiles at the bar positions of interest.
-- Evidence: `/app/outputs/temperature_profiles.csv`
+- Evidence: `/app/outputs/temperature_profiles.csv` (optional, not scored)
 
 ### Step 2: Graphite nodule count prediction (fading model)
 - Role: process
 - Action: Compute the inclusion diameter and resulting graphite nodule count as a function of position using the paper’s fading/inclusion coarsening model with the given coarsening constant and initial diameter.
-- Evidence: `/app/outputs/nodule_count.csv`
+- Evidence: `/app/outputs/nodule_count.csv` (optional, not scored)
 
 ### Step 3: Microstructural state variable integration
 - Role: process
 - Action: Solve the coupled ordinary differential equations for the four primary state variables (Φ, X, Y, Z) at each spatial position, using the local cooling curves, the nodule count, and the paper‑specified time constants and nucleation temperature.
-- Evidence: `/app/outputs/state_variables.csv`
+- Evidence: `/app/outputs/state_variables.csv` (optional, not scored)
 
 ### Step 4: Convert to volume fractions and output predictions
 - Role: scored (load-bearing)
@@ -132,7 +146,10 @@ No external datasets or pre‑trained models are required. All numerical paramet
 
 ## Output files
 Write all artifacts under `/app/outputs`:
-- `/app/outputs/step_01_predictions.csv`
+- `/app/outputs/step_01_predictions.csv` (required, scored)
+- `/app/outputs/temperature_profiles.csv` (optional, not scored)
+- `/app/outputs/nodule_count.csv` (optional, not scored)
+- `/app/outputs/state_variables.csv` (optional, not scored)
 
 ## Output contract
 

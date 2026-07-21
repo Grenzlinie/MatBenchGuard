@@ -1,0 +1,86 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Structural features (critical temperature, metastable region boundaries, bimodality) can be recomputed from raw CSV data and compared to paper-reported reference values.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "canonical_caloric.csv": "metric_recompute",
+    "microcanonical_caloric.csv": "metric_recompute",
+    "trace_E_3_006125.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for canonical critical temperature, low-energy potential, microcanonical metastable boundaries, and trace bimodality thresholds",
+      "source_provenance": "Paper Fig. 1, Fig. 3, and associated text",
+      "generation_method": "Extracted from paper narrative: Tc=15.5, low-energy Φ≈–60, microcanonical region boundaries E=–25.6525 and E=15.2448, bimodal separation >5 and each peak >5%.",
+      "why_not_fabricated": "Values are directly from the paper's reported quantitative claims and figures."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "canonical_caloric.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "avg_potential_energy"
+          ]
+        },
+        "description": "Canonical caloric curve data. The checker will recompute derived quantities (e.g., temperature of steepest jump, low-temperature energy) and compare against hidden paper-reported values."
+      },
+      {
+        "file": "microcanonical_caloric.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "total_energy",
+            "temperature"
+          ]
+        },
+        "description": "Microcanonical caloric curve data. The checker will verify the existence and boundaries of a negative specific heat region (where dT/dE < 0)."
+      },
+      {
+        "file": "trace_E_3_006125.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "step",
+            "potential_energy"
+          ]
+        },
+        "description": "Time series at fixed energy. The checker will compute a histogram of potential energy and verify a bimodal distribution with two well-separated peaks."
+      }
+    ],
+    "notes": "All output files are CSV with a header row. The checker will recompute structural features from the raw data, not trust self-reported metrics. No gold values or tolerances are disclosed here."
+  },
+  "steps": [
+    {
+      "id": "canonical_caloric_check",
+      "output_file": "canonical_caloric.csv",
+      "kind": "recompute_canonical_features",
+      "weight": 0.4
+    },
+    {
+      "id": "microcanonical_caloric_check",
+      "output_file": "microcanonical_caloric.csv",
+      "kind": "recompute_microcanonical_features",
+      "weight": 0.4
+    },
+    {
+      "id": "trace_check",
+      "output_file": "trace_E_3_006125.csv",
+      "kind": "check_trace_bimodality",
+      "weight": 0.2
+    }
+  ]
+}

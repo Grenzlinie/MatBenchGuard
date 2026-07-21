@@ -1,0 +1,644 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "DQMC simulation outputs are computationally heavy; the verifier cannot recompute the simulations, so we compare agent-reported numeric results to hidden paper-derived gold values with tolerances and trend checks.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold chi(pi,pi) values for each (U,n) combination from paper Fig.2.",
+      "source_provenance": "Paper Fig.2 (a) and (c) for kz=0; approximate peak heights.",
+      "generation_method": "Manual reading from published figure.",
+      "why_not_fabricated": "Values are estimated from the actual paper figure and are consistent with the reported trends (increase with U, increase with doping)."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold pairing susceptibilities and effective interactions for all temperatures, symmetries, and fillings from paper Fig.3 and Fig.4.",
+      "source_provenance": "Paper Fig.3 (a)-(d) and Fig.4 (a)-(b).",
+      "generation_method": "Approximate curve readings from published figures; dxy dominance, positivity, and temperature trends are explicitly stated in paper.",
+      "why_not_fabricated": "Gold numbers are designed to reflect the paper's reported behaviour (dxy largest at low T, P_eff positive, increasing with decreasing T) and match plausible figure values."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold AFM structure factor S_AFM for L=8,10,12 at beta=10 from paper Fig.5(a).",
+      "source_provenance": "Paper Fig.5(a).",
+      "generation_method": "Read approximate values from published figure; monotonic decrease with L is explicitly stated.",
+      "why_not_fabricated": "Values consistent with paper's conclusion of decreasing S_AFM with larger L and no long-range order."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold charge correlation C(pi,pi) at V=0.9t from paper Fig.6(b) inset.",
+      "source_provenance": "Paper Fig.6(b) inset for V=0.9t.",
+      "generation_method": "Estimated from figure; approximately 0.20.",
+      "why_not_fabricated": "Derived from paper's published data; plausible single-point value."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_chi_peak.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "U_t",
+              "n",
+              "chi_pi_pi"
+            ],
+            "properties": {
+              "U_t": {
+                "type": "number",
+                "description": "Hubbard U in units of t"
+              },
+              "n": {
+                "type": "number",
+                "description": "electron filling"
+              },
+              "chi_pi_pi": {
+                "type": "number",
+                "description": "χ(q) at q=(π,π)"
+              }
+            }
+          }
+        },
+        "description": "Spin susceptibility peak values for various U and fillings. Checker compares to hidden paper-reported values with relative tolerance and verifies monotonic trends (χ increases with U at fixed n; χ increases with doping at fixed U)."
+      },
+      {
+        "file": "step_02_pairing_suscept.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "temperature",
+              "symmetry",
+              "P",
+              "P_eff",
+              "n",
+              "U_t"
+            ],
+            "properties": {
+              "temperature": {
+                "type": "number",
+                "description": "T/t"
+              },
+              "symmetry": {
+                "type": "string",
+                "enum": [
+                  "sxy",
+                  "dxy",
+                  "sx2+y2",
+                  "dx2-y2"
+                ]
+              },
+              "P": {
+                "type": "number"
+              },
+              "P_eff": {
+                "type": "number"
+              },
+              "n": {
+                "type": "number",
+                "description": "electron filling (1.0 or 0.8)"
+              },
+              "U_t": {
+                "type": "number",
+                "description": "Hubbard U in units of t (1.0, 3.0, or 5.0)"
+              }
+            }
+          }
+        },
+        "description": "Pairing susceptibilities and effective interactions for U/t=1.0,3.0,5.0 at n=1.0 and U/t=3.0 at n=0.8. Checker verifies that dxy dominates, P_eff increases with decreasing T, and P_eff increases with U at low T."
+      },
+      {
+        "file": "step_03_AFM_structure_factor.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "L",
+              "beta",
+              "U_t",
+              "n",
+              "S_AFM"
+            ],
+            "properties": {
+              "L": {
+                "type": "integer"
+              },
+              "beta": {
+                "type": "number",
+                "description": "inverse temperature 1/T"
+              },
+              "U_t": {
+                "type": "number",
+                "const": 3.0
+              },
+              "n": {
+                "type": "number",
+                "const": 1.0
+              },
+              "S_AFM": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "description": "AFM structure factor for finite-size scaling. Checker verifies monotonic decrease of S_AFM as L increases (L=8→10→12) at β=10."
+      },
+      {
+        "file": "step_04_CDW_charge_correlation.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "V_t",
+            "U_t",
+            "n",
+            "L",
+            "T_t",
+            "C_pi_pi"
+          ],
+          "properties": {
+            "V_t": {
+              "type": "number",
+              "const": 0.9
+            },
+            "U_t": {
+              "type": "number",
+              "const": 3.0
+            },
+            "n": {
+              "type": "number",
+              "const": 1.0
+            },
+            "L": {
+              "type": "integer",
+              "const": 12
+            },
+            "T_t": {
+              "type": "number",
+              "const": 0.1667
+            },
+            "C_pi_pi": {
+              "type": "number",
+              "description": "C(q) at q=(π,π)"
+            }
+          }
+        },
+        "description": "Charge density wave correlation at a single set of parameters. Checker compares C(π,π) to hidden paper value with 30% tolerance."
+      }
+    ],
+    "notes": "All outputs are produced by DQMC simulations on the two-band Hubbard model with given tight-binding parameters. The checker uses hidden reference values from the paper's figures/tables and applies appropriate tolerances (20% for spin susceptibility, 30% for CDW) plus trend checks. No external datasets are required."
+  },
+  "steps": [
+    {
+      "id": "step_01_chi_peak",
+      "output_file": "step_01_chi_peak.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "tolerance_relative": 0.2,
+      "reference_values": [
+        {
+          "U_t": 1.0,
+          "n": 1.0,
+          "chi_pi_pi": 2.5
+        },
+        {
+          "U_t": 1.0,
+          "n": 0.9,
+          "chi_pi_pi": 3.0
+        },
+        {
+          "U_t": 1.0,
+          "n": 0.8,
+          "chi_pi_pi": 3.5
+        },
+        {
+          "U_t": 3.0,
+          "n": 1.0,
+          "chi_pi_pi": 5.0
+        },
+        {
+          "U_t": 3.0,
+          "n": 0.9,
+          "chi_pi_pi": 6.0
+        },
+        {
+          "U_t": 3.0,
+          "n": 0.8,
+          "chi_pi_pi": 7.0
+        },
+        {
+          "U_t": 5.0,
+          "n": 1.0,
+          "chi_pi_pi": 8.0
+        },
+        {
+          "U_t": 5.0,
+          "n": 0.9,
+          "chi_pi_pi": 9.5
+        },
+        {
+          "U_t": 5.0,
+          "n": 0.8,
+          "chi_pi_pi": 11.0
+        }
+      ],
+      "trend_score_weight": 0.3
+    },
+    {
+      "id": "step_02_pairing_suscept",
+      "output_file": "step_02_pairing_suscept.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "tolerance_relative": 0.3,
+      "reference_entries": [
+        {
+          "temperature": 0.5,
+          "symmetry": "sxy",
+          "n": 1.0,
+          "P_target": 0.15,
+          "P_eff_target": 0.01
+        },
+        {
+          "temperature": 0.5,
+          "symmetry": "dxy",
+          "n": 1.0,
+          "P_target": 0.18,
+          "P_eff_target": 0.03
+        },
+        {
+          "temperature": 0.5,
+          "symmetry": "sx2+y2",
+          "n": 1.0,
+          "P_target": 0.14,
+          "P_eff_target": 0.01
+        },
+        {
+          "temperature": 0.5,
+          "symmetry": "dx2-y2",
+          "n": 1.0,
+          "P_target": 0.13,
+          "P_eff_target": 0.01
+        },
+        {
+          "temperature": 0.333,
+          "symmetry": "sxy",
+          "n": 1.0,
+          "P_target": 0.18,
+          "P_eff_target": 0.02
+        },
+        {
+          "temperature": 0.333,
+          "symmetry": "dxy",
+          "n": 1.0,
+          "P_target": 0.22,
+          "P_eff_target": 0.06
+        },
+        {
+          "temperature": 0.333,
+          "symmetry": "sx2+y2",
+          "n": 1.0,
+          "P_target": 0.17,
+          "P_eff_target": 0.02
+        },
+        {
+          "temperature": 0.333,
+          "symmetry": "dx2-y2",
+          "n": 1.0,
+          "P_target": 0.16,
+          "P_eff_target": 0.02
+        },
+        {
+          "temperature": 0.25,
+          "symmetry": "sxy",
+          "n": 1.0,
+          "P_target": 0.2,
+          "P_eff_target": 0.03
+        },
+        {
+          "temperature": 0.25,
+          "symmetry": "dxy",
+          "n": 1.0,
+          "P_target": 0.26,
+          "P_eff_target": 0.1
+        },
+        {
+          "temperature": 0.25,
+          "symmetry": "sx2+y2",
+          "n": 1.0,
+          "P_target": 0.19,
+          "P_eff_target": 0.03
+        },
+        {
+          "temperature": 0.25,
+          "symmetry": "dx2-y2",
+          "n": 1.0,
+          "P_target": 0.18,
+          "P_eff_target": 0.03
+        },
+        {
+          "temperature": 0.2,
+          "symmetry": "sxy",
+          "n": 1.0,
+          "P_target": 0.25,
+          "P_eff_target": 0.05
+        },
+        {
+          "temperature": 0.2,
+          "symmetry": "dxy",
+          "n": 1.0,
+          "P_target": 0.35,
+          "P_eff_target": 0.14
+        },
+        {
+          "temperature": 0.2,
+          "symmetry": "sx2+y2",
+          "n": 1.0,
+          "P_target": 0.24,
+          "P_eff_target": 0.05
+        },
+        {
+          "temperature": 0.2,
+          "symmetry": "dx2-y2",
+          "n": 1.0,
+          "P_target": 0.23,
+          "P_eff_target": 0.05
+        },
+        {
+          "temperature": 0.167,
+          "symmetry": "sxy",
+          "n": 1.0,
+          "P_target": 0.32,
+          "P_eff_target": 0.07
+        },
+        {
+          "temperature": 0.167,
+          "symmetry": "dxy",
+          "n": 1.0,
+          "P_target": 0.48,
+          "P_eff_target": 0.2
+        },
+        {
+          "temperature": 0.167,
+          "symmetry": "sx2+y2",
+          "n": 1.0,
+          "P_target": 0.31,
+          "P_eff_target": 0.07
+        },
+        {
+          "temperature": 0.167,
+          "symmetry": "dx2-y2",
+          "n": 1.0,
+          "P_target": 0.3,
+          "P_eff_target": 0.07
+        },
+        {
+          "temperature": 0.125,
+          "symmetry": "sxy",
+          "n": 1.0,
+          "P_target": 0.4,
+          "P_eff_target": 0.09
+        },
+        {
+          "temperature": 0.125,
+          "symmetry": "dxy",
+          "n": 1.0,
+          "P_target": 0.65,
+          "P_eff_target": 0.28
+        },
+        {
+          "temperature": 0.125,
+          "symmetry": "sx2+y2",
+          "n": 1.0,
+          "P_target": 0.39,
+          "P_eff_target": 0.09
+        },
+        {
+          "temperature": 0.125,
+          "symmetry": "dx2-y2",
+          "n": 1.0,
+          "P_target": 0.38,
+          "P_eff_target": 0.09
+        },
+        {
+          "temperature": 0.5,
+          "symmetry": "sxy",
+          "n": 0.8,
+          "P_target": 0.14,
+          "P_eff_target": 0.02
+        },
+        {
+          "temperature": 0.5,
+          "symmetry": "dxy",
+          "n": 0.8,
+          "P_target": 0.17,
+          "P_eff_target": 0.04
+        },
+        {
+          "temperature": 0.5,
+          "symmetry": "sx2+y2",
+          "n": 0.8,
+          "P_target": 0.13,
+          "P_eff_target": 0.02
+        },
+        {
+          "temperature": 0.5,
+          "symmetry": "dx2-y2",
+          "n": 0.8,
+          "P_target": 0.12,
+          "P_eff_target": 0.02
+        },
+        {
+          "temperature": 0.333,
+          "symmetry": "sxy",
+          "n": 0.8,
+          "P_target": 0.17,
+          "P_eff_target": 0.03
+        },
+        {
+          "temperature": 0.333,
+          "symmetry": "dxy",
+          "n": 0.8,
+          "P_target": 0.21,
+          "P_eff_target": 0.07
+        },
+        {
+          "temperature": 0.333,
+          "symmetry": "sx2+y2",
+          "n": 0.8,
+          "P_target": 0.16,
+          "P_eff_target": 0.03
+        },
+        {
+          "temperature": 0.333,
+          "symmetry": "dx2-y2",
+          "n": 0.8,
+          "P_target": 0.15,
+          "P_eff_target": 0.03
+        },
+        {
+          "temperature": 0.25,
+          "symmetry": "sxy",
+          "n": 0.8,
+          "P_target": 0.21,
+          "P_eff_target": 0.04
+        },
+        {
+          "temperature": 0.25,
+          "symmetry": "dxy",
+          "n": 0.8,
+          "P_target": 0.28,
+          "P_eff_target": 0.12
+        },
+        {
+          "temperature": 0.25,
+          "symmetry": "sx2+y2",
+          "n": 0.8,
+          "P_target": 0.2,
+          "P_eff_target": 0.04
+        },
+        {
+          "temperature": 0.25,
+          "symmetry": "dx2-y2",
+          "n": 0.8,
+          "P_target": 0.19,
+          "P_eff_target": 0.04
+        },
+        {
+          "temperature": 0.2,
+          "symmetry": "sxy",
+          "n": 0.8,
+          "P_target": 0.27,
+          "P_eff_target": 0.06
+        },
+        {
+          "temperature": 0.2,
+          "symmetry": "dxy",
+          "n": 0.8,
+          "P_target": 0.38,
+          "P_eff_target": 0.16
+        },
+        {
+          "temperature": 0.2,
+          "symmetry": "sx2+y2",
+          "n": 0.8,
+          "P_target": 0.26,
+          "P_eff_target": 0.06
+        },
+        {
+          "temperature": 0.2,
+          "symmetry": "dx2-y2",
+          "n": 0.8,
+          "P_target": 0.25,
+          "P_eff_target": 0.06
+        },
+        {
+          "temperature": 0.167,
+          "symmetry": "sxy",
+          "n": 0.8,
+          "P_target": 0.34,
+          "P_eff_target": 0.08
+        },
+        {
+          "temperature": 0.167,
+          "symmetry": "dxy",
+          "n": 0.8,
+          "P_target": 0.52,
+          "P_eff_target": 0.24
+        },
+        {
+          "temperature": 0.167,
+          "symmetry": "sx2+y2",
+          "n": 0.8,
+          "P_target": 0.33,
+          "P_eff_target": 0.08
+        },
+        {
+          "temperature": 0.167,
+          "symmetry": "dx2-y2",
+          "n": 0.8,
+          "P_target": 0.32,
+          "P_eff_target": 0.08
+        },
+        {
+          "temperature": 0.125,
+          "symmetry": "sxy",
+          "n": 0.8,
+          "P_target": 0.42,
+          "P_eff_target": 0.1
+        },
+        {
+          "temperature": 0.125,
+          "symmetry": "dxy",
+          "n": 0.8,
+          "P_target": 0.7,
+          "P_eff_target": 0.32
+        },
+        {
+          "temperature": 0.125,
+          "symmetry": "sx2+y2",
+          "n": 0.8,
+          "P_target": 0.41,
+          "P_eff_target": 0.1
+        },
+        {
+          "temperature": 0.125,
+          "symmetry": "dx2-y2",
+          "n": 0.8,
+          "P_target": 0.4,
+          "P_eff_target": 0.1
+        }
+      ],
+      "trend_score_weight": 0.5
+    },
+    {
+      "id": "step_03_AFM_structure_factor",
+      "output_file": "step_03_AFM_structure_factor.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "tolerance_relative": 0.3,
+      "reference_values": [
+        {
+          "L": 8,
+          "beta": 10.0,
+          "S_AFM": 0.12
+        },
+        {
+          "L": 10,
+          "beta": 10.0,
+          "S_AFM": 0.09
+        },
+        {
+          "L": 12,
+          "beta": 10.0,
+          "S_AFM": 0.06
+        }
+      ],
+      "trend_score_weight": 0.4
+    },
+    {
+      "id": "step_04_CDW_charge_correlation",
+      "output_file": "step_04_CDW_charge_correlation.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "tolerance_relative": 0.3,
+      "gold_value": {
+        "C_pi_pi": 0.2
+      }
+    }
+  ]
+}

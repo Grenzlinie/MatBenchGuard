@@ -1,0 +1,64 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "The checker compares reported mean magnetization and susceptibility to analytical spin-wave predictions (Eqs. 4 and 8) and checks constancy of standardized moments. Full recomputation from raw simulation traces is infeasible without re-running the MC code; result-level compare with tolerance and structural constancy is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "simulation_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "analytical reference values for M_mean and chi per condition, and constancy threshold",
+      "source_provenance": "paper Eqs. (4) and (8) and reference solve.sh constants",
+      "generation_method": "Implemented directly as Python expressions in the checker prepare and scorers; no separate file needed.",
+      "why_not_fabricated": "These are the exact paper-reported spin-wave expressions used to derive the hidden gold; they are not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "simulation_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "N",
+            "T_J",
+            "M_mean",
+            "chi",
+            "z4",
+            "z6"
+          ],
+          "units": {}
+        },
+        "description": "The checker reads this CSV and compares the reported ⟨M⟩ and χ to the paper's analytical spin-wave predictions (hidden) with a relative tolerance. It additionally checks that the standardized moments ⟨z⁴⟩ and ⟨z⁶⟩ are approximately constant across all conditions (maximum deviation from the cross-condition mean is below a hidden threshold). Satisfying these checks demonstrates that the agent's simulation reproduces the spin-wave behavior and the universality of the scaled magnetization distribution."
+      }
+    ],
+    "notes": "The agent must simulate the harmonic XY model exactly as described; the checker uses the spin-wave formulas and the constancy of standardized moments as the hidden ground truth. No additional artifact is required."
+  },
+  "steps": [
+    {
+      "id": "magnetization_accuracy",
+      "output_file": "simulation_results.csv",
+      "kind": "custom",
+      "weight": 0.4,
+      "description": "Compare reported <M> to analytical spin-wave formula (Eq.4): M = (1/(2N))^(T/(8π)). Score based on relative error with piecewise linear decay; full credit at ≤1% error, zero beyond 10% error."
+    },
+    {
+      "id": "susceptibility_accuracy",
+      "output_file": "simulation_results.csv",
+      "kind": "custom",
+      "weight": 0.4,
+      "description": "Compare reported χ to analytical formula (Eq.8): χ = (1/(2·258.6))·N·M²·T. Score based on relative error with piecewise linear decay; full credit at ≤2% error, zero beyond 15% error."
+    },
+    {
+      "id": "moment_constancy",
+      "output_file": "simulation_results.csv",
+      "kind": "custom",
+      "weight": 0.2,
+      "description": "Check that standardized moments z4 and z6 are approximately constant across all (N,T) conditions. Score based on maximum absolute deviation from the condition mean (≤0.2 full credit, linear decay to 0.5)."
+    }
+  ]
+}

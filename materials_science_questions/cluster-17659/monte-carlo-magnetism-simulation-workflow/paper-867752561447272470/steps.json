@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step1",
+    "title": "Simulate 1D Ising model",
+    "role": "process",
+    "action": "Use the Wolff cluster algorithm to simulate the 1D nearest-neighbour Ising model with Hamiltonian H = -J Σ S_i S_{i+1} and periodic boundary conditions. Set N = 10^5 spins, reduced temperatures T* = 0.2 and 0.5. For each temperature, discard the first 10^4 microstates for equilibration, then collect M = 2×10^4 microstates at an interval of 205 Monte Carlo steps. Store the microstates for later steps.",
+    "output_file": "",
+    "evidence": "1d_simulation_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Simulate 2D Ising model (eigen microstate)",
+    "role": "process",
+    "action": "Simulate the 2D square-lattice Ising model with nearest-neighbour interactions, linear size L = 32, periodic boundary conditions. Use the Wolff algorithm at reduced temperatures T* = 2.2 and 6.2. For each temperature, discard the first 8000 microstates, then collect M = 2×10^4 microstates at an interval of 250 Monte Carlo steps. Store the microstates.",
+    "output_file": "",
+    "evidence": "2d_eigen_simulation_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Simulate 2D Ising model (finite-size scaling)",
+    "role": "process",
+    "action": "Simulate the 2D Ising model at the exact critical temperature T_c* = 2/ln(1+√2) for linear sizes L = 32, 64, 128. Use the Wolff algorithm with periodic boundaries. For each L, discard the first 8000 microstates, then collect M = 2×10^4 microstates at an interval of 250 Monte Carlo steps. Store the microstates.",
+    "output_file": "",
+    "evidence": "2d_fss_simulation_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step4",
+    "title": "Compute 1D weight factors",
+    "role": "scored",
+    "action": "From the microstate ensembles of step1, for each temperature separately: construct the M×M correlation matrix C_IJ = (A^I)·(A^J) where A^I is the normalized spin configuration vector of microstate I; diagonalize C (e.g., using an iterative eigensolver) to obtain eigenvalues λ₁≥λ₂≥…; compute the weight factors w_I = λ_I / M; write the largest three weights to 1d_weight_factors.csv.",
+    "output_file": "1d_weight_factors.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Weight factors for the 1D Ising model at the specified temperatures",
+    "output_schema": "T_star (float), w1 (float), w2 (float), w3 (float)"
+  },
+  {
+    "id": "step5",
+    "title": "Compute 2D weight factors",
+    "role": "scored",
+    "action": "From the microstate ensembles of step2 (L=32), for each temperature T*=2.2 and 6.2: build the correlation matrix, diagonalize, compute the largest three weight factors, and write the results to 2d_weight_factors.csv.",
+    "output_file": "2d_weight_factors.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Weight factors for the 2D Ising model at L=32 for the specified temperatures",
+    "output_schema": "T_star (float), L (int), w1 (float), w2 (float), w3 (float)"
+  },
+  {
+    "id": "step6",
+    "title": "Finite-size scaling and β/ν determination",
+    "role": "scored",
+    "action": "From the microstate ensembles of step3 for L=32,64,128 at T_c, compute the largest weight factor w1 for each L. Perform a linear regression of ln(w1) vs ln(L) to obtain the slope s = 2β/ν, then compute β/ν = s/2. Write the results to fss_results.csv: for each L a row with description='w1_at_Tc' and value=w1; and a row with L=0, description='beta_over_nu' and value=β/ν.",
+    "output_file": "fss_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Finite-size scaling analysis of the largest weight factor at the critical point, yielding the exponent ratio β/ν",
+    "output_schema": "L (int), value (float), description (string)"
+  }
+]

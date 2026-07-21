@@ -13,9 +13,7 @@
 - Publishable: false
 - Repair state: NOT_REQUIRED
 - Authoritative score (0–100): null
-- Legacy total score (0–100): null
-- Scoring version: materials-review-scoring/1.1
-- Legacy scoring version: materials-review-scoring/1.0
+- Scoring version: materials-review-scoring/2.0
 - Deterministic D1-D6 status: NOT_APPLICABLE
 - Deterministic repair state: NOT_REQUIRED
 - Publication route: EVIDENCE_PENDING
@@ -27,7 +25,7 @@
 
 ## 4. Final Verdict
 
-The verdict is fail-closed under `materials-evidence-contract/1.0`. List every
+The verdict is fail-closed under `materials-evidence-contract/2.0`. List every
 unresolved evidence gap; a report with any gap cannot be `PASS`.
 
 ## 5. Materials Qualification
@@ -111,8 +109,7 @@ The authoritative scoring is the seven-dimension `dimensions_v11` model
 (C01–C07). Each dimension reports weight/max points, points earned, normalized
 score, key-dimension flag, status, its deductions, and finding IDs; deductions
 apply by severity ratio inside that dimension only. `summary.total_score` is the
-weighted 0–100 total; `legacy_total_score` and the legacy `dimension_scores`
-table are retained as compatibility fields. Robustness (C07) also records
+weighted 0–100 total. Robustness (C07) also records
 positive/negative/discrimination/equivalence provenance. C06/solution status
 records only solve/positive-mock status and never Oracle values.
 

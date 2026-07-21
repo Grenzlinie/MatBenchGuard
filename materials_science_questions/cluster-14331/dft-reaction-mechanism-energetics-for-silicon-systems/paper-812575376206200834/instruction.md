@@ -4,7 +4,28 @@
 Accurate kinetic data for hexamethyldisiloxane (HMDSO) thermal decomposition is critical for flame-based silica material synthesis. This task computes the Gibbs free energy of activation and forward rate constants for the four initial decomposition pathways of HMDSO using density functional theory and transition state theory, providing quantitative insight into which pathway is most kinetically favorable.
 
 ## Approach
-Use quantum chemistry calculations at the B3LYP/6-311+G(d,p) level of density functional theory (DFT). For each of the four initial decomposition pathways—Si–O bond dissociation (P1), Si–C bond dissociation (P2), dissociation-recombination of Si–O and Si–C bonds (P3), and CH₄ elimination (P4)—locate and verify transition states, compute thermochemistry (including zero-point energy correction), and calculate activation Gibbs free energies. Apply conventional transition state theory with Wigner tunneling correction to obtain rate constants at multiple temperatures. The workflow consists of: (1) geometry optimizations, transition-state searches, and frequency analyses for all species; (2) extraction of barriers and rate constants, written to a CSV file.
+Use quantum chemistry calculations at the B3LYP/6-311+G(d,p) level of density functional theory (DFT). For each of the four initial decomposition pathways—Si–O bond dissociation (P1), Si–C bond dissociation (P2), dissociation-recombination of Si–O and Si–C bonds (P3), and CH₄ elimination (P4)—locate and verify transition states, compute thermochemistry (including zero-point energy correction), and calculate activation Gibbs free energies. Apply conventional transition state theory with Wigner tunneling correction to obtain rate constants at multiple temperatures.
+
+## Reaction pathways
+The four target initial decomposition reactions, as defined in the paper, are:
+
+- **P1 (Si–O bond dissociation):**  
+  (CH₃)₃SiOSi(CH₃)₃ → (CH₃)₃SiO• + •Si(CH₃)₃  
+  (trimethylsilyloxyl radical + trimethylsilyl radical)
+
+- **P2 (Si–C bond dissociation):**  
+  (CH₃)₃SiOSi(CH₃)₃ → •CH₃ + (CH₃)₃SiOSi(CH₃)₂•  
+  (methyl radical + pentamethyldisiloxane radical)
+
+- **P3 (dissociation-recombination of Si–O and Si–C bonds):**  
+  (CH₃)₃SiOSi(CH₃)₃ → (CH₃)₂SiO + Si(CH₃)₄  
+  (dimethylsiloxane + tetramethylsilane)
+
+- **P4 (CH₄ elimination):**  
+  (CH₃)₃SiOSi(CH₃)₃ → CH₄ + (CH₃)₃SiOSiCH₃CH₂  
+  (methane + a closed-shell silene molecule)
+
+You must compute the activation barrier and rate constant for each of these four elementary reactions.
 
 ## Reproduction target
 Compute the Gibbs free energy of activation ΔG_f‡ (in kcal/mol) at 298.15 K and the forward rate constants k(T) at 298.15, 1000, 1500, 2000, and 2500 K for the four initial decomposition pathways P1–P4 of HMDSO. Write the results to a CSV file with columns: pathway, temperature_K, delta_G_forward_kcalmol (provided only for T = 298.15 K), rate_constant_s-1. The file must contain exactly 20 rows (4 pathways × 5 temperatures).
@@ -17,7 +38,7 @@ Compute the Gibbs free energy of activation ΔG_f‡ (in kcal/mol) at 298.15 K a
 
 ### Step 1: DFT geometry optimization and transition state search
 - Role: process
-- Action: Perform DFT geometry optimizations and frequency analyses for HMDSO, all product species, and locate transition states for the four initial decomposition pathways using relaxed scans and saddle point searches at the B3LYP/6-311+G(d,p) level. Verify each transition state by a single imaginary frequency and intrinsic reaction coordinate (IRC) calculations. Obtain absolute enthalpies and Gibbs free energies (including zero-point energy corrections) for all species.
+- Action: Perform DFT geometry optimizations and frequency analyses for HMDSO, all product species of P1–P4 as listed in the Reaction pathways section, and locate transition states for the four initial decomposition pathways using relaxed scans and saddle point searches at the B3LYP/6-311+G(d,p) level. Verify each transition state by a single imaginary frequency and intrinsic reaction coordinate (IRC) calculations. Obtain absolute enthalpies and Gibbs free energies (including zero-point energy corrections) for all species.
 - Evidence: none
 
 ### Step 2: Compute activation barriers and rate constants

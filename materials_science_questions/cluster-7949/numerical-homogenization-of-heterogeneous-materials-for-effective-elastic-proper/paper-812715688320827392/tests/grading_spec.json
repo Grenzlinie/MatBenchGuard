@@ -1,0 +1,112 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing the full analytical model in the verifier is infeasible. Agent's CSV end-of-life stress values are compared to paper-reported gold from hybrid model curves with generous tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "ilal_stress_vs_fd.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference radial stress at IL/Al interface at end-of-life fission densities for six plate-location configurations, extracted from paper's Fig. 12 and Fig. 13 hybrid model curves.",
+      "source_provenance": "Paper figures 12 and 13 showing hybrid model stress vs. fission density; digitized by approximating from published plots.",
+      "generation_method": "Visual interpolation from figure curves at end-of-life fission densities given in Table 2.",
+      "why_not_fabricated": "Directly traceable to paper-reported results plotted in the referenced figures."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ilal_stress_vs_fd.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "plate",
+            "location",
+            "fission_density_1e21",
+            "radial_stress_MPa"
+          ],
+          "units": {
+            "fission_density_1e21": "10^21 fissions/cm³",
+            "radial_stress_MPa": "MPa"
+          }
+        },
+        "description": "Radial stress at the IL/Al interface as a function of fission density for the six plate/location cases. Checker compares end-of-life values and a sign-transition trend to hidden paper gold with tolerance."
+      }
+    ],
+    "notes": "Only the CSV is scored. The process step evidence (data_loaded.txt) is not verified. The checker uses hidden gold end-of-life values and a trend check for V6022M location B stress sign transition."
+  },
+  "steps": [
+    {
+      "id": "step_ilal_stress_eol",
+      "output_file": "ilal_stress_vs_fd.csv",
+      "kind": "numeric",
+      "weight": 0.7,
+      "description": "Compare radial stress at end-of-life fission density for six configurations to paper gold with tolerance.",
+      "cases": [
+        {
+          "plate": "V6022M",
+          "location": "A",
+          "fd_eol": 5.91,
+          "stress_gold": 24.0,
+          "tolerance_rel": 0.15,
+          "tolerance_abs": 10.0
+        },
+        {
+          "plate": "V6022M",
+          "location": "B",
+          "fd_eol": 5.68,
+          "stress_gold": 15.0,
+          "tolerance_rel": 0.15,
+          "tolerance_abs": 10.0
+        },
+        {
+          "plate": "V6022M",
+          "location": "C",
+          "fd_eol": 5.43,
+          "stress_gold": 8.0,
+          "tolerance_rel": 0.15,
+          "tolerance_abs": 10.0
+        },
+        {
+          "plate": "R3R108",
+          "location": "A",
+          "fd_eol": 5.3,
+          "stress_gold": 10.6,
+          "tolerance_rel": 0.15,
+          "tolerance_abs": 10.0
+        },
+        {
+          "plate": "R3R108",
+          "location": "B",
+          "fd_eol": 4.78,
+          "stress_gold": 7.5,
+          "tolerance_rel": 0.15,
+          "tolerance_abs": 10.0
+        },
+        {
+          "plate": "R3R108",
+          "location": "C",
+          "fd_eol": 4.16,
+          "stress_gold": 5.0,
+          "tolerance_rel": 0.15,
+          "tolerance_abs": 10.0
+        }
+      ]
+    },
+    {
+      "id": "step_ilal_stress_trend",
+      "output_file": "ilal_stress_vs_fd.csv",
+      "kind": "structural",
+      "weight": 0.3,
+      "description": "Verify that for V6022M location B, radial stress changes from compressive to tensile between FD 2.0 and 3.0.",
+      "trend_plate": "V6022M",
+      "trend_location": "B",
+      "fd_low": 2.0,
+      "fd_high": 3.0
+    }
+  ]
+}

@@ -1,0 +1,180 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Both target artifacts are final computed tables; the checker cannot rerun the computationally heavy SEM pipeline. Therefore we compare the agent's reported values to hidden gold values digitised from the paper's Fig. 10 and Table II, with tolerances that absorb implementation variance.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference for sc_s11_s12.csv and convergence_table.csv",
+      "source_provenance": "Digitised from IEEE T-MTT paper Fig. 10 (S-parameters) and Table II (convergence errors). Unit: frequency GHz, S-parameters dimensionless, errors dimensionless.",
+      "generation_method": "Manually extracted from the published paper using known filter dimensions and TE10 excitation; the same numbers are used by the hidden reference solve.sh.",
+      "why_not_fabricated": "The gold reproduces the paper's reported results; no labels are invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "sc_s11_s12.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "frequency",
+            "S11_mag",
+            "S12_mag"
+          ],
+          "units": {
+            "frequency": "GHz",
+            "S11_mag": "dimensionless",
+            "S12_mag": "dimensionless"
+          }
+        },
+        "description": "Computed |S11| and |S12| magnitudes for the microwave filter at frequencies 8.0–9.0 GHz, using the semianalytical SEM with 3rd‑order spectral elements. The checker compares these values to the paper’s published reference data with a fixed absolute tolerance."
+      },
+      {
+        "file": "convergence_table.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "order",
+            "unknowns",
+            "memory_MB",
+            "cpu_time_min",
+            "rel_error_S11",
+            "rel_error_S12"
+          ],
+          "units": {
+            "order": "dimensionless",
+            "unknowns": "count",
+            "memory_MB": "MB",
+            "cpu_time_min": "minutes",
+            "rel_error_S11": "dimensionless",
+            "rel_error_S12": "dimensionless"
+          }
+        },
+        "description": "Spectral convergence metrics for orders 3–8. The checker scores rel_error_S11 and rel_error_S12 by comparing them to the paper’s published values with a generous relative tolerance (agent values within a factor of 2 of the gold are accepted). Collective monotonic decrease with order is also verified."
+      }
+    ],
+    "notes": "The task reproduces the microwave filter example from the paper. The agent must implement the complete semianalytical SEM pipeline; no external datasets or third‑party solvers are required. The reference solution used for the convergence study can be obtained by running the same SEM with a much higher interpolation order (e.g., 12) and/or a finer mesh, as a computationally efficient alternative to a dense 3‑D FEM."
+  },
+  "steps": [
+    {
+      "id": "sc_s11_s12_check",
+      "output_file": "sc_s11_s12.csv",
+      "kind": "numeric",
+      "weight": 0.5,
+      "tolerance_abs": 0.01,
+      "notes": "Compare agent |S11| and |S12| to embedded gold per frequency; average row scores."
+    },
+    {
+      "id": "convergence_table_check",
+      "output_file": "convergence_table.csv",
+      "kind": "numeric",
+      "weight": 0.5,
+      "rel_tolerance": 0.5,
+      "notes": "Score rel_error_S11 and rel_error_S12 with threshold_or_better relative to gold; also check unknowns, memory, CPU loosely, and enforce monotonic decrease of errors with order."
+    }
+  ],
+  "hidden_gold": {
+    "sc_s11_s12": {
+      "description": "Gold S-parameters for microwave filter (TE10, 3rd-order SEM) from Fig.10",
+      "frequencies": [
+        8.0,
+        8.1,
+        8.2,
+        8.3,
+        8.4,
+        8.5,
+        8.6,
+        8.7,
+        8.8,
+        8.9,
+        9.0
+      ],
+      "S11_mag": [
+        0.98,
+        0.95,
+        0.9,
+        0.7,
+        0.3,
+        0.05,
+        0.03,
+        0.1,
+        0.4,
+        0.7,
+        0.92
+      ],
+      "S12_mag": [
+        0.03,
+        0.05,
+        0.1,
+        0.3,
+        0.7,
+        0.95,
+        0.97,
+        0.9,
+        0.6,
+        0.3,
+        0.08
+      ]
+    },
+    "convergence_table": {
+      "description": "Gold convergence table from Table II (orders 3-8, unknowns, rel errors) extended with memory/CPU from reference solve.sh",
+      "gold_rows": [
+        {
+          "order": 3,
+          "unknowns": 2046,
+          "memory_MB": 9.0,
+          "cpu_time_min": 2.0,
+          "rel_error_S11": 0.0039,
+          "rel_error_S12": 0.003
+        },
+        {
+          "order": 4,
+          "unknowns": 3784,
+          "memory_MB": 16.6,
+          "cpu_time_min": 9.0,
+          "rel_error_S11": 0.0016,
+          "rel_error_S12": 0.0033
+        },
+        {
+          "order": 5,
+          "unknowns": 6050,
+          "memory_MB": 26.6,
+          "cpu_time_min": 28.0,
+          "rel_error_S11": 0.00093,
+          "rel_error_S12": 0.00074
+        },
+        {
+          "order": 6,
+          "unknowns": 8844,
+          "memory_MB": 38.9,
+          "cpu_time_min": 72.1,
+          "rel_error_S11": 0.00046,
+          "rel_error_S12": 0.00036
+        },
+        {
+          "order": 7,
+          "unknowns": 12166,
+          "memory_MB": 53.5,
+          "cpu_time_min": 178.1,
+          "rel_error_S11": 0.00028,
+          "rel_error_S12": 0.00022
+        },
+        {
+          "order": 8,
+          "unknowns": 16016,
+          "memory_MB": 70.5,
+          "cpu_time_min": 321.6,
+          "rel_error_S11": 0.00013,
+          "rel_error_S12": 0.0001
+        }
+      ]
+    }
+  }
+}

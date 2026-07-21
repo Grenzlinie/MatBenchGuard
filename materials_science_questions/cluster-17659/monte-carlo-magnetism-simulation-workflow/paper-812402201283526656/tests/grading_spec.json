@@ -1,0 +1,60 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The paper's main claim is a functional form (height-difference correlation function scaling as (log r)^2) and finite-size independence of interface width; these are assessed by structural consistency checks and goodness-of-fit, because a single numeric recompute target is infeasible (the exact values depend on simulation details and are not reported as fixed targets).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_02_saturation_widths.csv": "structural_audit",
+    "step_03_correlation_function.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_02_saturation_widths.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "L",
+            "saturated_W2",
+            "std_W2"
+          ]
+        },
+        "description": "The finite-size independence check: three rows for L=128, 256, 512 giving the disorder-averaged saturated squared interface width and its standard deviation. The checker verifies that the three values are within a small relative tolerance of each other."
+      },
+      {
+        "file": "step_03_correlation_function.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r",
+            "C_r"
+          ]
+        },
+        "description": "The height-difference correlation function for L=256, averaged over disorder realizations. The checker will assess the scaling behavior of C(r) using a hidden validation function to determine whether the predicted correlation law holds."
+      }
+    ],
+    "notes": "No gold values from the paper are disclosed. The checker only verifies intra-artifact consistency (finite-size independence) and functional form (log-squared scaling)."
+  },
+  "steps": [
+    {
+      "id": "step_02",
+      "output_file": "step_02_saturation_widths.csv",
+      "weight": 0.4,
+      "kind": "structural_audit",
+      "description": "Verify finite-size independence: all three saturated_W2 values must have relative deviation from mean < 5%."
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_correlation_function.csv",
+      "weight": 0.6,
+      "kind": "structural_audit",
+      "description": "Assess (log r)^2 scaling via Pearson R² between C_r and (log r)^2 for r=2..20; require R² > 0.95."
+    }
+  ]
+}

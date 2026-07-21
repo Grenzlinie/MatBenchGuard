@@ -1,0 +1,52 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The reference implementation embedded in checker.py recomputes the headline quantity (Fg) from each row's input parameters using the paper's analytical equations, enabling a direct numerical comparison with the agent's output.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "glide_force_values.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference implementation of edge dislocation near elliptical inhomogeneity glide force",
+      "source_provenance": "Derived from paper equations (1)-(3) and the general perturbative solution from Stagni ZAMP 33, 315 (1982).",
+      "generation_method": "Python code in checker_blocks that solves the plane elasticity problem using complex variable methods and numerical series summation.",
+      "why_not_fabricated": "The implementation reproduces the exact analytical method of the paper; its results are deterministic and consistent with the paper's reported trends for limiting cases (hole, rigid, circular)."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "glide_force_values.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "m",
+            "Gamma",
+            "nu1",
+            "nu2",
+            "r0_over_R",
+            "phi0_deg",
+            "Fg"
+          ]
+        },
+        "description": "Computed dimensionless glide force for predefined test cases spanning shape, modulus ratios, and dislocation positions. The checker recomputes the correct Fg from each row's input parameters using a reference implementation and checks that the agent's reported Fg agrees within a relative tolerance."
+      }
+    ],
+    "notes": "The hidden checker recomputes Fg from the input parameters in each row using a reference implementation of the full elasticity solution and applies a relative tolerance. Test cases are a public set that sample the parameter ranges shown in the paper's figures; the exercise verifies that the agent correctly implemented the complex potential method, perturbative series, and Peach-Koehler formula."
+  },
+  "steps": [
+    {
+      "id": "step_03_glide_force",
+      "output_file": "glide_force_values.csv",
+      "weight": 1.0,
+      "kind": "numeric_recompute",
+      "tolerance_relative": 0.0001,
+      "metric": "Fg",
+      "description": "Recompute dimensionless glide force from input parameters and compare against agent's reported Fg. Each row is scored individually; final score = mean per-row accuracy."
+    }
+  ]
+}

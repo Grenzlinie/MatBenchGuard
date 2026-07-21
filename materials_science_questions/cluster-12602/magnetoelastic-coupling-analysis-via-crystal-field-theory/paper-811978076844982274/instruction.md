@@ -4,10 +4,144 @@
 The magnetization of two‑sublattice axial magnets is described by a magnetoelastic Hamiltonian that includes Ising exchange, exchange-strain coupling, and strain-coupled single-ion anisotropy. Within the mean-field approximation (MFA) this leads to coupled self-consistency equations for the sublattice magnetizations, quadrupole moments, and the equilibrium strain. For certain choices of the dimensionless material parameters, the system can undergo a temperature-induced phase transition from an antiferromagnetic (A) phase to a ferromagnetic (F) phase. This task investigates whether such a transition occurs for a specific parameter set.
 
 ## Approach
-The MFA provides self-consistency equations for the sublattice magnetization σ and the equilibrium strain ε in the A phase (σ₁ = –σ₂ = σ) and the F phase (σ₁ = σ₂ = σ). The equations are transcendental: σ is given by a hyperbolic function of σ, ε, and the fixed parameters (k, l, m, c) and the reduced temperature t; the strain ε is given by a quadratic expression involving σ² and another hyperbolic function. By simultaneously solving the pair (σ_A, ε_A) from the A-phase equations and (σ_F, ε_F) from the F-phase equations on a dense grid of t from 0 to 2, one can obtain the equilibrium values. The free energy density f for each phase is then computed from the full variational free-energy expression, which involves ln terms, the order parameters, and the strain. The entire analysis is performed for the fixed dimensionless parameter set k = -1.1, c = 1, l = 1, m = 2, producing a CSV table of all quantities as functions of t.
+The MFA provides exact self-consistency equations for the sublattice magnetization σ and the equilibrium strain ε in two magnetic phases.  
+**Fixed dimensionless parameters** (identical to Fig. 5 of the paper):
+- \(k = -1.1\)
+- \(c = 1.0\)
+- \(l = 1.0\)
+- \(m = 2.0\)
+
+The reduced temperature is \(t = k_{\mathrm B}T/(z_1 I)\) (all energies are measured in units of \(z_1 I\)).
+
+---
+
+### 1. Self-consistency equations for the antiferromagnetic (A) phase
+In the A phase the sublattice magnetizations satisfy \(\sigma_1 = -\sigma_2 = \sigma\). The two coupled equations are
+
+\[
+\sigma \;=\; \frac{2\,e^{\,l\varepsilon/t}\;\sinh\!\bigl(\sigma\,(m-(1+k\varepsilon))/t\bigr)}
+{2\,e^{\,l\varepsilon/t}\;\cosh\!\bigl(\sigma\,(m-(1+k\varepsilon))/t\bigr) \;+\; 1} ,
+\tag{1}
+\]
+
+\[
+\varepsilon \;=\; \frac{1}{2c}\,
+\left[\;
+\frac{4l\,e^{\,l\varepsilon/t}\;\cosh\!\bigl(\sigma\,(m-(1+k\varepsilon))/t\bigr)}
+{2\,e^{\,l\varepsilon/t}\;\cosh\!\bigl(\sigma\,(m-(1+k\varepsilon))/t\bigr) \;+\; 1}
+\;-\; \sigma^2 k
+\right].
+\tag{2}
+\]
+
+After solving these equations the quadrupole moments are given by
+
+\[
+Q_1 = Q_2 = Q = 
+\frac{2\,e^{\,l\varepsilon/t}\;\cosh\!\bigl(\sigma\,(m-(1+k\varepsilon))/t\bigr)}
+{2\,e^{\,l\varepsilon/t}\;\cosh\!\bigl(\sigma\,(m-(1+k\varepsilon))/t\bigr) \;+\; 1}.
+\tag{3}
+\]
+
+---
+
+### 2. Self-consistency equations for the ferromagnetic (F) phase
+In the F phase \(\sigma_1 = \sigma_2 = \sigma\). The equations become
+
+\[
+\sigma \;=\; \frac{2\,e^{\,l\varepsilon/t}\;\sinh\!\bigl(\sigma\,(m+1+k\varepsilon)/t\bigr)}
+{2\,e^{\,l\varepsilon/t}\;\cosh\!\bigl(\sigma\,(m+1+k\varepsilon)/t\bigr) \;+\; 1},
+\tag{4}
+\]
+
+\[
+\varepsilon \;=\; \frac{1}{2c}\,
+\left[\;
+\frac{4l\,e^{\,l\varepsilon/t}\;\cosh\!\bigl(\sigma\,(m+1+k\varepsilon)/t\bigr)}
+{2\,e^{\,l\varepsilon/t}\;\cosh\!\bigl(\sigma\,(m+1+k\varepsilon)/t\bigr) \;+\; 1}
+\;+\; \sigma^2 k
+\right],
+\tag{5}
+\]
+
+and the quadrupole moments are again
+
+\[
+Q_1 = Q_2 = Q = 
+\frac{2\,e^{\,l\varepsilon/t}\;\cosh\!\bigl(\sigma\,(m+1+k\varepsilon)/t\bigr)}
+{2\,e^{\,l\varepsilon/t}\;\cosh\!\bigl(\sigma\,(m+1+k\varepsilon)/t\bigr) \;+\; 1}.
+\tag{6}
+\]
+
+---
+
+### 3. Free energy density \(f\)
+The dimensionless free energy density (per two sublattice sites) is given by
+
+\[
+\begin{aligned}
+f &= -t\,\Bigl[\,\ln\!\bigl(2\,e^{y_2/t}\cosh(y_1/t)+1\bigr)
+          + \ln\!\bigl(2\,e^{y_4/t}\cosh(y_3/t)+1\bigr)\Bigr] \\
+  &\quad - \sigma_1\sigma_2\,(1+k\varepsilon)
+    - l\,\varepsilon\,(Q_1+Q_2)
+    - \tfrac12\,m\,(\sigma_1^2+\sigma_2^2) \\
+  &\quad + y_1\sigma_1 + y_3\sigma_2
+    + y_2 Q_1 + y_4 Q_2
+    + c\,\varepsilon^2 ,
+\end{aligned}
+\tag{7}
+\]
+
+where the auxiliary fields are
+
+\[
+\begin{aligned}
+y_1 &= \sigma_2\,(1+k\varepsilon) + \sigma_1\,m, \\
+y_2 &= y_4 = l\varepsilon, \\
+y_3 &= \sigma_1\,(1+k\varepsilon) + \sigma_2\,m .
+\end{aligned}
+\tag{8}
+\]
+
+- For the **A phase** use \(\sigma_1 = -\sigma\), \(\sigma_2 = \sigma\), \(Q_1=Q_2=Q\) from (3).
+- For the **F phase** use \(\sigma_1 = \sigma\), \(\sigma_2 = \sigma\), \(Q_1=Q_2=Q\) from (6).
+
+---
+
+### 4. Special treatment at \(t = 0\)
+Equations (1)–(2) and (4)–(5) are singular at \(t=0\). The exact analytic limits are:
+
+- **A phase** (antiferromagnetic):
+  \[
+  \sigma_{\mathrm A} = 1,\qquad
+  \varepsilon_{\mathrm A} = \frac{2l - k}{2c},\qquad
+  f_{\mathrm A} = 1 - m - \frac{(2l-k)^2}{4c}.
+  \tag{9}
+  \]
+
+- **F phase** (ferromagnetic):
+  \[
+  \sigma_{\mathrm F} = 1,\qquad
+  \varepsilon_{\mathrm F} = \frac{2l + k}{2c},\qquad
+  f_{\mathrm F} = -1 - m - \frac{(2l+k)^2}{4c}.
+  \tag{10}
+  \]
+
+When solving the equations, use these closed-form values at \(t = 0\) and begin the numerical iteration from these values for \(t>0\).
+
+---
+
+### 5. Numerical solution
+For a dense temperature grid (\(t\) from 0 to 2, at least 100 equally spaced points) you must:
+1. At \(t=0\) record the analytic values (9)–(10).
+2. For \(t>0\) solve the coupled equations (1)–(2) for A phase and (4)–(5) for F phase simultaneously. Use a robust root‑finder (e.g., `scipy.optimize.fsolve`) with initial guesses taken from the previous temperature step or from the \(t=0\) solution.
+3. After obtaining \(\sigma\) and \(\varepsilon\) for each phase, compute \(Q\) via (3) or (6) and then the free energy \(f\) via (7) using the appropriate signs for \(\sigma_1,\sigma_2\).
+4. Write all results to a CSV file.
+
+The key scientific question is whether \(f_{\mathrm F}\) becomes lower than \(f_{\mathrm A}\) at some finite temperature, signalling an A→F transition.
 
 ## Reproduction target
-For the parameter set k = -1.1, c = 1, l = 1, m = 2, solve the MFA self-consistency equations for the antiferromagnetic (A) and ferromagnetic (F) phases on a grid of reduced temperature t spanning at least 100 evenly spaced points from 0 to 2. For each t and each phase, compute the sublattice magnetization σ, the equilibrium strain ε, and the free energy density f. Write all results to `/app/outputs/magnetoelastic_results.csv` with columns: t, sigma_A, sigma_F, epsilon_A, epsilon_F, f_A, f_F (all floating-point numbers). The key scientific question is: does the free energy of the F phase become lower than that of the A phase at some finite temperature? Your numerical solution should reveal whether an A→F transition exists for this parameter set and, if so, approximately where it occurs.
+For the parameter set \(k = -1.1, c = 1, l = 1, m = 2\), solve the MFA self-consistency equations for the antiferromagnetic (A) and ferromagnetic (F) phases on a grid of reduced temperature \(t\) spanning at least 100 evenly spaced points from 0 to 2. For each \(t\) and each phase, compute the sublattice magnetization σ, the equilibrium strain ε, and the free energy density f. Write all results to `/app/outputs/magnetoelastic_results.csv` with columns: `t`, `sigma_A`, `sigma_F`, `epsilon_A`, `epsilon_F`, `f_A`, `f_F` (all floating-point numbers). Your numerical solution should reveal whether an A→F transition exists for this parameter set and, if so, approximately where it occurs.
 
 ## Assets
 
@@ -18,10 +152,10 @@ For the parameter set k = -1.1, c = 1, l = 1, m = 2, solve the MFA self-consiste
 
 ### Step 1: Magnetoelastic simulation for A and F phases
 - Role: scored (load-bearing)
-- Action: Implement the molecular-field (MFA) self-consistency equations for the antiferromagnetic (A) and ferromagnetic (F) phases of a two‑sublattice magnet with axial symmetry, using the magnetoelastic coupling model described in the paper. For the fixed dimensionless parameter set k = -1.1, c = 1, l = 1, m = 2, solve the coupled transcendental equations numerically for a grid of reduced temperature t from 0 to 2 (at least 100 evenly spaced points). For each phase, compute the sublattice magnetization σ, equilibrium strain ε, and free energy density f. Output all results to a CSV file.
+- Action: Implement the molecular-field (MFA) self-consistency equations for the antiferromagnetic (A) and ferromagnetic (F) phases as detailed in the Approach section. Solve the coupled transcendental equations numerically for a grid of reduced temperature \(t\) from 0 to 2 (at least 100 evenly spaced points). For each phase, compute the sublattice magnetization σ, equilibrium strain ε, and free energy density f. Output all results to a CSV file.
 - Output file: `/app/outputs/magnetoelastic_results.csv`
 - Format: csv
-- Contract: columns: t (float), sigma_A (float), sigma_F (float), epsilon_A (float), epsilon_F (float), f_A (float), f_F (float); header required; at least 100 evenly spaced t points in [0.0, 2.0]
+- Contract: columns: `t` (float), `sigma_A` (float), `sigma_F` (float), `epsilon_A` (float), `epsilon_F` (float), `f_A` (float), `f_F` (float); header required; at least 100 evenly spaced t points in [0.0, 2.0]
 - Scoring: scored by hidden verifier
 
 ## Output files

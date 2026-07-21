@@ -1,149 +1,186 @@
-# Vapor Pressure and Composition Calculation for UO2-x using Extended Blackburn Oxygen-Potential Model
+# Vapor Pressure and Composition Calculation for Hypostoichiometric Uranium Dioxide (UO2−x)
 
 ## Problem background
-Hypostoichiometric uranium dioxide (UO2−x) is used as nuclear reactor fuel, and understanding its vapor properties at high temperatures is critical for safety analysis. This task addresses the computation of vapor pressures and vapor compositions in equilibrium with UO2−x at temperatures from 1500 K to 6000 K. The goal is to determine the oxygen partial pressure, total pressure, and oxygen-to-uranium ratio of the vapor using thermodynamic functions and an oxygen‑potential model. The resulting quantities provide insight into the behavior of the fuel under accident conditions, where vaporization can significantly alter the composition of the condensed phase.
+Hypostoichiometric uranium dioxide (UO2−x) is used as nuclear reactor fuel, and understanding its vapor properties at high temperatures is critical for safety analysis. This task addresses the computation of vapor pressures and vapor compositions in equilibrium with UO2−x at temperatures from 1500 K to 6000 K. The goal is to determine the oxygen partial pressure, total pressure, and oxygen‑to‑uranium ratio of the vapor using thermodynamic functions and an ionic oxygen‑potential model for the condensed phase. The resulting quantities provide insight into the behavior of the fuel under accident conditions, where vaporization can significantly alter the composition of the condensed phase.
 
 ## Approach
 The calculation combines three components:
 
 - **Gas‑phase thermodynamic functions:** Free energies of formation for O, O₂, U, UO, UO₂, and UO₃ species as functions of temperature, used to relate partial pressures through equilibrium reactions.
 - **Condensed‑phase thermodynamic functions:** Free energy of formation for solid and liquid UO₂ and a method to obtain the free energy of hypostoichiometric UO₂−x by integrating the oxygen partial pressure with respect to non‑stoichiometry x.
-- **Oxygen‑potential model (Blackburn model):** An ionic equilibrium model that expresses the oxygen partial pressure p(O₂) in terms of temperature T and x. The model assumes a mixture of U²⁺, U⁴⁺, U⁶⁺, and O²⁻ ions, with two equilibria and corresponding equilibrium constants whose temperature dependence is given by simple coefficients. Separate sets of coefficients are provided for the solid and liquid phases.
+- **Ionic oxygen‑potential model:** An ionic equilibrium model for the condensed phase that expresses the oxygen partial pressure p(O₂) in terms of temperature T and x. The model assumes a mixture of U²⁺, U⁴⁺, U⁶⁺, and O²⁻ ions, with two equilibria and corresponding equilibrium constants whose temperature dependence is given by simple coefficients. Separate sets of coefficients are provided for the solid and liquid phases.
 
 The workflow proceeds as follows:
-1. For a range of x values at each required temperature, compute p(O₂) using the Blackburn model, selecting the solid or liquid parameters according to the U–O phase diagram boundaries (monotectic at 2700 K, melting at 3120 K).
-2. Numerically integrate ln(p(O₂)) to obtain the integral Δ(0,x), which is combined with the free energy of stoichiometric UO₂ to yield ΔGf°(UO₂−x,c) across the grid.
-3. Using the gas‑phase free energies and the computed p(O₂) and ΔGf°(UO₂−x,c), solve a set of equilibrium relations to obtain the partial pressures of O, O₂, U, UO, UO₂, and UO₃. From these, compute the total pressure and the vapor‑phase O/U ratio at specified conditions.
+1. For a given temperature T and non‑stoichiometry x, compute p(O₂) using the ionic model with the liquid‑phase parameters (all target conditions lie in the liquid region).
+2. Numerically integrate ln(p(O₂)) with respect to x to obtain the correction needed for the free energy of UO₂−x, and combine it with the free energy of stoichiometric UO₂ to yield ΔG_f°(UO₂−x,c).
+3. Using the gas‑phase free energies and the computed p(O₂) and ΔG_f°(UO₂−x,c), solve the equilibrium relations to obtain the partial pressures of O, O₂, U, UO, UO₂, and UO₃. From these, compute the total pressure and the vapor‑phase O/U ratio.
 
 This method is applied to a set of target temperatures and compositions to produce the final results.
 
 ## Reproduction target
-Implement the Blackburn oxygen‑potential model for solid and liquid UO₂−x using the supplied coefficients. Then, for the following conditions, compute and report the specified quantities:
+Implement the ionic oxygen‑potential model for liquid UO₂−x using the supplied coefficients. Then, for the following conditions, compute and report the specified quantities:
 
 - Oxygen partial pressure p(O₂) (in MPa) at:
-  - T = 3150 K for O/U = 1.90, 1.96, and 2.00
-  - T = 6000 K for O/U = 1.90, 1.96, and 2.00
-- Total pressure (in MPa) in equilibrium with UO₂.₀₀ at T = 5000 K.
-- Vapor‑phase oxygen‑to‑uranium ratio (dimensionless) in equilibrium with UO₁.₉₆ at T = 5000 K.
+  - T = 3150 K for O/U = 1.90, 1.96, and 2.00
+  - T = 6000 K for O/U = 1.90, 1.96, and 2.00
+- Total pressure (in MPa) in equilibrium with UO₂.₀₀ at T = 5000 K.
+- Vapor‑phase oxygen‑to‑uranium ratio (dimensionless) in equilibrium with UO₁.₉₆ at T = 5000 K.
 
-All values must be derived from the workflow described in the approach, using the gas‑phase free‑energy coefficients and the oxygen‑potential model parameters that are listed as resources. The final output must be written to `/app/outputs/step_01_results.json` in the format specified under the output contract.
+All values must be derived from the model and data described in this instruction. The final output must be written to `/app/outputs/step_01_results.json` in the format specified under the output contract.
 
-## Assets
+## Model equations
 
-The following data are required for the calculations. All numerical values are taken directly from the source paper and must be hardcoded in your implementation; do not attempt to read any external file.
+All equations below are taken from the referenced paper; implement them exactly as written.
 
-### Data: Gas-phase thermodynamic functions
+### 1. Ionic oxygen‑potential model (liquid phase)
+The condensed phase is treated as a mixture of U²⁺, U⁴⁺, U⁶⁺, and O²⁻ ions.  
+Define the ion fractions:
+- y₂ = mole fraction of U²⁺ among all uranium ions
+- y₄ = mole fraction of U⁴⁺
+- y₆ = mole fraction of U⁶⁺
 
-The free energy of formation \(\Delta G_f^\circ(T)\) (in kJ/mol) for each gaseous species and for condensed UO2 is given by the polynomial:
+The non‑stoichiometry parameter x is defined by O/U = 2 − x.  
+The site and charge balances are:
 
-\[
-\Delta G_f^\circ(T) = A + B\,T + C\,T^2 + \frac{D}{T} + E\ln(T) + F\,T^3
-\]
+y₂ + y₄ + y₆ = 1         (1)
 
-where \(T\) is the absolute temperature in kelvins. For each species the temperature range and the corresponding coefficients are listed below. Missing coefficients are zero.
+2 y₂ + 4 y₄ + 6 y₆ = 4 − 2 x.   (2)
 
-**O(g)**
+The two equilibrium reactions are:
 
-| Range (K) | A | B (K⁻¹) | C (K⁻²) | D (K) | E | F (K⁻³) |
-|-----------|----|---------|---------|-------|---|---------|
-| 298.15 – 1400 | 252.36 | −6.2747×10⁻² | −1.3294×10⁻⁶ | −527.69 | 0 | 0 |
-| 1400 – 6000 | 259.03 | −6.7710×10⁻² | −1.6525×10⁻⁸ | −3747.4 | 0 | 0 |
+2 U⁴⁺ ⇌ U²⁺ + U⁶⁺  K₁ = y₂ y₆ / y₄²
 
-**U(g)**
-
-| Range (K) | A | B (K⁻¹) | C (K⁻²) | D (K) | E | F (K⁻³) |
-|-----------|----|---------|---------|-------|---|---------|
-| 298.15 – 1400 | 539.11 | −1.6007×10⁻¹ | 1.7321×10⁻⁵ | −1046.4 | 0 | 0 |
-| 1400 – 4435 | 749.73 | −8.3008×10⁻² | −2.0904×10⁻⁶ | 0 | −40.548 | 0 |
-| 4435 – 6000 | 0.00 | 0 | 0 | 0 | 0 | 0 |
-
-**UO(g)**
-
-| Range (K) | A | B (K⁻¹) | C (K⁻²) | D (K) | E | F (K⁻³) |
-|-----------|----|---------|---------|-------|---|---------|
-| 298.15 – 1400 | 26.863 | −1.0515×10⁻¹ | 1.6100×10⁻⁵ | −1002.4 | 0 | 0 |
-| 1400 – 4435 | 178.98 | −4.2342×10⁻² | 2.0064×10⁻⁶ | 0 | −29.432 | 0 |
-| 4435 – 6000 | −521.65 | 5.8124×10⁻² | 2.4020×10⁻⁶ | 0 | 0 | 0 |
-
-**UO₂(g)**
-
-| Range (K) | A | B (K⁻¹) | C (K⁻²) | D (K) | E | F (K⁻³) |
-|-----------|----|---------|---------|-------|---|---------|
-| 298.15 – 1400 | −501.42 | −4.2567×10⁻² | 1.4530×10⁻⁵ | 0 | 7.5475 | 0 |
-| 1400 – 4435 | −367.02 | 1.4476×10⁻² | 1.7735×10⁻⁶ | 0 | −18.571 | 0 |
-| 4435 – 6000 | −989.24 | 1.1823×10⁻¹ | 2.0798×10⁻⁶ | 0 | 0 | 0 |
-
-**UO₃(g)**
-
-| Range (K) | A | B (K⁻¹) | C (K⁻²) | D (K) | E | F (K⁻³) |
-|-----------|----|---------|---------|-------|---|---------|
-| 298.15 – 1400 | −822.97 | 2.5295×10⁻² | 1.4770×10⁻⁵ | 0 | 4.9754 | 0 |
-| 1400 – 4435 | −707.37 | 8.0256×10⁻² | 1.9058×10⁻⁶ | 0 | −18.131 | 0 |
-| 4435 – 6000 | −1321.1 | 1.8201×10⁻¹ | 2.4230×10⁻⁶ | 0 | 0 | 0 |
-
-**UO₂(c)** (condensed phase, used for stoichiometric UO₂)
-
-| Range (K) | A | B (K⁻¹) | C (K⁻²) | D (K) | E | F (K⁻³) |
-|-----------|----|---------|---------|-------|---|---------|
-| 298.15 – 1400 | −1131.0 | 1.4405×10⁻¹ | 8.1068×10⁻⁶ | 0 | 9.7445 | 0 |
-| 1400 – 2670 | −1079.8 | 1.5714×10⁻¹ | 1.2365×10⁻⁴ | 0 | 0 | −2.6564×10⁻¹ |
-| 2670 – 3120 | −1167.1 | 2.4280×10⁻¹ | −1.4569×10⁻⁵ | 0 | 0 | 0 |
-| 3120 – 4435 | −1002.7 | 1.6163×10⁻¹ | −5.4369×10⁻⁶ | 0 | 0 | 0 |
-| 4435 – 6000 | −1453.7 | 2.5458×10⁻¹ | −3.4634×10⁻⁶ | 0 | 0 | 0 |
-
-### Data: Oxygen‑potential model (Blackburn model)
-
-The oxygen partial pressure \(p_{\mathrm{O}_2}\) (in MPa) is obtained from the ionic equilibria:
-
-1. \(2\,\mathrm{U}^{4+} \rightleftharpoons \mathrm{U}^{2+} + \mathrm{U}^{6+}\), equilibrium constant \(K_1\)
-2. \(2\,\mathrm{U}^{2+} + \mathrm{O}_2(\mathrm{g}) \rightleftharpoons 2\,\mathrm{U}^{4+} + 2\,\mathrm{O}^{2-}\), equilibrium constant \(K_2\)
+2 U²⁺ + O₂(g) ⇌ 2 U⁴⁺ + 2 O²⁻  K₂ = y₄² (2 − x)² / [ y₂² p(O₂) ]  
 
 with
 
-\[
-\ln K_1 = A_1 + B_1/T,\qquad
-\ln K_2 = A_2 + B_2/T .
-\]
+ln K₁ = A₁ + B₁ / T,  ln K₂ = A₂ + B₂ / T.
 
-The coefficients for solid and liquid are:
+Combining (1), (2) and the expression for K₁ yields the quadratic equation for y₄:
 
-| Parameter | Solid (T ≤ 3120 K) | Liquid (T > 3120 K) |
-|-----------|-------------------|---------------------|
-| \(A_1\) | 7.680 | 7.680 |
-| \(B_1\) (K) | −60 805 | −57 576 |
-| \(A_2\) | −28 786 | −25 986 |
-| \(B_2\) (K) | 159 317 | 147 352 |
+(4 K₁ − 1) y₄² + 2 y₄ − (1 − x²) = 0.   (3)
 
-The equations that relate the ion fractions and \(p_{\mathrm{O}_2}\) to \(x\) are given in the Methods section of the paper (eqs. (27)-(38)). The agent must implement them exactly.
+The physically admissible root (positive y₄) is:
 
-### Data: Phase diagram boundaries
+y₄ = [ −1 + √( 1 + (4 K₁ − 1)(1 − x²) ) ] / (4 K₁ − 1).  (4)
 
-- Stoichiometric UO₂ melts at 3120 K.
-- A monotectic exists at 2700 K; the solid phase has O/U ≈ 1.50 (x ≈ 0.50) and the liquid O/U ≈ 1.67 (x ≈ 0.33).
-- For the target conditions – all at or above 3150 K – the condensed phase is entirely liquid (Region VI of the phase diagram). Thus only the liquid oxygen‑potential model coefficients and the liquid‑phase condensed‑phase ΔGf° coefficients (T > 3120 K) are needed.
+Then
 
-## Workflow steps
+y₂ = (1 + x − y₄) / 2,        (5)
 
-### Step 1: Compute oxygen potential grids
-- Role: process
-- Action: Implement the Blackburn solid and liquid oxygen-potential models using the given coefficients. For temperatures T = 3150, 5000, 6000 K, compute the oxygen partial pressure p(O2) as a function of the non-stoichiometry parameter x (O/U = 2-x) over a fine grid from x=0 to x=0.5. Use the solid model for T < 2670 K and the liquid model for T > 3120 K, with appropriate interpolation across the solid-liquid coexistence region per the phase diagram. Save the resulting pO2 vs x data for each temperature in a CSV file.
-- Evidence: `/app/outputs/pO2_grid.csv`
+y₆ = 1 − y₂ − y₄.          (6)
 
-### Step 2: Integrate pO2 to obtain free energies
-- Role: process
-- Action: Numerically integrate ln(p(O2)) with respect to x at constant T (using the grids from step_1) to compute the integral Δ(0,x) required for the free-energy correction. Combine with ΔGf°(UO2,c) from the supplied thermodynamic coefficients, using the appropriate phase-region formulas (e.g., Region I–VI based on Fig. 2) to obtain ΔGf°(UO2-x,c) for all grid points. Save the integrated free-energy values in a CSV file.
-- Evidence: `/app/outputs/deltaG_grid.csv`
+The oxygen partial pressure (in atm) is obtained from the expression for K₂:
 
-### Step 3: Compute vapor pressures and composition at target conditions
-- Role: scored (load-bearing)
-- Action: For the six target conditions (3150 K at x=0.10, 0.04, 0.00; 6000 K at x=0.10, 0.04, 0.00) and the additional targets (5000 K at x=0.00 for total pressure; 5000 K at x=0.04 for vapor O/U ratio), evaluate gas-phase free-energy functions using the provided coefficients. Using p(O2) from step_1 and ΔGf°(UO2-x,c) from step_2, compute the partial pressures of O, O2, U, UO, UO2, and UO3 via the equilibrium relations. Sum the partial pressures to obtain total pressure. Compute the vapor-phase oxygen-to-uranium ratio. Write all required final values as a JSON object to /app/outputs/step_01_results.json.
+ln p(O₂) = 2 ln[ y₄ (2 − x) / y₂ ] − (A₂ + B₂ / T).  (7)
+
+**Conversion to MPa:**  
+p(O₂, MPa) = p(O₂, atm) × 0.101325.
+
+### 2. Free energy of hypostoichiometric UO₂−x (single‑phase region)
+For a single condensed phase (liquid) the free energy of formation is obtained by integration:
+
+ΔG_f°(UO₂−x, c) = ΔG_f°(UO₂, c) − (R T / 2) ∫₀ˣ ln p(O₂) dx′.  (8)
+
+The integral is evaluated numerically using the p(O₂) values calculated from the ionic model.  
+For x = 0 the integral is zero, so ΔG_f°(UO₂, c) is used directly.
+
+### 3. Partial pressures of gaseous species
+Given p(O₂) in atm and all ΔG_f° values in J mol⁻¹, the partial pressures (in atm) are computed from the equilibrium relations:
+
+ln p(O) = ½ ln p(O₂) − ΔG_f°(O, g) / (R T)    (9)
+
+ln p(UO₂) = (x/2) ln p(O₂) + [ ΔG_f°(UO₂−x, c) − ΔG_f°(UO₂, g) ] / (R T)  (10)
+
+ln p(UO) = ln p(UO₂) − ½ ln p(O₂) + [ ΔG_f°(UO₂, g) − ΔG_f°(UO, g) ] / (R T)  (11)
+
+ln p(UO₃) = ln p(UO₂) + ½ ln p(O₂) + [ ΔG_f°(UO₂, g) − ΔG_f°(UO₃, g) ] / (R T)  (12)
+
+ln p(U) = ln p(UO₂) − ln p(O₂) + [ ΔG_f°(UO₂, g) − ΔG_f°(U, g) ] / (R T).  (13)
+
+Total pressure (atm) is the sum of all partial pressures; convert to MPa by multiplying by 0.101325.
+
+### 4. Vapor‑phase oxygen‑to‑uranium ratio
+R(vapor) = [ p(O) + 2 p(O₂) + p(UO) + 2 p(UO₂) + 3 p(UO₃) ] / [ p(U) + p(UO) + p(UO₂) + p(UO₃) ].  (14)
+
+### 5. Gas‑phase and condensed‑phase free energies
+The free energy of formation (in kJ mol⁻¹) for each species is given by the polynomial:
+
+ΔG_f°(T) = A + B T + C T² + D / T + E ln(T) + F T³,
+
+where T is in kelvins. Coefficients are listed in the Assets section.  
+To use in the equations above, multiply the result by 1000 to obtain J mol⁻¹ and employ R = 8.314 J mol⁻¹ K⁻¹.
+
+## Assets
+
+All numerical values are taken directly from the source paper and must be hardcoded in your implementation.
+
+### Gas‑phase and condensed‑phase free‑energy coefficients
+
+**O(g)**
+| T range (K) | A | B | C | D | E | F |
+|-------------|----|----|----|----|----|----|
+| 298.15–1400 | 252.36 | −6.2747×10⁻² | −1.3294×10⁻⁶ | −527.69 | 0 | 0 |
+| 1400–6000 | 259.03 | −6.7710×10⁻² | −1.6525×10⁻⁸ | −3747.4 | 0 | 0 |
+
+**U(g)**
+| T range (K) | A | B | C | D | E | F |
+|-------------|----|----|----|----|----|----|
+| 298.15–1400 | 539.11 | −1.6007×10⁻¹ | 1.7321×10⁻⁵ | −1046.4 | 0 | 0 |
+| 1400–4435 | 749.73 | −8.3008×10⁻² | −2.0904×10⁻⁶ | 0 | −40.548 | 0 |
+| 4435–6000 | 0.00 | 0 | 0 | 0 | 0 | 0 |
+
+**UO(g)**
+| T range (K) | A | B | C | D | E | F |
+|-------------|----|----|----|----|----|----|
+| 298.15–1400 | 26.863 | −1.0515×10⁻¹ | 1.6100×10⁻⁵ | −1002.4 | 0 | 0 |
+| 1400–4435 | 178.98 | −4.2342×10⁻² | 2.0064×10⁻⁶ | 0 | −29.432 | 0 |
+| 4435–6000 | −521.65 | 5.8124×10⁻² | 2.4020×10⁻⁶ | 0 | 0 | 0 |
+
+**UO₂(g)**
+| T range (K) | A | B | C | D | E | F |
+|-------------|----|----|----|----|----|----|
+| 298.15–1400 | −501.42 | −4.2567×10⁻² | 1.4530×10⁻⁵ | 0 | 7.5475 | 0 |
+| 1400–4435 | −367.02 | 1.4476×10⁻² | 1.7735×10⁻⁶ | 0 | −18.571 | 0 |
+| 4435–6000 | −989.24 | 1.1823×10⁻¹ | 2.0798×10⁻⁶ | 0 | 0 | 0 |
+
+**UO₃(g)**
+| T range (K) | A | B | C | D | E | F |
+|-------------|----|----|----|----|----|----|
+| 298.15–1400 | −822.97 | 2.5295×10⁻² | 1.4770×10⁻⁵ | 0 | 4.9754 | 0 |
+| 1400–4435 | −707.37 | 8.0256×10⁻² | 1.9058×10⁻⁶ | 0 | −18.131 | 0 |
+| 4435–6000 | −1321.1 | 1.8201×10⁻¹ | 2.4230×10⁻⁶ | 0 | 0 | 0 |
+
+**UO₂(c)** (stoichiometric condensed phase)
+| T range (K) | A | B | C | D | E | F |
+|-------------|----|----|----|----|----|----|
+| 298.15–1400 | −1131.0 | 1.4405×10⁻¹ | 8.1068×10⁻⁶ | 0 | 9.7445 | 0 |
+| 1400–2670 | −1079.8 | 1.5714×10⁻¹ | 1.2365×10⁻⁴ | 0 | 0 | −2.6564×10⁻¹ |
+| 2670–3120 | −1167.1 | 2.4280×10⁻¹ | −1.4569×10⁻⁵ | 0 | 0 | 0 |
+| 3120–4435 | −1002.7 | 1.6163×10⁻¹ | −5.4369×10⁻⁶ | 0 | 0 | 0 |
+| 4435–6000 | −1453.7 | 2.5458×10⁻¹ | −3.4634×10⁻⁶ | 0 | 0 | 0 |
+
+### Ionic oxygen‑potential model parameters (liquid)
+| Parameter | Value |
+|-----------|-------|
+| A₁ | 7.680 |
+| B₁ (K) | −57 576 |
+| A₂ | −25.986 |
+| B₂ (K) | 147 352 |
+
+**Note:** The liquid‑phase parameters are valid for T > 3120 K (all target temperatures are ≥ 3150 K).
+
+## Workflow step
+
+### Step 1: Compute required quantities
+- Role: scored
+- Action: For each target condition listed in the Reproduction target, perform the calculations described in the Approach and Model equations sections. First compute p(O₂) with the liquid ionic model. For values that require ΔG_f°(UO₂−x, c) (vapor pressure and vapor O/U ratio at x ≠ 0), evaluate the integral in Eq. (8) numerically (e.g., Simpson’s rule or trapezoidal integration over a fine x‑grid from 0 to the target x). Then compute all partial pressures, total pressure, and vapor O/U ratio as defined. Assemble the results into a JSON object and write to the output file.
 - Output file: `/app/outputs/step_01_results.json`
 - Format: json
-- Contract: JSON object with numeric keys: pO2_3150_1_90 (MPa), pO2_3150_1_96 (MPa), pO2_3150_2_00 (MPa), pO2_6000_1_90 (MPa), pO2_6000_1_96 (MPa), pO2_6000_2_00 (MPa), total_pressure_5000_UO2 (MPa), vapor_OU_5000_UO1_96 (dimensionless).
-- Scoring: scored by hidden verifier
+- Contract: JSON object with numeric keys: `pO2_3150_1_90`, `pO2_3150_1_96`, `pO2_3150_2_00`, `pO2_6000_1_90`, `pO2_6000_1_96`, `pO2_6000_2_00` (all in MPa), `total_pressure_5000_UO2` (MPa), `vapor_OU_5000_UO1_96` (dimensionless).
 
 ## Output files
-Write all artifacts under `/app/outputs`:
+Write the artifact under `/app/outputs`:
 - `/app/outputs/step_01_results.json`
 
 ## Output contract
@@ -155,7 +192,7 @@ Every file the hidden verifier reads is described below. Write each file under `
 - format: json
 - purpose: scored
 - target_policy: threshold_or_better
-- description: Scored output: the six oxygen partial pressures, total pressure at 5000 K for stoichiometric UO₂, and vapor O/U ratio at 5000 K for UO₁.₉₆. The verifier compares the reported values against reference values using relative‑error thresholds (10 % for p(O₂), 20 % for total pressure) and verifies that vapor_OU_5000_UO1_96 > 1.96.
+- description: Scored output: the six oxygen partial pressures, total pressure at 5000 K for stoichiometric UO₂, and vapor O/U ratio at 5000 K for UO₁.₉₆. The verifier compares the reported values against reference values using relative‑error thresholds (10 % for p(O₂), 20 % for total pressure) and verifies that `vapor_OU_5000_UO1_96 > 1.96`.
 - schema:
   - `type`: object
   - `required`:
@@ -172,9 +209,9 @@ Notes: All quantities are in MPa for pressures, dimensionless for O/U ratio.
 
 ## Self-check before finishing (optional, not scored)
 
-A machine-readable copy of the output contract is below. Before you finish, write and run a small script that checks every file under `/app/outputs` against it: each declared file exists, JSON objects contain the required keys, and CSV/TSV files contain the required columns. Fix any mismatch before finishing.
+A machine‑readable copy of the output contract is below. Before you finish, write and run a small script that checks every file under `/app/outputs` against it: the declared file exists, the JSON object contains the required keys. Fix any mismatch before finishing.
 
-This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific correctness, and passing it does not mean your answer is correct.
+This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific correctness.
 
 ```json
 {
@@ -205,11 +242,10 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
 ```
 
 ## How you are scored
-A hidden verifier independently checks each workflow stage’s output. The scored artifact `step_01_results.json` is compared against expected values that are recomputed by the verifier using the same model and parameters. The verifier also performs consistency checks on the process artifacts (`pO2_grid.csv` and `deltaG_grid.csv`) to ensure the full pipeline was executed.
+A hidden verifier independently checks your output artifact `step_01_results.json`. Scoring is based on:
 
-Scoring is based on:
-- Whether the six requested p(O₂) values fall within an acceptable relative error of the reference.
-- Whether the total pressure at 5000 K for UO₂.₀₀ falls within an acceptable relative error.
-- Whether the vapor O/U ratio at 5000 K for UO₁.₉₆ exceeds the condensed‑phase value of 1.96 (i.e., the vapor is oxygen‑rich), which is a structural check derived from the physics.
+- Whether the six p(O₂) values fall within a 10 % relative error of reference values.
+- Whether the total pressure at 5000 K for UO₂.₀₀ falls within a 20 % relative error.
+- Whether `vapor_OU_5000_UO1_96` is greater than 1.96 (the vapor is oxygen‑rich).
 
-Meeting or exceeding the acceptable thresholds yields full credit for each target; larger deviations reduce the score. The final reward is a weighted average over all targets and process evidence checks (process checks carry low weight). The verifier does not reveal its exact tolerances or reference values; you must produce results from a correct implementation of the model and integrations.
+Meeting or exceeding the acceptable thresholds yields full credit for each target; larger deviations reduce the score. The reward is a weighted average over all targets.

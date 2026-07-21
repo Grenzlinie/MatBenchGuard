@@ -4,23 +4,16 @@ set -euo pipefail
 OUTDIR="/app/outputs"
 mkdir -p "$OUTDIR"
 
-# === solve preamble ===
-#!/bin/bash
-set -euo pipefail
-mkdir -p /app/outputs
-
 # === solve block: binding_energies.csv ===
 python3 << 'EOF'
 import csv
 import os
-import sys
 
 # define binding energy models (E = a*(v - v0)^2 + E_min)
 models = {
     "diamond":       {"v0": 1.00, "E_min": -4.70, "a": 10},
     "wurtzite":      {"v0": 1.00, "E_min": -4.69, "a": 10},
     "white-tin(4)":  {"v0": 0.90, "E_min": -4.65, "a": 12},
-    "white-tin(6)":  {"v0": 0.95, "E_min": -4.60, "a": 11},
     "fcc":           {"v0": 1.00, "E_min": -4.20, "a": 8},
     "bcc":           {"v0": 1.00, "E_min": -4.15, "a": 8},
 }

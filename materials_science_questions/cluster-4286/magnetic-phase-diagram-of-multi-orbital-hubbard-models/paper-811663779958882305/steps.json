@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_precompute_coeffs",
+    "title": "Precompute Chebyshev expansion coefficients",
+    "role": "process",
+    "action": "Compute the Chebyshev expansion coefficients f_m for the effective action S(x) = -ln[1+exp(beta*(x-mu))] and electron occupation n(x)=1/(1+exp(beta*(x-mu))) for chemical potentials mu=-6 and mu=-8 at inverse temperature beta=75, up to polynomial cutoff M=30.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Precomputes coefficients needed for efficient evaluation of effective action and electron density during Monte Carlo updates.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_implement_tpem",
+    "title": "Implement TPEM core and Hamiltonian",
+    "role": "process",
+    "action": "Implement the double-exchange Hamiltonian H = -t sum_{<ij>,alpha} c^+_{i,alpha}c_{j,alpha} + h.c. - J_H sum_{i,alpha,beta} c^+_{i,alpha} sigma_{alpha,beta} c_{i,beta} . S_i + J_AF sum_{<ij>} S_i . S_j on a 6x6 triangular lattice with periodic boundary conditions. Implement the recursive Chebyshev moment calculation, truncated matrix-vector products, and the effective action update for spin-flip trials using thresholds epsilon_p=10^{-5} and epsilon_tr=10^{-3} (TPEM).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Builds the computational engine for the TPEM Monte Carlo simulation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_run_mc",
+    "title": "Run Monte Carlo simulations for four parameter sets",
+    "role": "process",
+    "action": "Using the precomputed coefficients and TPEM engine, perform Monte Carlo simulations for each of the four parameter sets: (mu=-6, J_AF=0), (mu=-6, J_AF=0.1), (mu=-8, J_AF=0), (mu=-8, J_AF=0.1) on a 6x6 triangular lattice with beta=75, J_H=8, t=1, M=30, epsilon_p=10^{-5}, epsilon_tr=10^{-3}. Run 10000 MC steps with 2000 warmup, measuring every 20 steps. Save the resulting spin-spin correlations as evidence files: correlations_half_JAF0.npy, correlations_half_JAF01.npy, correlations_quarter_JAF0.npy, correlations_quarter_JAF01.npy.",
+    "output_file": "",
+    "evidence": "correlations_half_JAF0.npy, correlations_half_JAF01.npy, correlations_quarter_JAF0.npy, correlations_quarter_JAF01.npy",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generates equilibrium spin-spin correlation data for subsequent spin structure factor analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_score_half_jaf0",
+    "title": "Compute S(q) for half-filling J_AF=0",
+    "role": "scored",
+    "action": "From the spin-spin correlation file correlations_half_JAF0.npy, compute the spin structure factor S(q) for all q in the first Brillouin zone, extract peak positions and values, and write the results to the output JSON file.",
+    "output_file": "results_half_filling_JAF0.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON containing lattice size, simulation parameters, spin-spin correlations, structure factor dictionary, and peak positions for mu=-6, J_AF=0 case.",
+    "output_schema": "JSON object with fields: lattice_size (list of ints), parameters (object with mu, J_AF, beta, JH, M, epsilon_p, epsilon_tr), spin_spin_correlations (list of floats, length N), structure_factor (object with keys 'q1_q2' and S(q) float values), peak_positions (list of [q1,q2] arrays)."
+  },
+  {
+    "id": "step_score_half_jaf01",
+    "title": "Compute S(q) for half-filling J_AF=0.1",
+    "role": "scored",
+    "action": "From the spin-spin correlation file correlations_half_JAF01.npy, compute S(q), extract peaks, and write to the output JSON file.",
+    "output_file": "results_half_filling_JAF01.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Same schema as above for mu=-6, J_AF=0.1.",
+    "output_schema": "JSON object with fields: lattice_size, parameters, spin_spin_correlations, structure_factor, peak_positions."
+  },
+  {
+    "id": "step_score_quarter_jaf0",
+    "title": "Compute S(q) for quarter-filling J_AF=0",
+    "role": "scored",
+    "action": "From the spin-spin correlation file correlations_quarter_JAF0.npy, compute S(q), extract peaks, and write to the output JSON file.",
+    "output_file": "results_quarter_filling_JAF0.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Same schema for mu=-8, J_AF=0.",
+    "output_schema": "JSON object with fields: lattice_size, parameters, spin_spin_correlations, structure_factor, peak_positions."
+  },
+  {
+    "id": "step_score_quarter_jaf01",
+    "title": "Compute S(q) for quarter-filling J_AF=0.1",
+    "role": "scored",
+    "action": "From the spin-spin correlation file correlations_quarter_JAF01.npy, compute S(q), extract peaks, and write to the output JSON file.",
+    "output_file": "results_quarter_filling_JAF01.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Same schema for mu=-8, J_AF=0.1.",
+    "output_schema": "JSON object with fields: lattice_size, parameters, spin_spin_correlations, structure_factor, peak_positions."
+  }
+]

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_data_extraction",
+    "title": "Extract experimental activity data",
+    "role": "process",
+    "action": "Digitise or manually extract the activity–composition data points for YH2-δ (Yannopoulos et al., 1965), CeH2+δ (Lundin, 1966), and ThC1-δ (Satow, 1967) at all reported temperatures. Format each dataset as a CSV file with columns: temperature, composition_delta, activity_X. For ThC1-δ, convert the composition to δ in CTh1+δ notation (M = C, X = Th). Compress the three CSV files into a single zip archive.",
+    "output_file": "",
+    "evidence": "extracted_data.zip",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_diagnostics",
+    "title": "Compute diagnostic variables and perform linear regression",
+    "role": "scored",
+    "action": "For each system and each temperature isotherm, compute y and x for every candidate defect model using the formulas given in the Approach section (negative deviation set for YH2-δ, positive deviation set for CeH2+δ and CTh1+δ). Perform ordinary least-squares linear regression of y on x for each model; record R², slope, and intercept. Write the diagnostic data to diagnostics.csv.",
+    "output_file": "diagnostics.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Diagnostic data for all systems, including x_i, y_i, R_squared, slope, and intercept for each defect model at each temperature. Enables the verifier to recompute the linear regressions and extract interaction energies.",
+    "output_schema": "columns: system, defect_model, temperature, x_i, y_i, R_squared, slope, intercept"
+  },
+  {
+    "id": "step_results",
+    "title": "Extract interaction energies and formation parameters",
+    "role": "scored",
+    "action": "From the slopes of the best-fit models in diagnostics.csv, compute the interaction free energies ξ using the conversion formulas and structural parameters presented in the Approach. For YH2-δ, fit ξ vs. T to obtain the vacancy-pair formation enthalpy and entropy. Write the final results to results.json.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final results: identified defect type for each system, interaction energies ξ at each temperature, and for YH2-δ the vacancy-pair formation enthalpy and entropy.",
+    "output_schema": "{\n  \"YH2\": {\n    \"temperatures_C\": [list of double],\n    \"xi_H_values_kcal_per_mol\": [list of double],\n    \"formation_enthalpy_kcal_per_mol\": double,\n    \"formation_entropy_cal_per_deg_mol\": double,\n    \"identified_defect\": \"hydrogen_vacancy\"\n  },\n  \"CeH2\": {\n    \"temperatures_C\": [list of double],\n    \"xi_H_values_kcal_per_mol\": [list of double],\n    \"identified_defect\": \"hydrogen_interstitial\"\n  },\n  \"ThC\": {\n    \"temperatures_K\": [list of double],\n    \"xi_C_values_kcal_per_mol\": [list of double],\n    \"identified_defect\": \"carbon_vacancy\"\n  }\n}"
+  }
+]

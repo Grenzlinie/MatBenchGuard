@@ -1,0 +1,158 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recomputation of cubane identification and connectivity from CIF is computationally heavy for the verifier sandbox; structural audit validates extracted counts, vertex-sharing degree, topology string, and carbonate motif presence using paper-reported reference values.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported structural reference values for cubane count, composition, vertex-sharing degree, vertex configuration string, sodalite topology boolean, and hexagonal wheel motif.",
+      "source_provenance": "Extracted directly from the paper's abstract, main text, and conclusion (24 cubane units, four Er atoms each, each shares one Er with three neighbours, vertex configuration (4,6,6), sodalite-like topology, μ6-CO3 ion bridging six Er atoms in a hexagonal cubane wheel).",
+      "generation_method": "Values transcribed from the paper's reported description; no synthesis or randomness involved.",
+      "why_not_fabricated": "These are the actual structural claims made by the paper and are used as the reference for verification."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "structural_analysis.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "cubane_units",
+            "vertex_sharing_connections",
+            "vertex_configuration",
+            "sodalite_topology",
+            "hexagonal_wheel"
+          ],
+          "properties": {
+            "cubane_units": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              },
+              "description": "List of identified tetrahedral cubane units; each is a list of four Er atom indices."
+            },
+            "vertex_sharing_connections": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "type": "integer"
+                }
+              },
+              "description": "Pairs of cubane indices that share a single Er vertex."
+            },
+            "vertex_configuration": {
+              "type": "string",
+              "description": "Vertex configuration of the cubane assembly derived from the connectivity graph."
+            },
+            "sodalite_topology": {
+              "type": "boolean",
+              "description": "True if the overall cage conforms to the sodalite (truncated octahedron) topology."
+            },
+            "hexagonal_wheel": {
+              "type": "object",
+              "required": [
+                "center_ion",
+                "coordination_mode",
+                "bridged_er_atoms"
+              ],
+              "properties": {
+                "center_ion": {
+                  "type": "string",
+                  "description": "Identity of the ion at the center of the hexagonal (or other) ring."
+                },
+                "coordination_mode": {
+                  "type": "string",
+                  "description": "Coordination mode of that ion."
+                },
+                "bridged_er_atoms": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "description": "Indices of the Er atoms bridged by the templating ion."
+                }
+              }
+            }
+          }
+        },
+        "description": "The extracted structural motifs: cubane units, their vertex‑sharing connectivity, the overall topology, and description of templating ion."
+      }
+    ],
+    "notes": "The output must be derived from the public CIF file. The checker will verify that the extracted cubane units, connectivity, topology, and templating ion are consistent with the expected structure, using structural comparison methods. Exact counts and identities are not disclosed in the contract."
+  },
+  "steps": [
+    {
+      "id": "cubane_unit_count",
+      "output_file": "structural_analysis.json",
+      "kind": "count_check",
+      "weight": 0.15,
+      "params": {
+        "field": "cubane_units",
+        "expected_count": 24
+      }
+    },
+    {
+      "id": "cubane_composition",
+      "output_file": "structural_analysis.json",
+      "kind": "composition_check",
+      "weight": 0.15,
+      "params": {
+        "field": "cubane_units",
+        "expected_size": 4
+      }
+    },
+    {
+      "id": "vertex_sharing_degree",
+      "output_file": "structural_analysis.json",
+      "kind": "graph_degree_check",
+      "weight": 0.2,
+      "params": {
+        "field": "vertex_sharing_connections",
+        "num_nodes": 24,
+        "expected_degree": 3
+      }
+    },
+    {
+      "id": "vertex_configuration",
+      "output_file": "structural_analysis.json",
+      "kind": "string_match",
+      "weight": 0.15,
+      "params": {
+        "field": "vertex_configuration",
+        "expected": "(4,6,6)"
+      }
+    },
+    {
+      "id": "sodalite_topology",
+      "output_file": "structural_analysis.json",
+      "kind": "boolean_match",
+      "weight": 0.15,
+      "params": {
+        "field": "sodalite_topology",
+        "expected": true
+      }
+    },
+    {
+      "id": "hexagonal_wheel",
+      "output_file": "structural_analysis.json",
+      "kind": "hex_wheel_check",
+      "weight": 0.2,
+      "params": {
+        "field": "hexagonal_wheel",
+        "center_ion_pattern": "CO3",
+        "expected_coordination_mode": "μ6:η1:η1:η1:η1:η1:η1",
+        "expected_bridged_count": 6
+      }
+    }
+  ]
+}

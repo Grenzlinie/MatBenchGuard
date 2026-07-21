@@ -4,31 +4,53 @@
 Solid-state lasers suffer from thermal lensing caused by temperature-dependent changes in the refractive index of the active medium. Accurately modeling these thermal effects requires distinguishing between the thermo-optic coefficient at constant stress (the conventionally measured quantity) and the coefficient at constant strain. This task addresses the relationship between these two coefficients for YAG-type cubic crystals and quantifies their difference using published material parameters.
 
 ## Approach
-The core idea is to derive a relationship between the two thermo-optic coefficients from photoelastic theory, then evaluate the derived expression numerically for YAG at room temperature. You will implement the formula that connects the coefficient at zero strain to the experimentally measured coefficient at zero stress, using the known elasto-optic constants, thermal expansion coefficient, and refractive index. Additionally, you will compute the bulging contribution to the generalized thermo-optic coefficient, which accounts for end-face deformation. All required material parameters are provided; no external data retrieval is needed.
+The core idea is to derive a relationship between the two thermo-optic coefficients from photoelastic theory, then evaluate the derived expression numerically for YAG at room temperature. You will implement the formula that connects the coefficient at zero strain to the experimentally measured coefficient at zero stress, using the known elasto-optic constants, thermal expansion coefficient, and refractive index. Additionally, you will compute the bulging contribution to the generalized thermo-optic coefficient, which accounts for end-face deformation. All required material parameters are provided below; no external data retrieval is needed.
+
+## Material Parameters (all given, no retrieval needed)
+Use the following values (taken from published literature for YAG at room temperature) for all calculations:
+
+- Refractive index:  
+  `n_0 = 1.82`
+- Thermal expansion coefficient:  
+  `α_T = 6.39 × 10⁻⁶ K⁻¹`
+- Elasto-optic coefficients:  
+  `p₁₁ = -0.029`, `p₁₂ = 0.0091`
+- Thermo-optic coefficient at zero stress (the conventionally measured value):  
+  `β_σ ≡ (∂n/∂T)σ = 8.48 × 10⁻⁶ K⁻¹`
+- Poisson’s ratio:  
+  `ν = 0.26`
+
+All symbols are dimensionless or have units as indicated. Substitute them exactly as given into the formulas described below.
 
 ## Reproduction target
-Using the provided YAG material constants, compute the thermo-optic coefficient at zero strain (∂n/∂T)ₑ and the relative difference between it and the zero-stress coefficient (∂n/∂T)σ, defined as ((∂n/∂T)ₑ − (∂n/∂T)σ) / (∂n/∂T)σ. Report these in thermo_optic_results.json. Independently compute the bulging term χ_bg^(2) = (n₀−1)(1+ν)α_T and report it in bulging_coefficient.json. The goal is to produce the numerical values that emerge from the formulas when the prescribed constants are substituted.
+Using the material constants listed above, compute:
 
-## Assets
+1. The thermo-optic coefficient at zero strain, `β_ε ≡ (∂n/∂T)ε`.
+2. The relative difference between the zero-strain and zero-stress coefficients, defined as `(β_ε − β_σ) / β_σ`.
+3. The bulging term `χ_bg⁽²⁾ = (n₀ − 1)(1 + ν)α_T`.
 
-- YAG Material Parameters
+Report the first two quantities in `thermo_optic_results.json` and the bulging term in `bulging_coefficient.json`. The goal is to produce the numerical values that emerge from the formulas when the prescribed constants are substituted.
 
 ## Workflow steps
 
 ### Step 1: Compute thermo-optic coefficients and relative difference
 - Role: scored (load-bearing)
-- Action: Using the provided material constants (n_0, alpha_T, p_11, p_12, beta_sigma), compute the thermo-optic coefficient at zero strain beta_epsilon via the relation (∂n/∂T)_σ = (∂n/∂T)_ε - (alpha_T * n_0^3)/2 * (p_11 + 2 p_12). Then compute the relative difference (beta_epsilon - beta_sigma) / beta_sigma.
+- Action: Using the provided material constants, compute the thermo-optic coefficient at zero strain via the relation derived from photoelastic theory:
+  ```
+  β_σ = β_ε − (α_T · n₀³)/2 · (p₁₁ + 2 p₁₂)
+  ```
+  Then compute the relative difference `(β_ε − β_σ) / β_σ`.
 - Output file: `/app/outputs/thermo_optic_results.json`
 - Format: json
-- Contract: {"beta_epsilon": "float (unit K^{-1})", "relative_difference": "float (dimensionless decimal)"}
+- Contract: `{"beta_epsilon": <float (K⁻¹)>, "relative_difference": <float (dimensionless)>}`
 - Scoring: scored by hidden verifier
 
-### Step 2: Compute bulging coefficient chi_bg^(2)
+### Step 2: Compute bulging coefficient χ_bg⁽²⁾
 - Role: scored
-- Action: Compute the bulging term chi_bg^(2) using the formula chi_bg^(2) = (n_0 - 1) * (1 + nu) * alpha_T, with the given refractive index, thermal expansion coefficient, and Poisson's ratio.
+- Action: Compute the bulging term using the formula `χ_bg⁽²⁾ = (n₀ − 1) · (1 + ν) · α_T`, with the given refractive index, thermal expansion coefficient, and Poisson’s ratio.
 - Output file: `/app/outputs/bulging_coefficient.json`
 - Format: json
-- Contract: {"chi_bg_2": "float (unit K^{-1})"}
+- Contract: `{"chi_bg_2": <float (K⁻¹)>}`
 - Scoring: scored by hidden verifier
 
 ## Output files
@@ -49,7 +71,7 @@ Every file the hidden verifier reads is described below. Write each file under `
 - schema:
   - `type`: object
   - `required`:
-    - `beta_epsilon`: float (K^{-1})
+    - `beta_epsilon`: float (K⁻¹)
     - `relative_difference`: float (dimensionless)
 
 ### bulging_coefficient.json
@@ -57,13 +79,11 @@ Every file the hidden verifier reads is described below. Write each file under `
 - format: json
 - purpose: scored
 - target_policy: exact_match
-- description: The bulging term chi_bg^(2) computed from the given material constants.
+- description: The bulging term χ_bg⁽²⁾ computed from the given material constants.
 - schema:
   - `type`: object
   - `required`:
-    - `chi_bg_2`: float (K^{-1})
-
-Notes: Both quantities are obtained by substituting provided material constants into formulas derived in the paper. The agent must implement the arithmetic and report the values. The checker compares the reported values to the paper's gold numbers within tight tolerances.
+    - `chi_bg_2`: float (K⁻¹)
 
 ## Self-check before finishing (optional, not scored)
 

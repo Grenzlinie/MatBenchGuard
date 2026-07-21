@@ -15,6 +15,22 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from canonical_status import canonical_fields
+from artifact_schema import (
+    AGENT_ASSESSMENT_SCHEMA_VERSION,
+    AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
+    AUDIT_ATTESTATION_SCHEMA_VERSION,
+    AUDIT_BUNDLE_SCHEMA_VERSION,
+    AUDIT_MANIFEST_SCHEMA_VERSION,
+    AUDIT_REPORT_SCHEMA_VERSION,
+    CHECKER_TESTS_SCHEMA_VERSION,
+    DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION,
+    DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION,
+    EVIDENCE_CONTRACT_SCHEMA_VERSION,
+    IMPLEMENTATION_HASH_SCHEMA_VERSION,
+    IMPLEMENTATION_MANIFEST_SCHEMA_VERSION,
+    SCORING_SCHEMA_VERSION,
+    RESOURCE_CHECKS_SCHEMA_VERSION,
+)
 
 
 REQUIRED_ROLES = {
@@ -136,21 +152,12 @@ def core_contract_digest(root: Path) -> str:
 
 def bind_external_evidence(
     temp_dir: Path,
-    known_valid_output: Path | None,
     agent_assessment: Path | None,
 ) -> dict[str, dict[str, str]]:
     manifest_path = temp_dir / "audit_manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     root = Path(manifest["benchmark_root"]).resolve()
-    fixture_hashes: dict[str, str] = {}
     assessment_hashes: dict[str, str] = {}
-    if known_valid_output is not None:
-        resolved = known_valid_output.expanduser().resolve()
-        if resolved.is_relative_to(root):
-            raise ValueError("known-valid output must remain outside the Harbor 题包")
-        fixture_hashes["known_valid_output"] = sha256_path(
-            resolved
-        )
     if agent_assessment is not None:
         resolved = agent_assessment.expanduser().resolve()
         if resolved.is_relative_to(root):
@@ -158,7 +165,6 @@ def bind_external_evidence(
         assessment_hashes["agent_assessment"] = sha256_path(
             resolved
         )
-    manifest["fixture_hashes"] = fixture_hashes
     manifest["assessment_hashes"] = assessment_hashes
     manifest["core_contract_digest"] = core_contract_digest(
         Path(manifest["benchmark_root"])
@@ -167,7 +173,6 @@ def bind_external_evidence(
         json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
     )
     return {
-        "fixture_hashes": fixture_hashes,
         "assessment_hashes": assessment_hashes,
         "core_contract_digest": manifest["core_contract_digest"],
     }
@@ -333,7 +338,7 @@ def review_implementation_files(root: Path | None = None) -> tuple[str, ...]:
     if (
         not isinstance(manifest, dict)
         or manifest.get("schema_version")
-        != "materials-review-implementation-files/1.0"
+        != IMPLEMENTATION_MANIFEST_SCHEMA_VERSION
         or not isinstance(manifest.get("files"), list)
     ):
         raise ValueError("Review implementation file manifest is invalid")
@@ -372,7 +377,7 @@ def collect_review_implementation_hashes(
         files, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
     return {
-        "schema_version": "materials-review-implementation/1.0",
+        "schema_version": IMPLEMENTATION_HASH_SCHEMA_VERSION,
         "root": ".cursor/skills/materials-benchmark-review",
         "files": files,
         "aggregate_hash": "sha256:" + hashlib.sha256(payload).hexdigest(),
@@ -384,13 +389,52 @@ def audit_attestation_payload(audit_dir: Path) -> dict[str, Any]:
     report_path = audit_dir / "audit_report.json"
     disposition_path = audit_dir / "disposition.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    required_artifacts = {
+        "audit_report.json": report_path,
+        "deterministic_core/report.json": audit_dir
+        / "deterministic_core/report.json",
+        "deterministic_core/probe_results.json": audit_dir
+        / "deterministic_core/probe_results.json",
+        "agent_quality/assessment.json": audit_dir
+        / "agent_quality/assessment.json",
+    }
+    artifact_hashes: dict[str, str] = {}
+    artifact_values: dict[str, dict[str, Any]] = {}
+    for relative, path in required_artifacts.items():
+        if not path.is_file() or path.is_symlink():
+            raise ValueError(
+                f"current audit is missing required artifact: {relative}"
+            )
+        artifact_hashes[relative] = sha256_file(path)
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(value, dict):
+            raise ValueError(f"current audit artifact is not an object: {relative}")
+        artifact_values[relative] = value
     return {
         "audit_id": manifest["audit_id"],
         "manifest_hash": sha256_file(manifest_path),
         "report_hash": sha256_file(report_path),
         "disposition_hash": sha256_file(disposition_path),
-        "fixture_hashes": manifest.get("fixture_hashes", {}),
         "assessment_hashes": manifest.get("assessment_hashes", {}),
+        "artifact_hashes": artifact_hashes,
+        "output_hashes": manifest.get("output_hashes", {}),
+        "artifact_schema_versions": {
+            "audit_manifest": manifest.get("schema_version"),
+            "audit_bundle": manifest.get("bundle_schema_version"),
+            "audit_report": report.get("schema_version"),
+            "deterministic_core": artifact_values[
+                "deterministic_core/report.json"
+            ].get("schema_version"),
+            "deterministic_probe_results": artifact_values[
+                "deterministic_core/probe_results.json"
+            ].get("schema_version"),
+            "agent_quality": artifact_values[
+                "agent_quality/assessment.json"
+            ].get("schema_version"),
+            "scoring": report.get("summary", {}).get("scoring_version"),
+        },
+        "scoring_schema_version": SCORING_SCHEMA_VERSION,
     }
 
 
@@ -416,7 +460,7 @@ def write_audit_attestation(
         payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
     attestation = {
-        "schema_version": "materials-audit-attestation/1.0",
+        "schema_version": AUDIT_ATTESTATION_SCHEMA_VERSION,
         **payload,
         "bundle_digest": "sha256:" + hashlib.sha256(encoded).hexdigest(),
     }
@@ -521,6 +565,8 @@ def prepare_workspace(
         "evidence/resource_checks",
         "evidence/checker_tests",
         "evidence/paper_checks",
+        "deterministic_core",
+        "agent_quality",
         "logs",
         "patches",
     ):
@@ -561,8 +607,8 @@ def prepare_workspace(
         encoding="utf-8",
     )
     manifest = {
-        "schema_version": "0.1",
-        "bundle_schema_version": "materials-audit-bundle/1.0",
+        "schema_version": AUDIT_MANIFEST_SCHEMA_VERSION,
+        "bundle_schema_version": AUDIT_BUNDLE_SCHEMA_VERSION,
         "audit_id": audit_id,
         "parent_audit_id": parent_audit_id,
         "review_type": (
@@ -572,7 +618,7 @@ def prepare_workspace(
         ),
         "generated_at": started_at,
         "completed_at": None,
-        "auditor_version": "materials-benchmark-review/0.1",
+        "auditor_version": "materials-benchmark-review/2.0",
         "benchmark_root": str(root),
         **canonical_fields("NOT_ASSESSABLE"),
         "execution_level": execution_level,
@@ -585,13 +631,25 @@ def prepare_workspace(
         ),
         "review_implementation": collect_review_implementation_hashes(),
         "core_contract_digest": core_contract_digest(root),
-        "fixture_hashes": {},
         "assessment_hashes": {},
         "output_hashes": {},
         "bundle_hash": None,
         "resolved_findings": [],
         "new_findings": [],
         "solution_content_inspected": False,
+        "artifact_schema_versions": {
+            "audit_report": AUDIT_REPORT_SCHEMA_VERSION,
+            "checker_tests": CHECKER_TESTS_SCHEMA_VERSION,
+            "resource_checks": RESOURCE_CHECKS_SCHEMA_VERSION,
+            "agent_assessment": AGENT_ASSESSMENT_SCHEMA_VERSION,
+            "deterministic_core": DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION,
+            "deterministic_probe_results": (
+                DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION
+            ),
+            "agent_quality": AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
+            "scoring": SCORING_SCHEMA_VERSION,
+            "evidence_contract": EVIDENCE_CONTRACT_SCHEMA_VERSION,
+        },
     }
     (temp_dir / "audit_manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"

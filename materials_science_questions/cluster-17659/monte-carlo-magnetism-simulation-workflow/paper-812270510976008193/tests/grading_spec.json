@@ -1,0 +1,99 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The core claim is a structural property (k-independence of normalized frequencies) verified by recomputing the normalization from the agent's raw data and then checking per-condition spread ≤ 0.05. Full recompute of raw spin wave frequencies from first principles is infeasible in the verifier sandbox.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "raw_frequencies.csv": "structural_audit",
+    "normalized_frequencies.csv": "metric_recompute"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "raw_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "eta",
+            "kx",
+            "ky",
+            "T_J",
+            "omega_ck"
+          ],
+          "units": {
+            "eta": "dimensionless",
+            "kx": "1/a",
+            "ky": "1/a",
+            "T_J": "J/k_B",
+            "omega_ck": "J"
+          }
+        },
+        "description": "Raw spin wave frequencies extracted from Langevin simulations for various η, k, and T. Used by the verifier to recompute normalized frequencies and check for consistency."
+      },
+      {
+        "file": "normalized_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "eta",
+            "kx",
+            "ky",
+            "T_J",
+            "normalized_freq"
+          ],
+          "units": {
+            "eta": "dimensionless",
+            "kx": "1/a",
+            "ky": "1/a",
+            "T_J": "J/k_B",
+            "normalized_freq": "dimensionless"
+          }
+        },
+        "description": "Normalized spin wave frequencies ω_ck(T)/ω_ck(0). The verifier checks consistency with raw frequencies via recomputation using the Bloch equation, then evaluates the structural claim of k-independence (within each η, for each T, the spread of normalized frequencies across k must be small) and monotonic decrease with T."
+      }
+    ],
+    "notes": "The verifier will recompute normalized frequencies from raw_frequencies.csv using the Bloch equation, compare to submitted normalized_frequencies.csv, perform k-independence and monotonic structural checks. The SRO similarity observation from the paper is a qualitative supplementary finding, not a co-equal quantitative headline, and is excluded from the scored contract."
+  },
+  "steps": [
+    {
+      "id": "shape_raw",
+      "output_file": "raw_frequencies.csv",
+      "kind": "file_exists",
+      "weight": 0.02
+    },
+    {
+      "id": "shape_norm",
+      "output_file": "normalized_frequencies.csv",
+      "kind": "file_exists",
+      "weight": 0.02
+    },
+    {
+      "id": "consistency",
+      "output_file": "normalized_frequencies.csv",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "description": "Recompute normalized frequencies from raw_frequencies.csv via Bloch equation and compare to submitted normalized_frequencies.csv within 1e-5 absolute tolerance."
+    },
+    {
+      "id": "k_independence",
+      "output_file": "normalized_frequencies.csv",
+      "kind": "structural_audit",
+      "weight": 0.54,
+      "description": "For each (eta, T_J) group with ≥2 distinct k vectors, compute mean normalized_freq and require max absolute deviation ≤ 0.05.",
+      "max_deviation": 0.05
+    },
+    {
+      "id": "monotonic_decrease",
+      "output_file": "normalized_frequencies.csv",
+      "kind": "structural_audit",
+      "weight": 0.22,
+      "description": "For each (eta, k) series, normalized_freq must be non-increasing with T_J, allowing an epsilon of 0.01."
+    }
+  ]
+}

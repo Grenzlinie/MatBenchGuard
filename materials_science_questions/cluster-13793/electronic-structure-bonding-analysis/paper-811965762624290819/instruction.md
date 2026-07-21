@@ -20,9 +20,9 @@ Produce the file `band_structure.csv` containing the band energies E(k) for CrN 
 - Role: scored (load-bearing)
 - Action: Implement the finite‑difference discretization of the Bloch‑Schrödinger equation for an fcc lattice with a range‑limited attractive potential. Use a regular 3D grid inside the primitive unit cell, assign a wavefunction value to each grid point, approximate first derivatives and the Laplacian by centered finite differences, impose Bloch‑periodic boundary conditions, and assemble the discrete eigenvalue problem. Use the explicit potential function from the paper (Eq. 8):
 
-V(x,y,z) = V₀ * [ (x - 3a/4)^2 * sin(Gx*d)^2 + (y - √3 a/4)^2 * sin(Gy*d)^2 + (5/3)*(z - a/2)^2 * sin(Gz*d)^2 + (2√3/3)*(x - 3a/4)*(y - √3 a/4) * sin(Gx*d)^2 * sin(Gz*d)^2 ]
+V(x,y,z) = V₀ * [ (x - 3a/4)^2 * (sin(Gx*d))^2 + (y - √3 a/4)^2 * (sin(Gy*d))^2 + (5/3)*(z - a/2)^2 * (sin(Gz*d))^2 + (2√3/3)*(x - 3a/4)*(y - √3 a/4) * (sin(Gx*d))^2 * (sin(Gz*d))^2 ]
 
-where V₀ is the Coulomb potential energy between Cr³⁺ and N³⁻ ions (separation a/2), computed from fundamental constants, and Gx, Gy, Gz are reciprocal‑lattice vector components. Use the fcc primitive vectors with lattice constant a = 4.14 Å, and compute the Coulomb‑based potential strength V₀ from fundamental constants. Sweep k‑points along the high‑symmetry directions Δ (100), Σ (110), and Λ (111) in the first Brillouin zone, with at least 50 uniformly spaced points per direction. For each k‑point solve the eigenvalue problem and collect the computed band energies (relative to the Fermi level) in electron volts. Write the results to band_structure.csv.
+where V₀ is the Coulomb potential energy between Cr³⁺ and N³⁻ ions (separation a/2), computed from fundamental constants, and Gx, Gy, Gz are reciprocal‑lattice vector components. Use the fcc primitive vectors with lattice constant a = 4.14 Å, and compute the Coulomb‑based potential strength V₀ from fundamental constants. Sweep k‑points along the high‑symmetry directions Δ (100), Σ (110), and Λ (111) in the first Brillouin zone, with at least 50 uniformly spaced points per direction. For each k‑point solve the eigenvalue problem and collect the computed band energies (relative to the Fermi level) in electron volts. Write the results to band_structure.csv.
 - Output file: `/app/outputs/band_structure.csv`
 - Format: csv
 - Contract: direction: str (one of 'Delta', 'Sigma', 'Lambda'); k_index: int (0‑based sequential index along the direction); kx: float; ky: float; kz: float (crystal momentum components in units of 2π/a); energy: float (energy eigenvalue in eV, relative to the Fermi level)
@@ -41,49 +41,18 @@ Every file the hidden verifier reads is described below. Write each file under `
 - format: csv
 - purpose: scored
 - target_policy: reference_match
-- description: Band energies E(k) computed from the finite‑difference Bloch‑lattice model. The hidden checker will extract energies at the high‑symmetry points Γ, X, K, L and compare them to paper reference values within an appropriate tolerance; it will also verify metallic character (at least one band crossing the Fermi level along each direction).
+- description: Band energies E(k) computed from the finite-difference Bloch-lattice model. The hidden checker will extract energies at the high-symmetry points Γ, X, K, L and compare them to paper reference values within an appropriate tolerance; it will also verify metallic character (at least one band crossing the Fermi level along each direction).
 - schema:
   - `type`: table
   - `required_columns`: `direction`, `k_index`, `kx`, `ky`, `kz`, `energy`
   - `units`:
     - `energy`: eV
 
-Notes: The agent must implement the finite‑difference scheme as described; any reasonable grid spacing that yields a converged band structure is acceptable. The hidden tolerance accounts for the expected spread from different discretisation choices and software environments.
+Notes: The agent must implement the finite-difference scheme as described; any reasonable grid spacing that yields a converged band structure is acceptable. The hidden tolerance accounts for the expected spread from different discretisation choices and software environments.
 
 ## Self-check before finishing (optional, not scored)
 
-A machine-readable copy of the output contract is below. Before you finish, write and run a small script that checks every file under `/app/outputs` against it: each declared file exists, JSON objects contain the required keys, and CSV/TSV files contain the required columns. Fix any mismatch before finishing.
-
-This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific correctness, and passing it does not mean your answer is correct.
-
-```json
-{
-  "outputs": [
-    {
-      "file": "band_structure.csv",
-      "format": "csv",
-      "purpose": "scored",
-      "target_policy": "reference_match",
-      "schema": {
-        "type": "table",
-        "required_columns": [
-          "direction",
-          "k_index",
-          "kx",
-          "ky",
-          "kz",
-          "energy"
-        ],
-        "units": {
-          "energy": "eV"
-        }
-      },
-      "description": "Band energies E(k) computed from the finite‑difference Bloch‑lattice model. The hidden checker will extract energies at the high‑symmetry points Γ, X, K, L and compare them to paper reference values within an appropriate tolerance; it will also verify metallic character (at least one band crossing the Fermi level along each direction)."
-    }
-  ],
-  "notes": "The agent must implement the finite‑difference scheme as described; any reasonable grid spacing that yields a converged band structure is acceptable. The hidden tolerance accounts for the expected spread from different discretisation choices and software environments."
-}
-```
+Before submitting, verify that your output file `/app/outputs/band_structure.csv` exists and contains exactly the required columns: `direction`, `k_index`, `kx`, `ky`, `kz`, `energy`. This checks shape only—it does not judge scientific correctness.
 
 ## How you are scored
 A hidden verifier reads your `band_structure.csv` and independently evaluates it. The verifier extracts the energies at the high‑symmetry k‑points Γ, X, K, and L, compares them to reference band energies obtained from the original simulation, and awards a reward that increases as the agreement improves. It also checks that each direction (Δ, Σ, Λ) contains at least one band that crosses the Fermi level (0 eV) within a hidden tolerance. The final reward is a weighted combination of these checks. Submitting a single reported number without the corresponding CSV data will not earn credit.

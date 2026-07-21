@@ -2,6 +2,13 @@ import os
 import json
 import csv
 
+# Gold values from the original experiments (hidden from the agent)
+GOLD_VALUES = [
+    {"threshold": "rain", "S": 4.2, "r": 8.6e-8},
+    {"threshold": "cloud", "S": 7.9, "r": 6.4e-8},
+    {"threshold": "sensitive", "S": 9.9, "r": 5.9e-8}
+]
+
 # === author imports / helpers ===
 import json
 
@@ -94,7 +101,7 @@ def load_artifact(path):
 
 def prepare(outputs_dir, spec):
     ctx = {
-        "gold": spec["gold"],
+        "gold": GOLD_VALUES,
         "tol": spec["tolerances"]
     }
     return ctx
@@ -102,54 +109,38 @@ def prepare(outputs_dir, spec):
 
 # === block: score_0 (check id='step_01') ===
 def score_0(artifact, step, ctx):
-    import math
+    # Compare agent's supersaturation and critical radius to the gold values
+    # using the relative tolerances defined in the grading spec.
+    gold_values = ctx["gold"]          # list of {"threshold", "S", "r"}
+    tol_S = ctx["tol"]["S"]            # relative tolerance for supersaturation
+    tol_r = ctx["tol"]["r"]            # relative tolerance for critical radius
 
-    if not isinstance(artifact, list) or not artifact:
+    if not isinstance(artifact, list):
         return 0.0
 
-    T1_K = 293.15
-    gamma = 1.41
-    rho_L = 1000.0
-    R_v = 461.5
-
-    def antoine(t_c):
-        return 10.0 ** (8.07131 - 1730.63 / (233.426 + t_c))
-
-    pi1_mmHg = antoine(20.0)
-
-    targets = [("rain", 1.252), ("cloud", 1.38), ("sensitive", 1.42)]
-
-    tol_S = ctx["tol"]["S"]
-    tol_r = ctx["tol"]["r"]
-
     ok = 0
-    for thresh, vr in targets:
-        inv_vr = 1.0 / vr
-        T2_K = T1_K * (inv_vr ** (gamma - 1.0))
-        t2_c = T2_K - 273.15
-        pi2_mmHg = antoine(t2_c)
-        S_exp = (pi1_mmHg / pi2_mmHg) * (inv_vr ** gamma)
-        sigma_mN = 75.6 - 0.14 * (T2_K - 273.0)
-        sigma_Nm = sigma_mN * 0.001
-        try:
-            r_exp = (2.0 * sigma_Nm) / (rho_L * R_v * T2_K * math.log(S_exp))
-        except (ValueError, ZeroDivisionError):
-            r_exp = float("inf")
+    for g in gold_values:
+        thresh = g["threshold"]
+        S_gold = g["S"]
+        r_gold = g["r"]
 
+        # Find the entry in the agent's output corresponding to this threshold
         entry = next((e for e in artifact if e.get("threshold") == thresh), None)
         if entry is None:
             continue
+
         try:
             S_agent = float(entry["supersaturation"])
             r_agent = float(entry["critical_radius_m"])
         except (ValueError, KeyError):
             continue
 
-        if abs(S_agent - S_exp) <= tol_S * S_exp:
+        if abs(S_agent - S_gold) <= tol_S * S_gold:
             ok += 1
-        if abs(r_agent - r_exp) <= tol_r * r_exp:
+        if abs(r_agent - r_gold) <= tol_r * r_gold:
             ok += 1
 
+    # 3 thresholds × 2 quantities = 6 values total
     return ok / 6.0
 
 

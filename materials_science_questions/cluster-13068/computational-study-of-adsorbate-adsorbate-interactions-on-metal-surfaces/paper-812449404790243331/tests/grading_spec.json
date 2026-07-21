@@ -1,0 +1,95 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute feasible; beta_A checked against paper gold, Delta_B_conv recomputed from beta_A, Delta_B_diff recomputed from Delta_B_conv using given formulas, and trend verified.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_field_enhancement_factors.csv": "exact_match",
+    "step_02_binding_energies.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold beta_A values from paper Table 5 for hexagonal lattice",
+      "source_provenance": "paper Table 5 (hexagonal, b_E=2.00 -> 1.085, b_E=7.00 -> 1.155)",
+      "generation_method": "direct transcription from published paper Table 5, matching the exact conditions of the task.",
+      "why_not_fabricated": "these are the actual paper-reported field enhancement factors; they are the correct reference for this reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_field_enhancement_factors.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "b_E_value",
+            "lattice_type",
+            "beta_A"
+          ],
+          "units": {
+            "b_E_value": "meV V^{-2} nm^2",
+            "beta_A": "dimensionless"
+          }
+        },
+        "description": "Field enhancement factor β_A computed for the two emitter polarisability values using the hexagonal array model."
+      },
+      {
+        "file": "step_02_binding_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "b_E_value",
+            "lattice_type",
+            "Delta_B_conv",
+            "Delta_B_diff"
+          ],
+          "units": {
+            "b_E_value": "meV V^{-2} nm^2",
+            "Delta_B_conv": "eV",
+            "Delta_B_diff": "eV"
+          }
+        },
+        "description": "Conventional and differential short-range binding energies derived from the field enhancement factor for both emitter polarisability values."
+      }
+    ],
+    "notes": "The hidden checker recomputes intermediate quantities as needed and compares the submitted values to expected numerical ranges with tolerance, ensuring internal consistency and correct physical derivation."
+  },
+  "steps": [
+    {
+      "id": "step_01_field_enhancement_check",
+      "output_file": "step_01_field_enhancement_factors.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target": {
+        "2.00": 1.085,
+        "7.00": 1.155
+      },
+      "tolerance_abs": 0.015,
+      "description": "Check that submitted beta_A values match paper Table 5 within ±0.015."
+    },
+    {
+      "id": "step_02_binding_energies_check",
+      "output_file": "step_02_binding_energies.csv",
+      "kind": "recompute_consistency",
+      "weight": 0.7,
+      "description": "Recompute Delta_B_conv from beta_A, recompute Delta_B_diff, compare to submitted values, and verify the required trend (lower b_E -> lower Delta_B_diff).",
+      "params": {
+        "b_A": 0.143,
+        "F_ext": 56.0,
+        "eta_map": {
+          "2.00": 0.51,
+          "7.00": 0.48
+        },
+        "Delta_B_disp": 0.01,
+        "tolerance_conv": 1e-05,
+        "tolerance_diff": 0.0001
+      }
+    }
+  ]
+}

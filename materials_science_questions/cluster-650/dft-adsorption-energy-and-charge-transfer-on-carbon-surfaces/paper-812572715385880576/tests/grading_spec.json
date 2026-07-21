@@ -1,0 +1,81 @@
+{
+  "scoring_tier": "T0 - result-level compare",
+  "scoring_justification": "DFT adsorption energies are the final result; comparing agent-reported values to paper gold with tolerance and ordering is the strongest feasible tier because recomputing from raw DFT outputs is infeasible due to massive wavefunction files and toolchain differences.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "adsorption_energies.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold adsorption energies for surface, edge, and heterojunction sites.",
+      "source_provenance": "Paper text and Figure 8 caption: surface -0.548 eV, edge -3.298 eV, heterojunction -1.306 eV.",
+      "generation_method": "Copied directly from the paper's reported values.",
+      "why_not_fabricated": "Values are explicitly stated in the paper for each configuration."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adsorption_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "surface": "float in eV",
+            "edge": "float in eV",
+            "heterojunction": "float in eV"
+          }
+        },
+        "description": "Adsorption energies of NO₂ on MXene surface, edge, and MXene/ZnO heterojunction in eV. The checker will compare each energy to reference values with tolerance and will also verify the relative ordering edge < heterojunction < surface (more negative = stronger adsorption)."
+      }
+    ],
+    "notes": "The three energies are the key quantitative results from the paper's DFT calculations. The agent must construct the required atomic models from publicly known crystal structures and run the DFT simulations."
+  },
+  "steps": [
+    {
+      "id": "surface_energy",
+      "output_file": "adsorption_energies.json",
+      "kind": "numeric_threshold",
+      "field": "surface",
+      "reference_value": -0.548,
+      "threshold": -0.348,
+      "partial_cutoff": -0.048,
+      "weight": 0.3
+    },
+    {
+      "id": "edge_energy",
+      "output_file": "adsorption_energies.json",
+      "kind": "numeric_threshold",
+      "field": "edge",
+      "reference_value": -3.298,
+      "threshold": -3.098,
+      "partial_cutoff": -2.798,
+      "weight": 0.3
+    },
+    {
+      "id": "heterojunction_energy",
+      "output_file": "adsorption_energies.json",
+      "kind": "numeric_threshold",
+      "field": "heterojunction",
+      "reference_value": -1.306,
+      "threshold": -1.106,
+      "partial_cutoff": -0.806,
+      "weight": 0.3
+    },
+    {
+      "id": "ordering",
+      "output_file": "adsorption_energies.json",
+      "kind": "ordering",
+      "fields": [
+        "edge",
+        "heterojunction",
+        "surface"
+      ],
+      "weight": 0.1,
+      "description": "Verify edge < heterojunction < surface (more negative is stronger binding)"
+    }
+  ]
+}

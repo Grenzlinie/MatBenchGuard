@@ -1,0 +1,131 @@
+{
+  "scoring_tier": "T0 result-level compare",
+  "scoring_justification": "The agent runs a heavy numerical minimization to obtain equilibrium states; recomputing that inside the checker is infeasible. The checker compares the agent's reported result values against the paper's gold with appropriate tolerances and verifies structural trends.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results_at_stress_points.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for polarization components, out-of-plane strain S3', monoclinic shear strain S4', piezoelectric coefficient d33', and dielectric constant epsilon33' at the stress points σ3' = -3.535, -3.56, -4.36, -4.565, -4.65 GPa.",
+      "source_provenance": "Extracted from the paper's Fig. 2, Fig. 4, and Fig. 5. Explicit numbers for -3.56, -4.36, -4.565 are from the Fig. 2 caption; values at -3.535 GPa are taken from the phase transition in Fig. 4; values at -4.65 GPa are digitised from Fig. 5.",
+      "generation_method": "Polarization values : -3.535 GPa estimated from continuous trend crossing the transition, -3.56/-4.36/-4.565 taken verbatim from the paper's caption, -4.65 GPa digitised from Fig. 5(a). Strains S3' and S4' digitised from Fig. 5(b) with aid of the analytical expressions. d33' and epsilon33' digitised from Fig. 5(c).",
+      "why_not_fabricated": "Every value corresponds to a data point or curve reported in the paper and is used as the reproduction target; they are the paper's own results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results_at_stress_points.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "stress_points": "array of float (GPa)",
+            "results": "array of objects"
+          },
+          "items": {
+            "P1": "float (C/m^2)",
+            "P2": "float (C/m^2)",
+            "P3": "float (C/m^2)",
+            "S3": "float (dimensionless)",
+            "S4": "float (dimensionless)",
+            "d33": "float (pm/V)",
+            "epsilon33": "float (dimensionless)"
+          },
+          "units": {
+            "P1": "C/m^2",
+            "P2": "C/m^2",
+            "P3": "C/m^2",
+            "S3": "1",
+            "S4": "1",
+            "d33": "pm/V",
+            "epsilon33": "1"
+          }
+        },
+        "description": "Equilibrium polarization components, out-of-plane strain, shear strain, piezoelectric coefficient d33', and dielectric constant ε33' for the stable state at various out-of-plane stress values. The hidden checker compares these values to the paper's reported numbers and also verifies structural trends (monotonic polarization rotation, sign of shear, phase sequence)."
+      }
+    ],
+    "notes": "Energy barrier quantification (stage 3) is not included in the scored output; the scoring focuses on the equilibrium polarization, strain, and response properties which are the primary quantitative claims. The phase sequence and critical stress transitions are inferred from the polarization data and included in the structural checks."
+  },
+  "steps": [
+    {
+      "id": "verify_results",
+      "output_file": "results_at_stress_points.json",
+      "weight": 1.0,
+      "kind": "rubric",
+      "description": "Validates schema, then compares computed polarization, strains, d33', and ε33' at the five specified stress points to gold values using tolerances, and verifies structural trends (monotonic P magnitude, negative S4, T-like M_A at -4.565 GPa).",
+      "reference_values": {
+        "stress_points": [
+          -3.535,
+          -3.56,
+          -4.36,
+          -4.565,
+          -4.65
+        ],
+        "gold": {
+          "-3.535": {
+            "P1": 0.151,
+            "P2": 0.151,
+            "P3": 0.213,
+            "S3": 0.004,
+            "S4": -0.002,
+            "d33": 50.0,
+            "epsilon33": 50.0
+          },
+          "-3.56": {
+            "P1": 0.1462,
+            "P2": 0.1462,
+            "P3": 0.2098,
+            "S3": 0.002,
+            "S4": -0.002,
+            "d33": 50.0,
+            "epsilon33": 50.0
+          },
+          "-4.36": {
+            "P1": 0.0357,
+            "P2": 0.0357,
+            "P3": 0.1802,
+            "S3": -0.01,
+            "S4": -0.0035,
+            "d33": 150.0,
+            "epsilon33": 150.0
+          },
+          "-4.565": {
+            "P1": -0.0005,
+            "P2": -0.0005,
+            "P3": 0.144,
+            "S3": -0.015,
+            "S4": -0.002,
+            "d33": 200.0,
+            "epsilon33": 200.0
+          },
+          "-4.65": {
+            "P1": -0.001,
+            "P2": -0.001,
+            "P3": 0.139,
+            "S3": -0.018,
+            "S4": -0.001,
+            "d33": 250.0,
+            "epsilon33": 1500.0
+          }
+        }
+      },
+      "tolerances": {
+        "P": 0.01,
+        "S3": 0.001,
+        "S4": 0.001,
+        "d33": "relative 0.1 or absolute 5",
+        "epsilon33": "relative 0.2"
+      },
+      "structural_checks": {
+        "monotonic_P_mag": true,
+        "S4_sign_negative": true,
+        "phase_sequence_MA_II_at_neg4_565": true
+      }
+    }
+  ]
+}

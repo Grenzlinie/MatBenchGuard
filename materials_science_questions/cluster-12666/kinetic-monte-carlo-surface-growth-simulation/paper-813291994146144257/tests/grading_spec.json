@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute the critical island size selection from the simulated island densities against the experimental target. Structural check of monotonic density trend.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Experimental AFM island density target (35 µm⁻²) used as hidden gold for recomputing the best matching i. The value is from the paper (AFM measurement for 0.03 ML coverage).",
+      "source_provenance": "Paper reported value (AFM measurement) for coverage 0.03 ML, described in text and Fig. 15.",
+      "generation_method": "Extracted from paper.",
+      "why_not_fabricated": "This is the actual experimental target used in the paper's KMC comparison; it is the correct hidden gold because the task requires matching the experimental density."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "island_density_vs_i.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "critical_island_size",
+              "island_density_per_um2"
+            ],
+            "properties": {
+              "critical_island_size": {
+                "type": "integer",
+                "description": "critical island size, 3..8"
+              },
+              "island_density_per_um2": {
+                "type": "number",
+                "description": "final island density in islands per µm²"
+              }
+            }
+          }
+        },
+        "description": "Island densities for each critical island size i, compared against hidden paper reference densities with tolerance."
+      },
+      {
+        "file": "selected_critical_island_size.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "A single integer (3..8) representing the critical island size i that minimizes the difference between simulated and experimental island density."
+        },
+        "description": "The determined critical island size."
+      }
+    ],
+    "notes": "The agent must implement the KMC simulation from scratch. The experimental AFM island density (35 µm⁻²) is provided as public input for the selection step. The hidden scoring checks both the island density trend (tolerance 25%) and the correctness of the selected critical island size."
+  },
+  "steps": [
+    {
+      "id": "step_kmc_sim",
+      "output_file": "island_density_vs_i.json",
+      "kind": "rubric",
+      "weight": 0.3,
+      "tolerance": 0.25,
+      "description": "Structural check: correct entries for i=3..8 and island densities monotonically non-increasing with critical island size. A tolerance of 25% of the maximum density is used to allow for stochastic fluctuations in the KMC simulation."
+    },
+    {
+      "id": "step_select_i",
+      "output_file": "selected_critical_island_size.txt",
+      "kind": "recompute_metric",
+      "weight": 0.7,
+      "metric": "critical_island_size_match",
+      "target": 7,
+      "tolerance": 0,
+      "description": "Recompute the best i from island_density_vs_i.json against experimental density 35 µm⁻²; verify the agent's chosen i matches the recomputed best i and equals 7."
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The absorption coefficient formula can be recomputed and compared to the agent's computed curves and extracted peaks, enabling full recomputation of the main results from the raw artifact.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "absorption_results.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden model parameters for the CdS absorption model (dielectric constant, rms potential, chemical potential, etc.) to recompute alpha and verify agent's computation.",
+      "source_provenance": "Physical constants for CdS (dielectric constant ~9, Nc ~1e20 cm⁻³, μ~200 cm²/V·s) and the paper's extracted Δ=0.7 eV, chosen to produce the qualitative trends described in the paper (σ_T > σ_I, σ_T ≠ εω).",
+      "generation_method": "Selected representative values that yield an absorption peak within the 300-900 K range and the required inequalities.",
+      "why_not_fabricated": "Values are based on CdS material parameters commonly cited and the paper's order-of-magnitude rms potential, ensuring the recomputed model is physically plausible and matches the paper's findings."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "absorption_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "params": "object",
+            "curves": "array of objects",
+            "temperature_maximum": "object",
+            "illumination_maximum": "object",
+            "homogeneous_sigma": "number",
+            "verification": "object"
+          },
+          "properties_description": "params: object containing all physical constants and model parameters used (e.g., epsilon, eta, v0, Delta, xi, Nc, mu, omega, T0). curves: array of two objects, each with 'scenario' (string 'temperature' or 'illumination'), 'sigma' (list of floats in S/cm), 'alpha' (list of floats in cm^{-1}). temperature_maximum: object with 'sigma_T' (float in S/cm) and 'alpha_T' (float in cm^{-1}) extracted from the temperature-varied computation. illumination_maximum: object with 'sigma_I' (float in S/cm) and 'alpha_I' (float in cm^{-1}) extracted from the illumination-varied computation. homogeneous_sigma: epsilon * omega (float in S/cm). verification: object with 'sigma_T_gt_sigma_I' (bool) indicating whether σ_T > σ_I, and 'sigma_T_not_equal_homogeneous' (bool) indicating whether |σ_T - σ_hom| exceeds a small relative threshold."
+        },
+        "description": "Scored artifact providing the raw absorption curves and derived quantities that the verifier will recompute against hidden reference parameters to evaluate correct implementation and trend verification."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "absorption_results.json",
+      "kind": "recompute_curve_and_peaks",
+      "weight": 1.0,
+      "params": {
+        "epsilon": 9e-13,
+        "eta2": 0.1,
+        "v0": 450000.0,
+        "rho": 4.8,
+        "c": 770000000000.0,
+        "mu": 200.0,
+        "Nc": 1e+20,
+        "Delta_J": 1.1214e-19,
+        "xi_J": -1.2816e-19,
+        "omega": 157079632.6794895,
+        "T0_illum": 300.0
+      }
+    }
+  ]
+}

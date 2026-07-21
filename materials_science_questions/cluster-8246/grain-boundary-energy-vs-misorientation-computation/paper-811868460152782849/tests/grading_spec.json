@@ -1,0 +1,166 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recomputing GB energy from raw LAMMPS dumps would require re-running molecular statics and dynamics, which is too heavyweight for the verifier sandbox. Instead we verify structural features (peak locations, relative magnitudes, monotonic trends, migration step size) and compare reported scalars to paper values with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for energy peaks, sliding displacement, migration distance, and grain-boundary-energy effect from the paper's figures and text.",
+      "source_provenance": "Paper Figures 5 (energy profile), 6 (structure & energy evolution), 7 (sliding displacement), 8 (migration), 9 (GB energy effect) and associated discussion pages. Specific numbers: peaks at ~0.17 and ~0.66 a_CSL, valley at 0.33 a_CSL; sliding at 5 ps for Σ3 under 0.02 eV/Å ≈ 3.3 Å; migration ~3 d_111 layers ≈ 7.0 Å; sliding at 5 ps for Σ3 (1.17e-3 eV/Å^4) = 5.5 Å, for Σ9 = 7.4 Å.",
+      "generation_method": "Extracted from published figures and text; units and conversions as given in the paper.",
+      "why_not_fabricated": "These are the actual reported simulation results; they define the reproduction target."
+    }
+  ],
+  "target_policies": {
+    "energy_vs_displacement.csv": "reference_match",
+    "sliding_vs_time.csv": "reference_match",
+    "migration_vs_time.csv": "reference_match",
+    "gb_energy_effect.csv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_vs_displacement.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "displacement_fraction",
+            "gb_energy"
+          ],
+          "units": {
+            "displacement_fraction": "fraction of a_CSL",
+            "gb_energy": "eV/Å^2"
+          }
+        },
+        "description": "Grain boundary energy profile for pure sliding of Σ3(1-11) boundary."
+      },
+      {
+        "file": "sliding_vs_time.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_ps",
+            "sliding_A"
+          ],
+          "units": {
+            "time_ps": "ps",
+            "sliding_A": "Å"
+          }
+        },
+        "description": "Sliding displacement vs. time for Σ3(1-11) under applied force 0.02 eV/Å."
+      },
+      {
+        "file": "migration_vs_time.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_ps",
+            "migration_A"
+          ],
+          "units": {
+            "time_ps": "ps",
+            "migration_A": "Å"
+          }
+        },
+        "description": "Migration distance vs. time for Σ3(1-11) under applied force 0.02 eV/Å."
+      },
+      {
+        "file": "gb_energy_effect.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "boundary_label",
+            "force_per_volume_eV_per_A4",
+            "sliding_at_5ps"
+          ],
+          "units": {
+            "force_per_volume_eV_per_A4": "eV/Å^4",
+            "sliding_at_5ps": "Å"
+          }
+        },
+        "description": "Sliding displacement at 5 ps for Σ3 and Σ9 boundaries under three levels of applied force per unit volume (0.58e-3, 1.17e-3, 2.32e-3 eV/Å^4), demonstrating dependence on applied force and grain boundary energy."
+      }
+    ],
+    "notes": "All outputs placed under /app/outputs. The hidden checker verifies sliding values for each force-boundary combination, monotonic increase with force, and higher sliding for Σ9 than Σ3 at the same force."
+  },
+  "steps": [
+    {
+      "id": "check_energy_profile",
+      "output_file": "energy_vs_displacement.csv",
+      "kind": "structural",
+      "weight": 0.3,
+      "description": "Verify energy vs displacement profile for pure GBS: peaks at ~0.17 and ~0.66 a_CSL, valley at ~0.33, energy magnitudes and barrier.",
+      "spec": {
+        "min_rows": 5,
+        "peak1_position": 0.17,
+        "peak1_tolerance_pos": 0.05,
+        "peak2_position": 0.66,
+        "peak2_tolerance_pos": 0.05,
+        "valley_position": 0.33,
+        "valley_tolerance_pos": 0.05,
+        "peak1_energy_min": 0.015,
+        "peak2_energy_min": 0.02,
+        "valley_energy_max": 0.005,
+        "barrier_min": 0.015
+      }
+    },
+    {
+      "id": "check_sliding_sigma3_002",
+      "output_file": "sliding_vs_time.csv",
+      "kind": "structural",
+      "weight": 0.3,
+      "description": "Check sliding displacement vs time for Σ3 at 0.02 eV/Å: sliding at 5 ps ~3.3 Å, increasing trend.",
+      "spec": {
+        "time_col": "time_ps",
+        "sliding_col": "sliding_A",
+        "target_time_ps": 5.0,
+        "target_sliding_A": 3.3,
+        "relative_tolerance": 0.1,
+        "require_increasing": true
+      }
+    },
+    {
+      "id": "check_migration_sigma3_002",
+      "output_file": "migration_vs_time.csv",
+      "kind": "structural",
+      "weight": 0.2,
+      "description": "Check migration distance vs time: stepwise increase with step ~d_111 (2.34 Å), final migration at 5 ps ~7.0 Å.",
+      "spec": {
+        "time_col": "time_ps",
+        "migration_col": "migration_A",
+        "d111": 2.338,
+        "expected_final_migration_A": 7.0,
+        "final_tolerance_abs": 1.5,
+        "max_step_size": 3.0,
+        "min_step_size": 1.5
+      }
+    },
+    {
+      "id": "check_gb_energy_effect",
+      "output_file": "gb_energy_effect.csv",
+      "kind": "structural",
+      "weight": 0.2,
+      "description": "Verify that Σ9(2-21) slides more than Σ3(1-11) under same force per volume, and that each sliding displacement at 5 ps is around paper values (Σ3: 5.5 Å, Σ9: 7.4 Å).",
+      "spec": {
+        "targets": {
+          "Sigma3(1-11)": 5.5,
+          "Sigma9(2-21)": 7.4
+        },
+        "relative_tolerance": 0.1,
+        "trend_check": "Sigma9 > Sigma3"
+      }
+    }
+  ]
+}

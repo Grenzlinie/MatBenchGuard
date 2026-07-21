@@ -103,8 +103,9 @@ def score_0(artifact, step, ctx):
         p_c = float(p_c_str)
     except:
         return 0.0
-    target = float(step.get("target", 0.34))
-    tol = float(step.get("tolerance_abs", 0.05))
+    # Hardcoded target from the paper: p_c = 0.34 ± 0.05
+    target = 0.34
+    tol = 0.05
     if abs(p_c - target) <= tol:
         return 1.0
     return 0.0
@@ -112,13 +113,13 @@ def score_0(artifact, step, ctx):
 
 # === block: score_1 (check id='simulation_E_over_E0') ===
 def score_1(artifact, step, ctx):
-    params = step["params"]
-    p_l = float(params["p_l"])
-    p_c = float(params["p_c"])
-    m = float(params["m"])
-    rel_tol_good = float(params["rel_tol_good"])
-    rel_tol_bad = float(params["rel_tol_bad"])
-    high_p_unity_tol = float(params["high_p_unity_tol"])
+    # Hardcoded parameters from the paper's interpolation formula Eq.12 (m=3.4, p_l=2/3, p_c=0.34)
+    p_l = 0.6666666667
+    p_c = 0.34
+    m = 3.4
+    rel_tol_good = 0.15
+    rel_tol_bad = 0.3
+    high_p_unity_tol = 0.02
 
     def ref_E(p):
         if p <= p_c:
@@ -187,11 +188,15 @@ def score_1(artifact, step, ctx):
 
 # === block: score_2 (check id='simulation_sigma') ===
 def score_2(artifact, step, ctx):
-    params = step["params"]
-    sigma_o_map = params["sigma_o"]
-    const_tol = float(params["const_tol"])
-    low_p_tol = float(params["low_p_tol"])
-    high_p_tol = float(params["high_p_tol"])
+    # Hardcoded perfect-lattice Poisson ratios for the three spring sets
+    sigma_o_map = {
+        "111": 0.3333333333,
+        "114": 0.5,
+        "167": 0.6057,
+    }
+    const_tol = 0.05
+    low_p_tol = 0.1
+    high_p_tol = 0.02
 
     rows = artifact
     if not rows:

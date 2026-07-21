@@ -8,11 +8,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.test_materials_benchmark_review_e1 import (
-    write_public_valid_dispersion,
-)
-
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNNER = (
     REPO_ROOT
@@ -35,9 +30,7 @@ def copy_source_package(destination: Path) -> None:
     shutil.copytree(
         SOURCE_PACKAGE,
         destination,
-        ignore=shutil.ignore_patterns("solution"),
     )
-    (destination / "solution").mkdir()
     checker_path = destination / "tests/checker.py"
     original_checker = checker_path.read_text(encoding="utf-8")
     checker_path.write_text(
@@ -362,55 +355,11 @@ def run_no_paper_with_taxonomy(
 
 
 class MaterialsBenchmarkPaperGroundedTests(unittest.TestCase):
-    def test_missing_public_fixture_deducts_noncritical_robustness(self) -> None:
+    def test_oracle_probe_is_not_a_public_fixture(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package = workspace / SOURCE_PACKAGE.name
             copy_source_package(package)
-            shutil.rmtree(package / "solution")
-            write_public_valid_dispersion(package / "solution")
-            (package / "solution/solve.sh").write_text(
-                "#!/bin/sh\n"
-                'mkdir -p "$OUTPUT_DIR"\n'
-                'cp "$(dirname "$0")/dispersion_curves.csv" '
-                '"$OUTPUT_DIR/dispersion_curves.csv"\n',
-                encoding="utf-8",
-            )
-            (package / "solution/solve.sh").chmod(0o755)
-            (package / "tests/checker.py").write_text(
-                """
-import csv
-import json
-import math
-from pathlib import Path
-
-output = Path("/app/outputs/dispersion_curves.csv")
-reward = 0.0
-if output.is_file():
-    try:
-        with output.open(newline="", encoding="utf-8") as handle:
-            reader = csv.DictReader(handle)
-            rows = list(reader)
-        keys = [(row["direction"], row["mode"], row["k"]) for row in rows]
-        if (
-            reader.fieldnames == ["direction", "mode", "k", "frequency"]
-            and len(rows) == 180
-            and len(set(keys)) == len(keys)
-            and all(math.isfinite(float(row["frequency"])) for row in rows)
-        ):
-            reward = 1.0
-    except (KeyError, TypeError, ValueError):
-        reward = 0.0
-logs = Path("/logs/verifier")
-logs.mkdir(parents=True, exist_ok=True)
-(logs / "reward.txt").write_text(str(reward), encoding="utf-8")
-(logs / "breakdown.json").write_text(
-    json.dumps({"fixture_integrity": reward}),
-    encoding="utf-8",
-)
-""",
-                encoding="utf-8",
-            )
             value = assessment()
             public_assessment = no_paper_assessment()
             value["materials_qualification"] = public_assessment[
@@ -423,10 +372,10 @@ logs.mkdir(parents=True, exist_ok=True)
                 dimension["status"] = "PASS"
             value["dimensions"]["gold_provenance"]["evidence"][0][
                 "package_quote"
-            ] = "len(rows) == 180"
+            ] = "_paper_test_rows"
             value["dimensions"]["checker_fidelity"]["evidence"][0][
                 "package_quote"
-            ] = 'reader.fieldnames == ["direction", "mode", "k", "frequency"]'
+            ] = "_paper_test_rows"
             assessment_path = workspace / "assessment.json"
             assessment_path.write_text(
                 json.dumps(value, ensure_ascii=False),
@@ -441,48 +390,23 @@ logs.mkdir(parents=True, exist_ok=True)
                     package / "benchmark_audit/audit_report.json"
                 ).read_text(encoding="utf-8")
             )
-            dimensions = {
-                item["dimension"]: item
-                for item in report["dimension_scores"]
-            }
             self.assertEqual(
-                dimensions["robustness_discrimination"]["points_earned"],
-                12,
+                report["deterministic_core"]["probe_results"]["probe_origin"],
+                "SCHEMA_DERIVED_DETERMINISTIC",
+            )
+            self.assertNotIn("fixture_hashes", json.dumps(report))
+            self.assertNotIn("repair_reaudit_lineage", json.dumps(report))
+            positive = next(
+                item
+                for item in report["checker_tests"]
+                if item["test_type"] == "positive_oracle"
             )
             self.assertEqual(
-                dimensions["robustness_discrimination"]["status"],
-                "PASS",
+                report["deterministic_core"]["probe_results"]["probe_origin"],
+                "SCHEMA_DERIVED_DETERMINISTIC",
             )
-            self.assertEqual(
-                {
-                    name: dimension["points_earned"]
-                    for name, dimension in dimensions.items()
-                },
-                {
-                    "scientific_validity": 35,
-                    "instruction_answerability": 20,
-                    "checker_gold_alignment": 25,
-                    "robustness_discrimination": 12,
-                    "solution_completeness": 5,
-                },
-                msg=json.dumps(report["findings"], ensure_ascii=False),
-            )
-            self.assertEqual(report["summary"]["legacy_total_score"], 97)
-            self.assertEqual(report["summary"]["total_score"], 98)
-            self.assertEqual(report["summary"]["final_verdict"], "PASS")
-            v11 = {
-                item["dimension"]: item
-                for item in report["dimensions_v11"]
-            }
-            self.assertEqual(v11["C07"]["points_earned"], 8)
-            self.assertEqual(v11["C07"]["normalized"], 80.0)
-            self.assertNotIn(
-                "independent_known_valid_output",
-                report["evidence_contract"]["gaps"],
-            )
-            self.assertIn(
-                "INDEPENDENT_PUBLIC_FIXTURE_UNAVAILABLE",
-                {finding["title"] for finding in report["findings"]},
+            self.assertNotEqual(
+                positive["probe_origin"], "INDEPENDENT_PUBLIC_FIXTURE"
             )
 
     def test_no_paper_report_records_trigger_adjudication_and_blocks_pass(
@@ -525,11 +449,8 @@ logs.mkdir(parents=True, exist_ok=True)
                 "triggered_paper_review",
                 report["evidence_contract"]["gaps"],
             )
-            for dimension in report["dimension_scores"]:
-                self.assertTrue(
-                    dimension["evidence"],
-                    msg=dimension["dimension"],
-                )
+            for dimension in report["dimensions_v11"]:
+                self.assertIn("status", dimension, msg=dimension["dimension"])
 
     def test_no_paper_assessment_requires_per_trigger_adjudication(
         self,
@@ -1098,16 +1019,16 @@ logs.mkdir(parents=True, exist_ok=True)
             )
             checker_alignment = next(
                 item
-                for item in report["dimension_scores"]
-                if item["dimension"] == "checker_gold_alignment"
+                for item in report["dimensions_v11"]
+                if item["dimension"] == "C04"
             )
-            self.assertEqual(checker_alignment["points_earned"], 15)
+            self.assertEqual(checker_alignment["points_earned"], 0)
             self.assertEqual(
                 [
                     deduction["points"]
                     for deduction in checker_alignment["deductions"]
                 ],
-                [10],
+                [8, 8, 8],
             )
             self.assertIn(
                 "PAPER_GOLD_PROVENANCE_FAIL",

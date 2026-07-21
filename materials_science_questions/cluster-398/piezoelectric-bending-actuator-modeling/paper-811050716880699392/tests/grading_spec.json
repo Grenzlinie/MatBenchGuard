@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The checker cannot re-run the full Rayleigh-Ritz analytical model; it compares the agent-reported results to paper-derived analytical values (center displacement 53.74 µm, optimal r2/r1 0.85, tpzt/tp 0.67, pressure rise 9.87 kPa) with absolute tolerances and validates the deflection profile shape and self-consistency.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "deflection_profile.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r_mm",
+            "w_um"
+          ],
+          "units": {
+            "r_mm": "mm",
+            "w_um": "μm"
+          }
+        },
+        "description": "Deflection profile of the bimorph actuator at 100 V without gas compression, sampled at 20 equally spaced radii from 0 to 15 mm."
+      },
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "center_displacement_um",
+            "pressure_rise_kPa",
+            "optimal_r2_r1",
+            "optimal_tpzt_tp"
+          ],
+          "properties": {
+            "center_displacement_um": {
+              "type": "number",
+              "unit": "μm"
+            },
+            "pressure_rise_kPa": {
+              "type": "number",
+              "unit": "kPa"
+            },
+            "optimal_r2_r1": {
+              "type": "number"
+            },
+            "optimal_tpzt_tp": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Key computed results: center displacement, optimal geometric ratios, and pressure rise under optimal conditions."
+      }
+    ],
+    "notes": "The hidden checker compares the reported deflection profile at a set of hidden radial points and the four numeric values in results.json against the paper's analytical solution, using tolerances appropriate for a re-implementation. The deflection profile is also checked for monotonic decrease from center to edge and near-zero displacement at the clamped boundary."
+  },
+  "steps": [
+    {
+      "id": "check_deflection_profile",
+      "output_file": "deflection_profile.csv",
+      "kind": "rubric",
+      "weight": 0.3,
+      "description": "Validate deflection profile shape (20 rows, monotonic decreasing, near-zero at clamped edge) and cross-check center displacement with results.json."
+    },
+    {
+      "id": "check_results",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.7,
+      "description": "Compare reported center_displacement_um, optimal_r2_r1, optimal_tpzt_tp, pressure_rise_kPa to paper-derived gold values with absolute tolerances."
+    }
+  ]
+}

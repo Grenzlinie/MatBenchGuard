@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_1",
+    "title": "Build slab models",
+    "role": "process",
+    "action": "Construct Si(111) slab models for four candidate compositions: 4Au_1Al, 3Au_1Al, 4Au_2Al, 4Au_3Al per 2×2 cell. Use a slab of 5 Si bilayers, bottom two layers fixed and H-terminated, ~15 Å vacuum. Place atoms according to the rectangular motif consisting of four Au atoms with an Al center, Si adatoms on short sides, Si dimers on long sides. For 3Au reduce Au coverage; for 2Al and 3Al substitute adjacent Si dimer atoms with Al. Output the initial atomic coordinates.",
+    "output_file": "",
+    "evidence": "slab_coordinates.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Initial structure setup required for DFT relaxation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "DFT geometry relaxation",
+    "role": "process",
+    "action": "For each slab model, perform geometry relaxation using the chosen DFT code with PAW pseudopotentials, spin-orbit coupling, plane-wave cutoff 400 eV, Monkhorst-Pack 6×6×1 k-mesh. Relax atomic positions until forces < 0.01 eV/Å. Record total energies for all four compositions.",
+    "output_file": "",
+    "evidence": "relaxation_output.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "DFT relaxations producing total energies needed for formation energy calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3",
+    "title": "Compute relative formation energies",
+    "role": "scored",
+    "action": "From the relaxed total energies, compute relative formation energies per 2×2 cell using the 4Au_1Al composition as the zero reference. Write the results to formation_energies.csv with columns for composition, total energy per cell (eV), and relative energy (eV).",
+    "output_file": "formation_energies.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Tabulated total and relative formation energies for the four compositions.",
+    "output_schema": "CSV with columns: composition (string), total_energy_per_cell_eV (float), relative_energy_eV (float). Four rows for '4Au_1Al', '3Au_1Al', '4Au_2Al', '4Au_3Al'."
+  },
+  {
+    "id": "step_4",
+    "title": "Band structure calculation",
+    "role": "process",
+    "action": "For the relaxed structures of the compositions with 1, 2, and 3 Al atoms, perform non-self-consistent band structure calculations using a 9×9×1 k-mesh and a slab thickness of 6 Si bilayers, including spin-orbit coupling. Extract electronic dispersion curves and surface character weights.",
+    "output_file": "",
+    "evidence": "band_structure_data.hdf5",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Band structure computation for metallicity and spin-splitting analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_5",
+    "title": "Band structure analysis and summary",
+    "role": "scored",
+    "action": "Analyze the band structures: determine whether the 4Au_3Al composition is metallic (bands crossing the Fermi level); note the energy shift trend of the surface resonant band and bulk band edge from 1 to 3 Al; compute spin splitting parameters for the 4Au_3Al composition along the Γ–M directions corresponding to [11–2] and [2–1–1] ([‾2‾1]‾ and [‾1‾2‾]). Extract the momentum splitting Δk∥ and energy splitting ΔE_F. Write the results to band_structure_summary.json.",
+    "output_file": "band_structure_summary.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Summarized electronic band properties: metallicity, band shift trend, spin splitting.",
+    "output_schema": "JSON object with keys: 'metallic' (bool), 'band_shift_trend' (string), 'spin_splitting': { 'delta_k_parallel' (float, Å⁻¹), 'delta_E_meV_11minus2' (float), 'delta_E_meV_2minus1minus1' (float) }."
+  }
+]

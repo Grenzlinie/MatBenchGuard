@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_00_model_setup",
+    "title": "Construct effective tight-binding model",
+    "role": "process",
+    "action": "Construct a single-orbital tight-binding Hamiltonian for a (6,6) carbon nanotube with substitutional magnetic impurity sites, incorporating spin-dependent on-site potentials parameterized by the impurity d-band occupation and exchange splitting.",
+    "output_file": "",
+    "evidence": "model_setup.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "The Hamiltonian provides the electronic structure needed for exchange coupling and transport calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_01_j_function",
+    "title": "Implement Green’s function method for J(D)",
+    "role": "process",
+    "action": "Implement the Green’s function method to compute the magnetic coupling J(D) between two substitutional impurities for both like and unlike sublattice configurations, using the effective tight-binding Hamiltonian.",
+    "output_file": "",
+    "evidence": "j_function_impl.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Provides the pairwise coupling values needed for Monte Carlo spin dynamics.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_j_values",
+    "title": "Pairwise exchange coupling at D=3a",
+    "role": "scored",
+    "action": "Using the implemented Green’s function method, compute the exchange coupling constants J_like and J_unlike for Ni and Mn impurities at a fixed separation of D=3a (a is the CNT lattice parameter). Output the results as a JSON file.",
+    "output_file": "step_01_j_values.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Exchange coupling constants for Ni and Mn between like and unlike sublattice sites.",
+    "output_schema": "{\"Ni\": {\"J_like\": number, \"J_unlike\": number}, \"Mn\": {\"J_like\": number, \"J_unlike\": number}} (units: eV)"
+  },
+  {
+    "id": "step_03_monte_carlo",
+    "title": "Monte Carlo simulated annealing of impurity spin configurations",
+    "role": "process",
+    "action": "For concentrations c = 0.5%, 1%, 2%, 3%, 4%, generate random substitutional impurity distributions on the (6,6) CNT with equal a priori probability on both sublattices. Perform Monte Carlo simulated annealing using the Heisenberg Hamiltonian with the pairwise J couplings to determine the equilibrium spin orientations.",
+    "output_file": "",
+    "evidence": "mc_spin_data.npy",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Determines the non-collinear or collinear magnetic ordering, which is essential for transport.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_transport_mr",
+    "title": "Magnetoresistance calculation and data",
+    "role": "scored",
+    "action": "Using the Kubo transport formalism and the spin configurations from the Monte Carlo step, compute the spin-resolved conductances Γ↑↑, Γ↓↓, Γ↑↓, total Γ (no field), and Γ̄ (with external aligning field), and the magnetoresistance MR = (Γ̄ − Γ)/Γ. Average over a sufficient number of disorder realizations to achieve statistical convergence, for both Ni and Mn impurities. Output the results as a CSV file containing the computed quantities for each concentration.",
+    "output_file": "step_02_mr_data.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Spin-resolved conductances and magnetoresistance as function of impurity concentration.",
+    "output_schema": "columns: impurity (Ni/Mn), concentration (float), Gamma_up (float), Gamma_down (float), Gamma_mixed (float), MR (float). Conductances in same arbitrary units; MR dimensionless."
+  }
+]

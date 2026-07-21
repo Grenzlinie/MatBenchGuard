@@ -1,0 +1,88 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The task requires the agent to produce final quantitative results (transmission probabilities and phase delay) from a spin-wave solver. The checker cannot fully recompute the underlying simulation within its sandbox; instead it compares the reported values against hidden reference thresholds derived from the paper's claims and the reference implementation, with monotonic partial credit for polarizer and tolerance-based exact match for retarder.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "polarizer_results.json": "threshold_or_better",
+    "retarder_results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Polarizer thresholds and retarder gold phase delay",
+      "source_provenance": "Paper's reported approximate values: T_L ≈ 1, T_R ≈ 0; δφ_LR ≈ 0.31π (≈0.974 rad). Thresholds for polarizer (T_L ≥ 0.95 and T_R ≤ 0.05) correspond to near-perfect filtering. Retarder tolerance of ±0.05 rad accommodates implementation spread.",
+      "generation_method": "Extracted from paper text and figures.",
+      "why_not_fabricated": "Values are directly traceable to the paper's own measurements and claims; thresholds are set to reflect the paper's 'T_L ≈ 1, T_R ≈ 0' and 'δφ_LR ≈ 0.31π'."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "polarizer_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "T_R": "float",
+            "T_L": "float",
+            "frequency_GHz": "float"
+          },
+          "units": {
+            "T_R": "dimensionless (probability)",
+            "T_L": "dimensionless (probability)",
+            "frequency_GHz": "GHz"
+          }
+        },
+        "description": "Transmission probabilities for left- and right-circular spin waves through the 2/1/2 polarizer at 6.5 GHz. The scoring checks that T_L is large (≥0.95) and T_R is small (≤0.05), consistent with the paper's claim of near-perfect circular polarization filtering."
+      },
+      {
+        "file": "retarder_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "delta_phi_LR": "float",
+            "frequency_GHz": "float",
+            "length_nm": "int"
+          },
+          "units": {
+            "delta_phi_LR": "radians",
+            "frequency_GHz": "GHz",
+            "length_nm": "nm"
+          }
+        },
+        "description": "Accumulated relative phase delay between left- and right-circular spin wave components through the 2/3/2 retarder at 6.5 GHz. The scoring compares the reported δφ_LR value to the paper's reported phase delay within a tight tolerance."
+      }
+    ],
+    "notes": "The solver must be implemented from scratch; no external code or pre-trained model is provided. All material parameters are given in the paper and included in the step actions. The capping layer magnetization direction for the retarder must follow the 2/‾3/2 configuration (pinned downward)."
+  },
+  "steps": [
+    {
+      "id": "step_02_polarizer",
+      "output_file": "polarizer_results.json",
+      "kind": "polarizer",
+      "weight": 0.5,
+      "target_policy": "threshold_or_better",
+      "T_L_threshold": 0.95,
+      "T_L_half_threshold": 0.8,
+      "T_R_threshold": 0.05,
+      "T_R_half_threshold": 0.15,
+      "description": "Check polarizer transmission"
+    },
+    {
+      "id": "step_03_retarder",
+      "output_file": "retarder_results.json",
+      "kind": "retarder",
+      "weight": 0.5,
+      "target_policy": "exact_match",
+      "gold_delta_phi_LR": 0.974,
+      "tolerance_full": 0.05,
+      "tolerance_half": 0.1,
+      "description": "Check retarder phase delay"
+    }
+  ]
+}

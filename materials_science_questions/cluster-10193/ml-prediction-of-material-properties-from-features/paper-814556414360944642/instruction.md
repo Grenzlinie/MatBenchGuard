@@ -4,7 +4,11 @@
 A representation of atomic environments that combines atomic numbers and bond-orientational order parameters is proposed to encode both chemical species and structural information. A family of 504 candidate fingerprints is systematically designed and applied to the molecules in the QM9 dataset, which contains 133 885 small organic molecules made of carbon, hydrogen, oxygen, nitrogen, and fluorine. The central problem is to determine whether a compact subset of these fingerprints can accurately predict Open Babel atomic charges and molecular dipole moments, and to evaluate the robustness of such predictions across different molecular geometries. The reproduction effort will screen the fingerprints via supervised machine learning, rank them by importance, and evaluate the regression performance of the selected top‑60 fingerprints.
 
 ## Approach
-For every atom in a molecule, neighbour sets are built at four cutoff radii (1.50, 1.75, 2.00, and 2.50 Å). The 18 implant functions F are defined as follows (N is the number of neighbors in the neighbor set, a_j is the atomic number of neighbor j, r_ij is the distance, and all sums run over neighbors k ∈ N_b(r_c,i)):
+For every atom in a molecule, neighbour sets are built at four cutoff radii (1.50, 1.75, 2.00, and 2.50 Å). The neighbour set N_b(r_c,i) consists of all atoms j (j ≠ i) for which the interatomic distance r_ij ≤ r_c.
+
+If N_b(r_c,i) is empty, all implant functions F(a_j, r_ij, r_c) that involve a division by Σ_k … (i.e. F4, F6, F8, F10, F12, F14, F16, F18) are defined to be 0 for all j (since there are no neighbours to contribute). For the non‑normalized functions, the result is 0 because the sum over an empty set is 0.
+
+The 18 implant functions F are defined as follows (N is the number of neighbors in the neighbor set, a_j is the atomic number of neighbor j, r_ij is the distance, and all sums run over neighbors k ∈ N_b(r_c,i)):
 
 F1 = 1
 F2 = 1/N
@@ -15,9 +19,9 @@ F6 = a_j / Σ_k a_k
 F7 = a_j r_ij^{-1}
 F8 = a_j r_ij^{-1} / Σ_k a_k r_ik^{-1}
 F9 = a_j^{1.5} r_ij^{-1}
-F10 = a_j^{1.5} r_ij^{-1} / Σ_k a_j^{1.5} r_ik^{-1}
+F10 = a_j^{1.5} r_ij^{-1} / Σ_k a_k^{1.5} r_ik^{-1}
 F11 = a_j^{1.5} r_ij
-F12 = a_j^{1.5} r_ij / Σ_k a_j^{1.5} r_ik
+F12 = a_j^{1.5} r_ij / Σ_k a_k^{1.5} r_ik
 F13 = a_j exp[-4(r_ij - 1.5)^2]
 F14 = (a_j exp[-4(r_ij - 1.5)^2]) / Σ_k a_k exp[-4(r_ik - 1.5)^2]
 F15 = a_j exp[-4(r_ij - 2.0)^2]
@@ -31,7 +35,12 @@ q_{lm}(r_c, F, i) = Σ_{j ∈ N_b(r_c,i)} F(a_j, r_ij, r_c) Y_{lm}(r_ij)
 
 Q_l(r_c, F, i) = √[ (4π/(2l+1)) Σ_{m=-l}^{l} |q_{lm}|^2 ]
 
-with the degree l ∈ {4, 6, 8, 12, 15, 18, 20}. Each combination of cutoff r_c (1.50, 1.75, 2.00, 2.50 Å), implant function F, and degree l yields one fingerprint component, producing 504 fingerprint components per atom. Appending the atomic number a_i gives a 505‑element vector d_i per atom. Appending the atomic number gives a 505‑element vector per atom, and the collection of all atomic vectors forms the global descriptor matrix D. A random‑forest regressor (default scikit‑learn hyperparameters) is trained to predict Open Babel GAFF atomic charges using D. Feature importances are extracted from the trained forest, and the 504 fingerprint components are ranked. The top 60 components are selected for subsequent regression. The workflow proceeds in three evaluation regimes: (1) train and evaluate on GAFF‑optimized geometries (charge prediction and dipole‑moment reconstruction); (2) train and evaluate on DFT‑optimized geometries from QM9 (robustness); (3) transfer prediction where the model trained on GAFF data is used to predict charges for DFT geometries. All evaluations use five‑fold cross‑validation and report per‑element (H, C, N, O, F) and total R², MAE, MSE; molecular dipole‑moment R² is reported for regimes (1) and (2).
+with the degree l ∈ {4, 6, 8, 12, 15, 18, 20}. Each combination of cutoff r_c (1.50, 1.75, 2.00, 2.50 Å), implant function F, and degree l yields one fingerprint component, producing 504 fingerprint components per atom. Appending the atomic number a_i gives a 505‑element vector d_i per atom. Appending the atomic number gives a 505‑element vector per atom, and the collection of all atomic vectors forms the global descriptor matrix D. A random‑forest regressor (default scikit‑learn hyperparameters, with `random_state=42` to guarantee reproducibility) is trained to predict Open Babel GAFF atomic charges using D. Feature importances are extracted from the trained forest, and the 504 fingerprint components are ranked. The top 60 components are selected for subsequent regression. The workflow proceeds in three evaluation regimes: (1) train and evaluate on GAFF‑optimized geometries (charge prediction and dipole‑moment reconstruction); (2) train and evaluate on DFT‑optimized geometries from QM9 (robustness); (3) transfer prediction where the model trained on GAFF data is used to predict charges for DFT geometries. All evaluations use five‑fold cross‑validation and report per‑element (H, C, N, O, F) and total R², MAE, MSE; molecular dipole‑moment R² is reported for regimes (1) and (2).
+
+## Implementation Notes
+- **Spherical harmonics:** Use `scipy.special.sph_harm` with default conventions (Condon‑Shortley phase and normalization as implemented in scipy’s default). No custom phases or normalization changes are required.
+- **Random seed:** Always set `random_state=42` when instantiating `RandomForestRegressor` and for cross‑validation splits to make fingerprint importance ranking and regression results strictly reproducible.
+- **Reference dipole moment:** The molecular dipole moment reference used for calculating dipole‑moment R² must be retrieved during the GAFF charge/geometry generation step (Step 1). Use Open Babel to compute the permanent molecular dipole moment from the GAFF‑derived charges and coordinates (e.g., `pybel.Molecule.OBMol.GetTotalDipoleMoment()` or the obabel dipole property). This reference is compared with the dipole moment recalculated from predicted charges.
 
 ## Reproduction target
 Implement the full fingerprint computation for all molecules in the QM9 dataset. Use Open Babel to assign GAFF atomic charges and, where required, GAFF‑optimized geometries. Train a random‑forest regressor to predict these charges, rank all 504 fingerprint components by importance, and select the top 60. Evaluate regression performance on GAFF‑optimized geometries: report per‑element (H, C, N, O, F) and total R², MAE, MSE, and the molecular dipole‑moment R². Then, using the DFT‑optimized geometries from QM9, assign GAFF charges (no geometry optimization) and evaluate the same set of 60 fingerprints by training and testing on these DFT geometries; report the same metrics (including dipole R²). Finally, take the random‑forest model trained on GAFF data and predict charges for the DFT geometries; report per‑element and total R², MAE, MSE (dipole‑moment R² is not required for this transfer scenario). Produce the following scored artifacts: the list of top‑60 fingerprints, the regression metrics for GAFF structures, the regression metrics for DFT structures, and the transfer‑prediction metrics.
@@ -47,7 +56,7 @@ Implement the full fingerprint computation for all molecules in the QM9 dataset.
 
 ### Step 1: Generate GAFF geometries and charges for QM9
 - Role: process
-- Action: Use Open Babel to generate GAFF‑optimized molecular geometries and assign per‑atom GAFF atomic charges for every molecule in the QM9 dataset.
+- Action: Use Open Babel to generate GAFF‑optimized molecular geometries and assign per‑atom GAFF atomic charges for every molecule in the QM9 dataset. **Also compute and store the molecular dipole moment for each molecule (from the GAFF‑optimized geometry and charges) using Open Babel; this serves as the reference dipole moment for dipole‑moment R².**
 - Evidence: `/app/outputs/gaff_generation.log`
 
 ### Step 2: Compute full 505‑dimensional descriptors from GAFF geometries
@@ -57,7 +66,7 @@ Implement the full fingerprint computation for all molecules in the QM9 dataset.
 
 ### Step 3: Random forest training on full descriptors and importance ranking
 - Role: process
-- Action: Train a RandomForestRegressor on D_gaff and the GAFF charges using scikit‑learn with default parameters. Perform fivefold cross‑validation and extract feature importances for the 504 fingerprint components (excluding the atomic number feature).
+- Action: Train a RandomForestRegressor on D_gaff and the GAFF charges using scikit‑learn with default parameters **and `random_state=42`**. Perform fivefold cross‑validation and extract feature importances for the 504 fingerprint components (excluding the atomic number feature).
 - Evidence: `/app/outputs/full_feature_importances.csv`
 
 ### Step 4: Select top 60 fingerprints
@@ -70,7 +79,7 @@ Implement the full fingerprint computation for all molecules in the QM9 dataset.
 
 ### Step 5: Evaluate charge and dipole moment prediction on GAFF geometries
 - Role: scored
-- Action: Using only the top 60 fingerprint features plus the atomic number, train a new RandomForestRegressor on D_gaff with fivefold cross‑validation. Predict charges for all atoms; compute per‑element (H, C, N, O, F) and total R², MAE, MSE. Also compute molecular dipole moments from the predicted charges and GAFF atomic positions, and calculate the R² between those dipole moments and the Open Babel dipole moments.
+- Action: Using only the top 60 fingerprint features plus the atomic number, train a new RandomForestRegressor on D_gaff **with `random_state=42`** and fivefold cross‑validation. Predict charges for all atoms; compute per‑element (H, C, N, O, F) and total R², MAE, MSE. Also compute molecular dipole moments from the **predicted** charges and GAFF atomic positions, and calculate the R² between those dipole moments and the **Open Babel reference dipole moments obtained in Step 1**.
 - Output file: `/app/outputs/regression_results_gaff.json`
 - Format: json
 - Contract: JSON object with keys: 'atom_types' (object with keys H, C, N, O, F, each an object with keys R2, MAE, MSE), 'total' (object with R2, MAE, MSE), 'dipole_moment_R2' (float).
@@ -88,7 +97,7 @@ Implement the full fingerprint computation for all molecules in the QM9 dataset.
 
 ### Step 8: Robustness evaluation on DFT geometries (train on DFT, evaluate on DFT)
 - Role: scored (load-bearing)
-- Action: Using the top 60 features, train a new RandomForestRegressor on D_dft and the GAFF charges assigned to DFT geometries, with fivefold cross‑validation. Predict charges, compute per‑element and total R², MAE, MSE, and the molecular dipole moment R².
+- Action: Using the top 60 features, train a new RandomForestRegressor on D_dft and the GAFF charges assigned to DFT geometries, **with `random_state=42`** and fivefold cross‑validation. Predict charges, compute per‑element and total R², MAE, MSE, and the molecular dipole moment R² (compare predicted dipole with Open Babel dipole from Step 1, recomputed for DFT geometries if necessary, or using DFT-consistent reference).
 - Output file: `/app/outputs/regression_results_dft.json`
 - Format: json
 - Contract: Same structure as regression_results_gaff.json.

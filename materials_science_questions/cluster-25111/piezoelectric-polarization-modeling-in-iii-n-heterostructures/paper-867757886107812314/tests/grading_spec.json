@@ -1,0 +1,121 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing full electroelastic and k·p simulations from raw FEM/k·p artifacts is infeasible in the verifier sandbox; scoring uses hidden paper-reported reference values with tolerances for minima depths, and peak detection/ordering for DOS and PL spectrum.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_02_potential_minima.json": "exact_match",
+    "step_04_dos.csv": "structural_audit",
+    "step_05_pl_spectrum.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for potential minima depths, DOS peak energies, and PL peak energies.",
+      "source_provenance": "Paper explicit numeric extrema (Step 7), and approximate PL peak positions inferred from Fig.5 and description.",
+      "generation_method": "Extracted from the paper's text and figure, with tolerances chosen to allow for implementation differences.",
+      "why_not_fabricated": "These are the paper's own reported numerical results; the checker compares the agent's recomputed output to them."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_02_potential_minima.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "hole_PEP": "number (meV)",
+            "hole_DP": "number (meV)",
+            "electron_DP": "number (meV)",
+            "electron_PEP": "number (meV)"
+          }
+        },
+        "description": "Depths of the hole piezoelectric potential minima, hole deformation-potential minimum, electron deformation-potential minimum, and electron piezoelectric potential minima, all in meV relative to strain-free QW band edges."
+      },
+      {
+        "file": "step_04_dos.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy(meV)",
+            "DOS_total",
+            "DOS_DP_only"
+          ]
+        },
+        "description": "Density of states of the SIQD system: total DOS and the DOS of optically active (DP-localized) states only, as a function of energy."
+      },
+      {
+        "file": "step_05_pl_spectrum.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy(eV)",
+            "intensity"
+          ]
+        },
+        "description": "Simulated continuous-wave photoluminescence spectrum of the SIQD ensemble."
+      }
+    ],
+    "notes": "The hidden checker will compare the reported minima depths to the paper's hidden reference values with appropriate tolerances, and will examine the DOS and PL spectrum data for expected peak positions and relative ordering."
+  },
+  "steps": [
+    {
+      "id": "step_02",
+      "output_file": "step_02_potential_minima.json",
+      "weight": 0.4,
+      "target_policy": "exact_match",
+      "kind": "json_fields_match",
+      "fields": [
+        "hole_PEP",
+        "hole_DP",
+        "electron_DP",
+        "electron_PEP"
+      ],
+      "expected": {
+        "hole_PEP": 65,
+        "hole_DP": 24,
+        "electron_DP": -108,
+        "electron_PEP": -15
+      },
+      "tolerance": 10.0,
+      "unit": "meV"
+    },
+    {
+      "id": "step_04",
+      "output_file": "step_04_dos.csv",
+      "weight": 0.3,
+      "target_policy": "structural_audit",
+      "kind": "dos_peaks",
+      "electron_peak_energy": -108,
+      "hole_peak_energy": 24,
+      "peak_tolerance": 20.0,
+      "energy_column": "energy(meV)",
+      "dp_only_column": "DOS_DP_only"
+    },
+    {
+      "id": "step_05",
+      "output_file": "step_05_pl_spectrum.csv",
+      "weight": 0.3,
+      "target_policy": "structural_audit",
+      "kind": "pl_spectrum_peaks",
+      "reference_energies_eV": [
+        1.31,
+        1.33,
+        1.35,
+        1.37,
+        1.39
+      ],
+      "peak_tolerance_eV": 0.005,
+      "energy_column": "energy(eV)",
+      "intensity_column": "intensity"
+    }
+  ]
+}

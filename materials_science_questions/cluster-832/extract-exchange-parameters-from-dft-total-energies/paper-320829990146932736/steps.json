@@ -1,0 +1,93 @@
+[
+  {
+    "id": "calc_c_constants",
+    "title": "Compute van der Waals C constants",
+    "role": "process",
+    "action": "Using the given polarizabilities α_I = 5.6×10⁻²⁴ cm³, α_Cd = 2.4×10⁻²⁴ cm³, compute the van der Waals constants C_XX, C_XM, C_MM via the Slater–Kirkwood formula. Output these constants in atomic units.",
+    "output_file": "",
+    "evidence": "c_constants.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "calc_deltav_z",
+    "title": "Coulomb potential differences",
+    "role": "process",
+    "action": "Using the analytical formula ΔV_{ss'}^z(m) = - (9 z_s^* z_{s'}^*) / (c γ^3) [ exp(-4π/√3 γ m) + 1/2 exp(-8π/√3 γ m) + 2/√7 exp(-4π √(7/3) γ m) + ... ] (m in units of c; keep the first three terms for convergence), compute the Coulomb potential differences ΔV^z for the following interactions: X–M at m = 3/2, X–M at m = 5/2, X–X at m = 2, M–M at m = 2, and X–X at m = 3. Use effective charges z_I^* = -0.58, z_Cd^* = 1.16, lattice constants c = 3.430 Å, γ = c/a = 0.808. Express results in atomic units per atom.",
+    "output_file": "",
+    "evidence": "deltaV_z.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "calc_deltav_c",
+    "title": "van der Waals potential differences via lattice sums",
+    "role": "process",
+    "action": "Perform numeric lattice sums for the R⁻⁶ potential over a triangular lattice (lattice parameters a=4.244 Å, c=3.430 Å, γ=0.808) for the same four distances/interactions, using the computed C constants. Compute ΔV^C for each term.",
+    "output_file": "",
+    "evidence": "deltaV_C.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "calc_deltav_b_coeffs",
+    "title": "Repulsive potential difference coefficients via lattice sums",
+    "role": "process",
+    "action": "Perform numeric lattice sums for the R⁻¹² potential to obtain the coefficients multiplying the Born–Mayer constants B_XX, B_XM, B_MM in ΔV^B for the same four distances.",
+    "output_file": "",
+    "evidence": "deltaV_B_coeffs.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "coulomb_exchange",
+    "title": "Compute Coulomb-only exchange parameters",
+    "role": "scored",
+    "action": "Using only the Coulomb ΔV^z values computed in Step 2, evaluate the exchange parameters J₁, J₂, and K according to: J₁ = ½ [ ΔV_{XM}(3/2) - ΔV_{XX}(2) - ½ ΔV_{MM}(2) + ΔV_{XX}(3) ]; J₂ = ¼ ΔV_{XX}(3); K  = ¼ ΔV_{MM}(2) - ½ ΔV_{XM}(5/2). All ΔV are the Coulomb potential differences from Step 2, in atomic units per atom. Then output J₁, J₂/J₁, K/J₁.",
+    "output_file": "coulomb_exchange.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Coulomb-only exchange parameters to verify the correct assembly of the Coulomb contributions and the exchange parameter formulas.",
+    "output_schema": "{\"J1\": <float>, \"J2_over_J1\": <float>, \"K_over_J1\": <float>} (atomic units)"
+  },
+  {
+    "id": "linear_relation",
+    "title": "Derive frustration condition linear relation",
+    "role": "scored",
+    "action": "Assemble the full ΔV = ΔV^z + ΔV^C + ΔV^B (keeping B_XX, B_XM, B_MM as variables) into J₁, J₂, K, impose the frustration line condition J₁ − 2J₂ − K = 0, and solve for the linear relation B_XM = α + β(B_XX + B_MM). Output α and β.",
+    "output_file": "linear_coefficients.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The linear relation between Born–Mayer repulsion constants that places the system on the frustration line ⟨1⟩:⟨2⟩.",
+    "output_schema": "{\"alpha\": <float>, \"beta\": <float>} (atomic units)"
+  },
+  {
+    "id": "bond_length",
+    "title": "Compute equilibrium bond length from repulsion constant",
+    "role": "scored",
+    "action": "Assume B_XM ≈ α and set B_XM = α. Using the interatomic potential W(R) = (z*_Cd)(z*_I)/R + B_XM/R¹² + C_XM/R⁶, solve the equilibrium condition dW/dR = 0 to find the Cd–I bond length R₀. Output R₀ in atomic units as a plain number.",
+    "output_file": "bond_length.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Equilibrium Cd–I bond length derived from the repulsive constant B_XM ≈ α, to be compared with the experimental value.",
+    "output_schema": "single float (atomic units)"
+  }
+]

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_1",
+    "title": "Simulate defect cluster population dynamics",
+    "role": "process",
+    "action": "Implement the discrete master equation (Eq. 2) for vacancy and interstitial clusters coupled with steady-state mobile defect equations (Eq. 1) using effective-medium sink strengths (Brailsford and Bullough) and thermal evaporation rates. Use reference cascade parameters (N0=200, n_i0=10, f_r0=0.77, f_vcl0=0.22, f_icl0=0.19, f_v0=0.01, f_i0=0.04, f_m0=15, n_d=40) and Ni defect parameters (E_vf=1.58 eV, S_vf=1.5k, E_vm=1.30 eV, ν_v0=1.98e15 s^{-1}, E_if=4.08 eV, S_if=1.5k, E_im=0.15 eV, ν_i0=4.23e12 s^{-1}). Set minimum immobile cluster size to 2. Integrate from 0 to 5 dpa at temperatures 500, 600, 650, 660 K with adaptive time steps. After each step solve for mobile defect steady state and update capture rates. Store all cluster concentrations and free defect concentrations at intervals sufficient to extract snapshots at 1 and 5 dpa.",
+    "output_file": "",
+    "evidence": "simulation_checkpoint.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Run the full simulation and save a checkpoint with time-dependent cluster distributions and free defect concentrations. The evidence file documents execution but is not directly scored.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Export cluster size distributions",
+    "role": "scored",
+    "action": "From the simulation output, extract concentrations of vacancy and interstitial clusters of every size at doses 1 and 5 dpa for temperatures 600, 650, 660 K. Write them to a CSV file with columns Temperature, Dose, Species, ClusterSize, Concentration.",
+    "output_file": "cluster_distributions.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV containing cluster concentrations as a function of size for vacancy and interstitial species at specified temperatures and doses. The file must include rows for both species, T in [600,650,660] and Dose in [1,5], and cluster sizes from 2 to at least 100.",
+    "output_schema": "CSV with header: Temperature (K), Dose (dpa), Species (interstitial or vacancy), ClusterSize (integer), Concentration (atomic fraction). Units: Temperature in K, Dose in dpa, Concentration dimensionless atomic fraction."
+  },
+  {
+    "id": "step_3",
+    "title": "Compute diffusion coefficients",
+    "role": "scored",
+    "action": "From the simulation output at 5 dpa for temperatures 500 and 660 K, extract the steady-state free vacancy and interstitial concentrations c_v and c_i. Compute D_v = ν_v c_v a^2, D_i = ν_i c_i a^2, and D_total = D_v + D_i, using lattice parameter a = 0.352 nm and the jump frequencies from the paper. Write results to a CSV file with columns Temperature, Dose, D_total, D_vacancy, D_interstitial.",
+    "output_file": "diffusion_coefficients.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV containing total, vacancy, and interstitial diffusion coefficients at 5 dpa. This file will be checked against the paper's reference trends (ordering of D_i and D_v at each temperature) and plausible magnitudes.",
+    "output_schema": "CSV with header: Temperature (K), Dose (dpa), D_total (m^2/s), D_vacancy (m^2/s), D_interstitial (m^2/s). Rows for (500,5) and (660,5)."
+  }
+]

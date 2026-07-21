@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Full recompute of heat capacity and entropy from analytic formulas is feasible and provides strong verification.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_hc_entropy_multiple.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "heat_capacity",
+            "entropy"
+          ]
+        },
+        "description": "Temperature-dependent heat capacity and entropy for the multiple-transition parameter set. The checker will recompute these values at hidden temperature points and compare with the submitted CSV within a relative tolerance."
+      },
+      {
+        "file": "step_02_hc_isotropic_equal.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "heat_capacity"
+          ]
+        },
+        "description": "Heat capacity curve for the isotropic singly decorated lattice. The checker will recompute at hidden temperature points and compare."
+      },
+      {
+        "file": "step_03_Tc_isotropic.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text"
+        },
+        "description": "Critical temperature of the isotropic decorated lattice. A single floating-point number; the checker will compare it to the exact theoretical value within an absolute tolerance."
+      }
+    ],
+    "notes": "All formulas are fully described in the method-level instruction (no paper equation numbers). The checker uses hidden gold values derived from the analytic expressions and the theoretical Tc."
+  },
+  "steps": [
+    {
+      "id": "step01",
+      "output_file": "step_01_hc_entropy_multiple.csv",
+      "kind": "recompute",
+      "weight": 0.55,
+      "temperature_points": [
+        0.2,
+        0.5,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0,
+        10.0
+      ],
+      "rel_tol": 0.0001
+    },
+    {
+      "id": "step02",
+      "output_file": "step_02_hc_isotropic_equal.csv",
+      "kind": "recompute",
+      "weight": 0.3,
+      "temperature_points": [
+        0.2,
+        0.5,
+        1.0,
+        1.5,
+        2.0,
+        3.0,
+        4.0,
+        5.0
+      ],
+      "rel_tol": 0.0001
+    },
+    {
+      "id": "step03",
+      "output_file": "step_03_Tc_isotropic.txt",
+      "kind": "numeric_exact",
+      "weight": 0.15,
+      "abs_tol": 0.01
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for comparison are recomputed in checker using the exact analytic expressions from the paper, evaluated at hidden temperature points.",
+      "source_provenance": "Paper equations for the general decorated square lattice (Eqs. 6-9) and the isotropic case (Eq. 12), and the exact theoretical critical temperature.",
+      "generation_method": "Numerical integration with scipy.integrate.nquad (general case) and direct evaluation of elliptic integrals (isotropic case); Tc from analytical formula.",
+      "why_not_fabricated": "The gold values are derived from the same analytic expressions as the paper's results, ensuring a correct reproduction can match them within tolerance."
+    }
+  ]
+}

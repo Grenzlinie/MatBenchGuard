@@ -1,0 +1,101 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute from raw CSVs is feasible: the checker re-derives T_cross and η from the agent's data, comparing to the paper's reported transition temperature and algebraic decay exponent.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "xi_over_L_vs_T.csv": "metric_recompute",
+    "q2_vs_N.csv": "metric_recompute",
+    "summary_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for T_sg/x and η used for scoring recomputed quantities.",
+      "source_provenance": "Paper reported values: Fig.10(a) crossing at T_sg/x≈0.95(5) for x=0.35; η relation η=-1+0.98(T/x)^2 from Sec.IV/VB yields η≈-0.92 at T/x=0.286 and η≈-0.68 at T/x=0.571.",
+      "generation_method": "Extracted from paper text and figures; rounded to match paper's resolution.",
+      "why_not_fabricated": "These are the paper's own estimates for the physical quantities being reproduced; they are not fabricated."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "xi_over_L_vs_T.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_div_x",
+            "L",
+            "xi_over_L",
+            "error"
+          ]
+        },
+        "description": "Finite-size correlation-length ratio vs scaled temperature for x=0.35."
+      },
+      {
+        "file": "q2_vs_N.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "L",
+            "N",
+            "q2",
+            "error"
+          ]
+        },
+        "description": "Overlap variance vs system size for selected low temperatures."
+      },
+      {
+        "file": "summary_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Tsg_over_x": "float",
+            "Tsg": "float",
+            "eta": "float"
+          }
+        },
+        "description": "Derived spin-glass transition temperature and quasi-long-range order exponent."
+      }
+    ],
+    "notes": "The checker will recompute the crossing temperature from xi_over_L_vs_T.csv and the decay exponent from q2_vs_N.csv, then compare against reference values with appropriate tolerances. The summary_results.json is used as a secondary check."
+  },
+  "steps": [
+    {
+      "id": "xi_crossing",
+      "output_file": "xi_over_L_vs_T.csv",
+      "weight": 0.4,
+      "kind": "recompute_metric",
+      "target": 0.95,
+      "tolerance_full": 0.1,
+      "tolerance_zero": 0.3
+    },
+    {
+      "id": "q2_decay",
+      "output_file": "q2_vs_N.csv",
+      "weight": 0.4,
+      "kind": "recompute_metric",
+      "target_etas": {
+        "0.1": -0.92,
+        "0.2": -0.68
+      },
+      "tolerance_full": 0.15,
+      "tolerance_zero": 0.35
+    },
+    {
+      "id": "summary_consistency",
+      "output_file": "summary_results.json",
+      "weight": 0.2,
+      "kind": "consistency"
+    }
+  ]
+}

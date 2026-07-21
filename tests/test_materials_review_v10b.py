@@ -467,7 +467,6 @@ reward = 1.0 if Path("/app/outputs/structure.cif").exists() else 0.0
 
             run_review.run_review(
                 package,
-                None,
                 paper_mode="paper_grounded",
                 agent_assessment_path=assessment,
             )

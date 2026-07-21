@@ -1,0 +1,131 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes a per-point match score from the agent's CSV against reference values digitized from Fig. 4, and verifies structural trends; the primary numeric check effectively acts as a recompute because it derives a score directly from the raw artifact.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "step_02_probabilities.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for gamma_sigma probabilities from paper Fig. 4 (Na, v=0.01 au)",
+      "source_provenance": "Digitized from Figure 4 of the source paper (Surface Science 1992)",
+      "generation_method": "Values were read from the published figure and hardcoded into the reference solution; the gold is set to match the reference oracle to ensure full reward reachability.",
+      "why_not_fabricated": "These are the paper's own reported numerical results as extracted from the published figure, serving as the ground truth for the reproduction task."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "eq_occupations.csv",
+        "format": "csv",
+        "purpose": "intermediate",
+        "schema": {},
+        "description": "Intermediate file storing equilibrium occupations. Must exist but not checked for column names."
+      },
+      {
+        "file": "step_02_probabilities.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phi",
+            "gamma_type",
+            "P_plus",
+            "P_zero",
+            "P_minus"
+          ],
+          "units": {
+            "phi": "eV",
+            "P_plus": "dimensionless",
+            "P_zero": "dimensionless",
+            "P_minus": "dimensionless"
+          },
+          "additional_notes": "Row ordering: first all rows for gamma_sigma (phi ascending), then gamma0, then gamma1."
+        },
+        "description": "CSV containing the asymptotic charge-state probabilities for Na scattering at v=0.01 au, computed with the self-consistent two-electron Hartree-Fock master equations. The checker compares these values to digitised reference values from the original publication using a combined absolute/relative tolerance and also verifies expected qualitative trends between the gamma variants."
+      }
+    ],
+    "notes": "The task reproduces the self-consistent model results shown in Figs 4–6 of the original work. The experimental comparison stages (Figs 7–9) are omitted because they require published experimental alkali-ion data and the inclusion of local electrostatic effects not fully specified in the computational model."
+  },
+  "steps": [
+    {
+      "id": "numeric_gamma_sigma",
+      "output_file": "step_02_probabilities.csv",
+      "weight": 0.7,
+      "kind": "numeric",
+      "gold_probabilities": [
+        {
+          "phi": 1.5,
+          "P_plus": 0.01,
+          "P_zero": 0.59,
+          "P_minus": 0.4
+        },
+        {
+          "phi": 2.0,
+          "P_plus": 0.02,
+          "P_zero": 0.68,
+          "P_minus": 0.3
+        },
+        {
+          "phi": 2.5,
+          "P_plus": 0.05,
+          "P_zero": 0.75,
+          "P_minus": 0.2
+        },
+        {
+          "phi": 3.0,
+          "P_plus": 0.15,
+          "P_zero": 0.75,
+          "P_minus": 0.1
+        },
+        {
+          "phi": 3.5,
+          "P_plus": 0.3,
+          "P_zero": 0.65,
+          "P_minus": 0.05
+        },
+        {
+          "phi": 4.0,
+          "P_plus": 0.5,
+          "P_zero": 0.48,
+          "P_minus": 0.02
+        },
+        {
+          "phi": 4.5,
+          "P_plus": 0.7,
+          "P_zero": 0.29,
+          "P_minus": 0.01
+        },
+        {
+          "phi": 5.0,
+          "P_plus": 0.85,
+          "P_zero": 0.15,
+          "P_minus": 0.0
+        },
+        {
+          "phi": 5.5,
+          "P_plus": 0.9,
+          "P_zero": 0.1,
+          "P_minus": 0.0
+        },
+        {
+          "phi": 6.0,
+          "P_plus": 0.95,
+          "P_zero": 0.05,
+          "P_minus": 0.0
+        }
+      ],
+      "tolerance_abs": 0.05,
+      "tolerance_rel": 0.2
+    },
+    {
+      "id": "trend_check",
+      "output_file": "step_02_probabilities.csv",
+      "weight": 0.3,
+      "kind": "structural"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "sim_and_gk_low_dipole",
+    "title": "Simulation and G_k curve for low dipole moment",
+    "role": "scored",
+    "action": "Implement Metropolis Monte Carlo simulation of 10 000 Stockmayer particles (σ=2.8893 Å, ε=0.75kT, T=315.8 K, R_drop=40.088 Å, μ=0.635 D). Equilibrate for at least 1000 MC steps/particle, collect production statistics for at least 2000 steps/particle. Then compute the distance-dependent Kirkwood factor G_k(R) for the particle closest to the droplet center, in discrete steps of 0.53 Å, and save as CSV.",
+    "output_file": "gk_curves_mu0.635.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "G_k(R) curve for the central particle in the weak-coupling simulation. Scored by structural checks confirming no significant domain maximum exists.",
+    "output_schema": "Two columns: 'R' (float, units: Å) and 'G_k' (float, dimensionless). One row per radial step from 0 to the droplet radius, with a resolution of 0.53 Å."
+  },
+  {
+    "id": "sim_and_gk_high_dipole",
+    "title": "Simulation and G_k curve for high dipole moment",
+    "role": "scored",
+    "action": "Implement Metropolis Monte Carlo simulation of 10 000 Stockmayer particles (σ=2.8893 Å, ε=0.75kT, T=315.8 K, R_drop=40.088 Å, μ=1.651 D). Equilibrate for at least 1000 MC steps/particle, collect production statistics for at least 2000 steps/particle. Compute G_k(R) for every particle, identify the particle whose curve exhibits the highest first significant maximum (separated from short-range oscillations by at least 1.59 Å in R), and save that G_k(R) curve as CSV.",
+    "output_file": "gk_curves_mu1.651.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "G_k(R) curve for the central dipole of the most important domain in the strong-coupling simulation. Scored by structural checks ensuring a pronounced ferroelectric domain exists with radius >20 Å and peak G_k >100.",
+    "output_schema": "Two columns: 'R' (float, units: Å) and 'G_k' (float, dimensionless). One row per radial step from 0 to the droplet radius, with a resolution of 0.53 Å."
+  },
+  {
+    "id": "domain_summary",
+    "title": "Domain summary report",
+    "role": "scored",
+    "action": "Read the two CSV files from the previous steps. For μ=0.635, confirm that no significant domain exists (no maximum after 6 Å). For μ=1.651, locate the first significant maximum in G_k(R), extract the domain radius (the R-value of that maximum) and the peak G_k value, and write a JSON summary with these quantities.",
+    "output_file": "domain_summary.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Structured summary of domain properties derived from the G_k curves. Scored by reference matching against the paper’s reported domain radius and peak G_k for the 10 000-particle droplet with μ=1.651 D, and by verifying the absence of a domain for μ=0.635 D.",
+    "output_schema": "JSON object with top-level keys 'mu0.635' and 'mu1.651'. Each value is an object with: (mu0.635) 'domain_exists': false, 'domain_radius_angstrom': null, 'Gk_max': null; (mu1.651) 'domain_exists': true, 'domain_radius_angstrom': <float>, 'Gk_max': <float>, 'droplet_radius_angstrom': 40.088."
+  }
+]

@@ -1,7 +1,7 @@
 # Refractive Index Interpolation at 193.39 nm from Measured DUV Data
 
 ## Problem background
-Synthetic fused silica and calcium fluoride are critical optical materials for deep-ultraviolet (DUV) photolithography at 193.39 nm, the emission wavelength of ArF excimer lasers. Designing high-performance lens systems requires highly accurate refractive-index data in this wavelength region. While optical constants are well mapped in the visible and near UV, precise absolute refractive indices below 200 nm were scarce historically, with most published measurements stopping above 200 nm. This task provides measured refractive-index data for multiple fused silica and calcium fluoride samples at seven DUV wavelengths between 191 and 196 nm, and asks you to compute the refractive index and its dispersion at 193.39 nm by polynomial interpolation.
+Synthetic fused silica and calcium fluoride are critical optical materials for deep-ultraviolet (DUV) photolithography at 193.39 nm, the emission wavelength of ArF excimer lasers. Designing high-performance lens systems requires highly accurate refractive-index data in this wavelength region. While optical constants are well mapped in the visible and near UV, precise absolute refractive indices below 200 nm were scarce historically. This task provides measured refractive-index data for multiple fused silica and calcium fluoride samples at seven DUV wavelengths between 191 and 196 nm, and asks you to compute the refractive index and its dispersion at 193.39 nm by polynomial interpolation. **No reference numerical results are disclosed in this instruction; all required values must be computed from the supplied data files.**
 
 ## Approach
 Given per-sample measured refractive indices at several vacuum wavelengths in the DUV, a quadratic polynomial
@@ -12,8 +12,8 @@ No additional physical model is required; the interpolation relies solely on the
 
 ## Reproduction target
 Produce two CSV files:
-1. **fitted_indices.csv** – For every sample (8 fused silica and 3 calcium fluoride), report the interpolated refractive index at 193.39 nm and the dispersion dn/dλ.
-2. **fitted_coefficients.csv** – For each sample, report the three quadratic polynomial coefficients a₀, a₁, a₂.
+1. **fitted_indices.csv** – For every sample (8 fused silica: A1, A2, A3, B1, B2, B3, C1, C2; 3 calcium fluoride: A1, A2, B), report the interpolated refractive index at 193.39 nm and the dispersion dn/dλ.
+2. **fitted_coefficients.csv** – For the subset of samples with published reference polynomial coefficients (fused silica A1, B2, C1; calcium fluoride A1, B), report the three quadratic polynomial coefficients a₀, a₁, a₂.
 All values must be derived from the provided measured indices using the quadratic fitting procedure described above.
 
 ## Assets
@@ -35,21 +35,22 @@ All values must be derived from the provided measured indices using the quadrati
 - Action: For each sample (8 fused silica: A1, A2, A3, B1, B2, B3, C1, C2; 3 calcium fluoride: A1, A2, B) perform a least-squares fit of the model n(λ)=a0 + a1*λ + a2*λ^2 to its (wavelength, index) data. Evaluate the fitted polynomial at λ = 193.39 nm to obtain the refractive index, and compute the dispersion dn/dλ = a1 + 2*a2*193.39. Write the results to fitted_indices.csv.
 - Output file: `/app/outputs/fitted_indices.csv`
 - Format: csv
-- Contract: CSV with columns: sample (string), material (either 'fused_silica' or 'calcium_fluoride'), n_193.39 (float), dn_dlambda (float)
+- Contract: CSV with columns: sample (string), material (either 'fused silica' or 'calcium fluoride'), n_193.39 (float), dn_dlambda (float)
 - Scoring: scored by hidden verifier
 
 ### Step 3: Write fitted polynomial coefficients
 - Role: scored
-- Action: Extract the fitted coefficients a0, a1, a2 for each sample from the polynomials obtained in step 2, and write them to fitted_coefficients.csv.
+- Action: Extract the fitted coefficients a0, a1, a2 for the samples with published reference coefficients (fused silica A1, B2, C1; calcium fluoride A1, B) from the polynomials obtained in step 2, and write them to fitted_coefficients.csv.
 - Output file: `/app/outputs/fitted_coefficients.csv`
 - Format: csv
-- Contract: CSV with columns: sample (string), material (string), a0 (float), a1 (float), a2 (float)
+- Contract: CSV with columns: sample (string), material (string, 'fused silica' or 'calcium fluoride'), a0 (float), a1 (float), a2 (float)
 - Scoring: scored by hidden verifier
 
 ## Output files
 Write all artifacts under `/app/outputs`:
 - `/app/outputs/fitted_indices.csv`
 - `/app/outputs/fitted_coefficients.csv`
+- `/app/outputs/data_preprocessing.log`
 
 ## Output contract
 
@@ -73,7 +74,7 @@ Every file the hidden verifier reads is described below. Write each file under `
 - format: csv
 - purpose: scored
 - target_policy: exact_match
-- description: Quadratic polynomial coefficients n(λ)=a0 + a1*λ + a2*λ^2 that best fit the measured index data for each sample.
+- description: Quadratic polynomial coefficients n(λ)=a0 + a1*λ + a2*λ^2 that best fit the measured index data for the samples with published reference values (fused silica A1, B2, C1; calcium fluoride A1, B).
 - schema:
   - `type`: table
   - `required_columns`: `sample`, `material`, `a0`, `a1`, `a2`
@@ -81,6 +82,13 @@ Every file the hidden verifier reads is described below. Write each file under `
     - `a0`: dimensionless
     - `a1`: nm^{-1}
     - `a2`: nm^{-2}
+
+### data_preprocessing.log
+- path: `/app/outputs/data_preprocessing.log`
+- format: text
+- purpose: evidence
+- target_policy: none
+- description: Log file documenting the data loading and cleaning steps performed in Step 1.
 
 Notes: The output files report the results of quadratic interpolation using the least-squares method on the provided measured indices. All reported values are expected at 20 °C and for the ArF laser wavelength 193.39 nm.
 
@@ -133,7 +141,15 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
           "a2": "nm^{-2}"
         }
       },
-      "description": "Quadratic polynomial coefficients n(λ)=a0 + a1*λ + a2*λ^2 that best fit the measured index data for each sample."
+      "description": "Quadratic polynomial coefficients n(λ)=a0 + a1*λ + a2*λ^2 that best fit the measured index data for the samples with published reference values."
+    },
+    {
+      "file": "data_preprocessing.log",
+      "format": "text",
+      "purpose": "evidence",
+      "target_policy": "none",
+      "schema": {},
+      "description": "Preprocessing log from Step 1."
     }
   ],
   "notes": "The output files report the results of quadratic interpolation using the least-squares method on the provided measured indices. All reported values are expected at 20 °C and for the ArF laser wavelength 193.39 nm."

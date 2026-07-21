@@ -1,0 +1,67 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Band dispersion verified by structural properties (Dirac point gap, linearity, opposite slopes) because exact propagation constants require eigenmode solver; surface existence map recomputed analytically but band dominates weighting.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "target_policies": {
+    "band_dispersion_dirac.csv": "reference_match",
+    "surface_mode_existence.csv": "metric_recompute"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_dispersion_dirac.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "kappa",
+            "beta_upper",
+            "beta_lower"
+          ],
+          "units": {
+            "kappa": "dimensionless",
+            "beta_upper": "normalized propagation constant",
+            "beta_lower": "normalized propagation constant"
+          }
+        },
+        "description": "Dispersion curves for the upper and lower bands, used to verify the Dirac point and band inversion."
+      },
+      {
+        "file": "surface_mode_existence.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "eta",
+            "Z",
+            "exists",
+            "r_magnitude"
+          ]
+        },
+        "description": "Existence map of surface modes as a function of asymmetry parameter eta and surface perturbation Z. The checker recomputes existence flags using the analytic formula as a structural consistency check."
+      }
+    ],
+    "notes": "The band dispersion step is load-bearing because its hidden reference values depend on the coupling coefficients extracted in the process step. The existence map step uses a structural audit via analytic recompute; no process dependency."
+  },
+  "steps": [
+    {
+      "id": "band_dispersion",
+      "output_file": "band_dispersion_dirac.csv",
+      "weight": 0.6,
+      "kind": "structural",
+      "description": "Verify Dirac point and band inversion via structural properties: gap at kappa=0, linearity of branches, opposite slopes, matching intercepts."
+    },
+    {
+      "id": "surface_existence",
+      "output_file": "surface_mode_existence.csv",
+      "weight": 0.4,
+      "kind": "recompute",
+      "description": "Recompute existence flags from Eq. (3) for every (eta, Z) pair in the grid and compare row-wise; score = fraction of matching entries."
+    }
+  ]
+}

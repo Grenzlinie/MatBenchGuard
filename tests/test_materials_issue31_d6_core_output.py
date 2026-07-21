@@ -89,7 +89,7 @@ class MaterialsIssue31D6Tests(unittest.TestCase):
             checker_result={
                 "tests": [
                     {
-                        "case": "known_valid_public",
+                        "case": "positive_oracle",
                         "reward": 1.0,
                         "breakdown": {
                             "result": {"score": 1.0, "weight": 1.0},
@@ -372,7 +372,7 @@ class MaterialsIssue31D6Tests(unittest.TestCase):
             checker_result={
                 "tests": [
                     {
-                        "case": "known_valid_public",
+                        "case": "positive_oracle",
                         "reward": 1.0,
                         "breakdown": {
                             "result": {"score": 0.5, "weight": 1.0},

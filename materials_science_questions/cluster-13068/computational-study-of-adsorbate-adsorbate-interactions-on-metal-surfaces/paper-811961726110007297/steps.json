@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step01_implement_pes",
+    "title": "Implement the Xe/Cu(111) analytical potential energy surface",
+    "role": "process",
+    "action": "Retrieve the PES parameters for Xe/Cu(111) from the companion paper (DOI: 10.1088/0953-8984/19/30/305008) and implement the functional form V(x,y,z) = A0(x,y) exp(−z/A1(x,y)) − A2(x,y)/z^3 with the periodic Bloch expansion for A_i. The implementation must provide the potential and its x-derivative at arbitrary (x,y,z) positions relevant for the analytical restoring force calculation and for use as a substrate potential in MD simulations. Save the implemented PES as a callable module or script.",
+    "output_file": "",
+    "evidence": "pes_implementation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "This process step provides the potential used by all later analytical and simulation steps. The agent may save the extracted parameter set or the implementation as evidence.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02_restoring_force",
+    "title": "Compute analytical restoring force vs. pressure",
+    "role": "scored",
+    "action": "Using the implemented PES, calculate −∂V/∂x at (x=a/4, y=0, z) for a range of adatom–surface distances z from equilibrium to below the critical distance z_c. Convert each z to a nominal pressure using the relation derived from the MD simulations (F_z / area_per_particle). Produce a JSON file containing the equilibrium distance, the restoring force at equilibrium, the critical z and corresponding pressure, and a list of (z, pressure, restoring_force) data points.",
+    "output_file": "analytical_restoring_force.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Computes the single-adatom restoring force along the [1-10] direction as a proxy for static friction. The result is checked against a hidden reference value for the equilibrium force and audited for the monotonic decrease and zero-crossing trend.",
+    "output_schema": "A JSON object with keys: 'z_eq_Ang' (float, equilibrium adatom–surface distance in Å), 'restoring_force_at_equilibrium_meV_per_Ang' (float, magnitude), 'critical_z_Ang' (float, distance where anticorrugation vanishes), 'critical_pressure_GPa' (float, corresponding pressure), 'z_vs_F' (list of objects, each with 'z_Ang' (float), 'pressure_GPa' (float), 'restoring_force_meV_per_Ang' (float)). All numeric values positive; restore force is magnitude."
+  },
+  {
+    "id": "step03_static_friction",
+    "title": "MD simulation of static friction vs. pressure",
+    "role": "scored",
+    "action": "Set up a 2048‑atom Xe monolayer in the √3 commensurate structure on the Cu(111) PES. Use Lennard‑Jones interactions (σ=3.95 Å, ε=20 meV) and a thermostat at T=77 K. After annealing at zero lateral force, apply an adiabatically increasing lateral force F_x. For each normal load F_z (varying the ML–surface spacing), record the F_x value at depinning (center‑of‑mass velocity becomes nonzero). Repeat for at least 5 normal loads spanning pressures from near zero to at least 6 GPa. Output a CSV with the static friction vs. pressure.",
+    "output_file": "static_friction_vs_pressure.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Measures static friction from MD depinning. The checker verifies that static friction decreases monotonically with pressure and that the friction at pressures ≥ 4.5 GPa is ≤ 20% of the maximum friction in the submitted series (structural audit).",
+    "output_schema": "CSV with header: pressure_GPa,static_friction_meV_per_Ang. Each row is one simulated normal load. Pressure and friction are positive floats. Expected at least 5 data points."
+  },
+  {
+    "id": "step04_kinetic_friction",
+    "title": "MD simulation of kinetic friction vs. pressure",
+    "role": "scored",
+    "action": "Simulate a Xe monolayer between two rigid surfaces, each described by the same Xe/Cu(111) PES, with the top surface moving at v=10 nm/ns in the x‑direction and the bottom fixed. The monolayer occupies the gap; the vertical spacing is varied to impose different normal pressures. Run for 5 ns at T=77 K. Time-average the lateral force F_x exerted on the ML by the sliding surface. For each spacing, record the averaged F_x as the kinetic friction. Output a CSV with kinetic friction vs. pressure.",
+    "output_file": "kinetic_friction_vs_pressure.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Measures kinetic friction from sliding simulations. The checker verifies that kinetic friction decreases with pressure and follows a similar drop trend, with near‑vanishing values at ≤ 20% of the low‑pressure maximum (structural audit).",
+    "output_schema": "CSV with header: pressure_GPa,kinetic_friction_meV_per_Ang. Each row is one simulation condition. Pressure and friction are positive floats. Expected at least 5 data points."
+  }
+]

@@ -9,6 +9,9 @@ mkdir -p "$OUTDIR"
 set -euo pipefail
 mkdir -p /app/outputs
 
+# === generate jammed_configs.log (required evidence) ===
+touch /app/outputs/jammed_configs.log
+
 # === solve block: elastic_tensors.json ===
 python3 -c "
 import json

@@ -105,4 +105,4 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
 ```
 
 ## How you are scored
-A hidden verifier will read your CSV output and compare each ε̄_M value against independently derived reference values (extracted from the experimental study) using a tolerance that accounts for small numerical differences between re-implementations. Scoring combines the accuracy of all five values with a structural consistency check; simply copying the paper's reported numbers without performing the genuine computation will not earn credit.
+A hidden verifier will read your CSV output and compare each ε̄_M value against independently derived reference values (recomputed identically from the provided lattice constants) using an absolute tolerance of 1 × 10⁻⁵. The scoring requires high numerical precision; the checker will reject any value whose absolute error exceeds 1e‑5. Scoring combines the accuracy of all five values with a structural consistency check; simply copying the paper's reported numbers without performing the genuine computation will not earn credit.

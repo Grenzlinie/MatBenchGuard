@@ -1,0 +1,58 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 recompute from raw simulation outputs is infeasible because the checker cannot re-run the full Metropolis Monte Carlo simulation; scoring is based on the structural properties (crossover point identification and trends) derived from the Tc CSV.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "critical_temperatures.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "L",
+            "H0",
+            "R",
+            "Tc"
+          ],
+          "units": {
+            "L": "number of layers (integer)",
+            "H0": "dimensionless",
+            "R": "dimensionless",
+            "Tc": "reduced temperature (k_B T_c / J_b)"
+          }
+        },
+        "description": "Dynamic critical temperatures extracted from specific heat maxima for each parameter set."
+      }
+    ],
+    "notes": "The hidden checker will perform structural analysis on this CSV to identify the intersection point R_c and verify crossover behavior and slow variation with H0; no numeric gold values are required from the agent."
+  },
+  "target_policies": {
+    "critical_temperatures.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold R_c value for H0=0.0 from paper Fig.5, intersection of Tc vs R curves for L=3,4,5.",
+      "source_provenance": "Paper Fig.5 shows the intersection of Tc-vs-R curves for different film thicknesses at R≈1.5 when H0=0.0, consistent with the paper's statement of agreement with EFT predictions. The reference synthetic data also uses this value.",
+      "generation_method": "Extracted from the figure and used as a reference tolerance check.",
+      "why_not_fabricated": "The value is based on the paper's reported behaviour and is used to verify that a correct reproduction yields a crossover point near the reported location."
+    }
+  ],
+  "steps": [
+    {
+      "id": "structural_crossover",
+      "output_file": "critical_temperatures.csv",
+      "weight": 1.0,
+      "kind": "structural_audit",
+      "params": {
+        "H0_0_Rc_gold": 1.5,
+        "H0_0_Rc_tolerance": 0.15,
+        "slow_variation_tolerance": 0.2
+      },
+      "description": "Structural analysis of Tc vs R to identify crossover point R_c and verify trend consistency."
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes Coulomb coefficients and stiffness eigenvalues from the same inputs and compares agent CSV pointwise; structural checks for sign and minimum location reinforce discrimination.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "coulomb_coefficients.csv": "reference_match",
+    "stiffness_dispersion.csv": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "coulomb_coefficients.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "xi",
+            "C_A_ORot"
+          ],
+          "units": {
+            "xi": "dimensionless fractional coordinate",
+            "C_A_ORot": "dimensionless (Coulomb coefficient units)"
+          }
+        },
+        "description": "C_A-ORot Coulomb coefficient along Γ-M. Checked by recomputing via Ewald summation and comparing to agent values with tolerance, and verifying C_A-ORot < 0 for 0<ξ<0.5 and non-zero at ξ=0."
+      },
+      {
+        "file": "stiffness_dispersion.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "xi",
+            "S_min"
+          ],
+          "units": {
+            "xi": "dimensionless fractional coordinate",
+            "S_min": "same energy scale as paper (arbitrary units)"
+          }
+        },
+        "description": "Lowest stiffness eigenvalue along Γ-M for the given polarizability set. Checked by recomputing S from Ewald matrix and polarizabilities, comparing S_min values with tolerance, and verifying that the minimum occurs at a finite ξ (0.05 ≤ ξ_min ≤ 0.3) and is not at the zone center."
+      }
+    ],
+    "notes": "Polarizability values (α_A=4.9, α_B=0.37, α_O-A=4.38, α_O-B=2.9 Å³) are the only non-default inputs; they define the parameter set for Trend 3 in the paper."
+  },
+  "steps": [
+    {
+      "id": "coulomb",
+      "output_file": "coulomb_coefficients.csv",
+      "weight": 0.5,
+      "kind": "recompute",
+      "description": "Recompute C_A_ORot via Ewald and compare pointwise with tolerance 0.02; check sign and non-zero at xi=0."
+    },
+    {
+      "id": "stiffness",
+      "output_file": "stiffness_dispersion.csv",
+      "weight": 0.5,
+      "kind": "recompute",
+      "description": "Recompute S_min via Ewald + polarizability diagonal and compare with relative tolerance 5%; check minimum at finite xi."
+    }
+  ]
+}

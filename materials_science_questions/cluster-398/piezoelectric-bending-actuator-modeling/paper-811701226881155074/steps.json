@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_mesh_matrix_assembly",
+    "title": "Mesh generation and transverse matrix assembly",
+    "role": "process",
+    "action": "Generate the 2-D spectral element mesh for each substructure (each of the ten cells divided into three substructures, six spectral elements per cross‑section) using Gauss–Lobatto–Legendre (GLL) basis functions. Assemble the transverse element matrices M1, M2, M3 and M4 by integrating over each element as described in the method. This creates the fundamental building blocks used by all subsequent SEM runs.",
+    "output_file": "",
+    "evidence": "transverse_matrices_info.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Records the mesh topology, element counts, and matrix dimensions to confirm the assembly step executed.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_reference_solution",
+    "title": "Compute reference S‑parameters using a high‑order converged SEM",
+    "role": "process",
+    "action": "Run the complete semianalytical SEM pipeline (Lagrangian matrices, Hamiltonian transformation, high‑precision integration, global assembly, block Thomas solver) for a high interpolation order (e.g., order 12) and/or a refined mesh to obtain a converged reference set of reflection and transmission coefficient magnitudes (|S11|, |S12|) across 8.0–9.0 GHz. This reference will serve as the ground truth for the convergence study.",
+    "output_file": "",
+    "evidence": "reference_s11_s12.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Reference |S11| and |S12| values used to compute relative errors in the convergence study.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_s11_s12_order3",
+    "title": "S‑parameters for 3rd‑order SEM (primary result)",
+    "role": "scored",
+    "action": "Run the semianalytical SEM pipeline for 3rd‑order spectral elements. For frequencies from 8.0 to 9.0 GHz in 0.1 GHz steps (or similar fine sampling), extract the reflection and transmission coefficients (|S11|, |S12|) and write them to the output CSV.",
+    "output_file": "sc_s11_s12.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Reflection and transmission coefficient magnitudes for the microwave filter at various frequencies computed by the semianalytical SEM (order 3).",
+    "output_schema": "CSV with columns: frequency (GHz, float), S11_mag (float), S12_mag (float). One row per frequency covering 8.0–9.0 GHz."
+  },
+  {
+    "id": "step_04_convergence_study",
+    "title": "Run SEM for orders 3–8 and compute relative errors",
+    "role": "process",
+    "action": "For each interpolation order from 3 to 8, run the semianalytical SEM pipeline and obtain the |S11| and |S12| magnitudes across the same frequency band. For each order, compute the maximum absolute relative error of |S11| and |S12| across all frequencies, taking the reference solution from step 2 as the baseline. Also record the total number of unknowns, the approximate memory usage (in MB), and the CPU time (in minutes) for each order.",
+    "output_file": "",
+    "evidence": "convergence_data.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Aggregated per‑order metrics used to generate the convergence table.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_convergence_table",
+    "title": "Convergence table",
+    "role": "scored",
+    "action": "Write the convergence metrics (order, unknowns, memory_MB, cpu_time_min, rel_error_S11, rel_error_S12) to a CSV file.",
+    "output_file": "convergence_table.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Convergence metrics: number of unknowns, memory, CPU time, and relative errors of S11 and S12 for each SEM order.",
+    "output_schema": "CSV with columns: order (int), unknowns (int), memory_MB (float), cpu_time_min (float), rel_error_S11 (float), rel_error_S12 (float). One row per order, from 3 to 8 inclusive."
+  }
+]

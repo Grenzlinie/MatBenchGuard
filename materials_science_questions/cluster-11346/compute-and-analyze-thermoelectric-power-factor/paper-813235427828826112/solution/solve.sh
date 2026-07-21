@@ -12,7 +12,7 @@ mkdir -p /app/outputs
 python3 -c "
 import csv
 data = [
-    ('constant_potential_+0.02V', 1.9575, 0.9627),
+    ('constant_potential_+0.02V', 1.9875, 0.9875),
     ('pulsed_5s_5s', 1.9887, 0.9887),
     ('pulsed_0.1s_0.1s', 2.0000, 1.0000),
     ('pulsed_0.01s_0.01s', 1.9813, 0.9813),

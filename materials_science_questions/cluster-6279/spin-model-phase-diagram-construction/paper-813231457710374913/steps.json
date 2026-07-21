@@ -1,0 +1,67 @@
+[
+  {
+    "id": "mc_simulation",
+    "title": "Monte Carlo simulation",
+    "role": "process",
+    "action": "Run standard Metropolis Monte Carlo simulations for the Hamiltonian H = -J1 Σ cos(θ_ij) - J2 Σ cos(2θ_ij) on triangular lattices with periodic boundary conditions, using J1 = 1-x and J2 = x. Perform simulations for nematic coupling strengths x = 0.4 and 0.9, each with lattice sizes L = 18, 27, 36, 45, 54, 72. For each (x, L), simulate over a temperature grid spanning the transition region, using 3×10^5 equilibration steps and 2×10^5 production steps per temperature. Record, for each temperature and L, the following averages: ⟨Σ cos(θ_ij)⟩, ⟨Σ cos(2θ_ij)⟩, the average of the squared fluctuation term F = (J1 Σ x_ij sin(θ_ij) + 2J2 Σ x_ij sin(2θ_ij))^2, the average energy ⟨E⟩, and ⟨E^2⟩.",
+    "output_file": "",
+    "evidence": "simulation_log.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Executes the Metropolis sampling that generates the raw averages required for all subsequent analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "helicity_crossing",
+    "title": "Helicity modulus and crossing temperatures",
+    "role": "scored",
+    "action": "Compute the helicity modulus Y(T) for each (x, L) pair using the formula Y = (J1/(2L^2))⟨Σ cos θ_ij⟩ + (2J2/L^2)⟨Σ cos 2θ_ij⟩ − (1/(T L^2))⟨(J1 Σ x_ij sin θ_ij + 2J2 Σ x_ij sin 2θ_ij)^2⟩, where J1=1-x, J2=x, and the angle brackets denote the averages recorded in step 1. For each L, determine the temperature where Y(T) crosses the line (2/π)(√3/2)(1+3x)T using linear interpolation. Output a CSV with columns x (float), L (int), and T_cross (float) giving the crossing temperature for every (x, L) combination.",
+    "output_file": "helicity_crossings.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Raw crossing temperatures computed from the helicity modulus; the checker will re-fit a polynomial in 1/L to extrapolate T_KT.",
+    "output_schema": "CSV with columns: x (float), L (int), T_cross (float). x values: 0.4, 0.9; L values: 18,27,36,45,54,72."
+  },
+  {
+    "id": "kt_extrapolation",
+    "title": "KT temperature extrapolation",
+    "role": "scored",
+    "action": "Read helicity_crossings.csv. For each x, fit a polynomial in 1/L (e.g., quadratic) to the crossing temperatures T_cross vs 1/L, and extrapolate to 1/L=0 to obtain T_KT. Estimate the error from the fit uncertainty. Output a JSON object with two keys: 'x0_4' and 'x0_9', each containing T_KT (float) and error (float).",
+    "output_file": "KT_temperatures.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Extrapolated KT transition temperatures for x=0.4 and x=0.9. Checked for consistency with the checker's own extrapolation from the raw crossings.",
+    "output_schema": "JSON object with keys 'x0_4' and 'x0_9', each an object with fields 'T_KT' (float) and 'error' (float)."
+  },
+  {
+    "id": "specific_heat_computation",
+    "title": "Specific heat for x=0.9",
+    "role": "scored",
+    "action": "From the simulation data for L=36, x=0.9, compute the specific heat C(T) = (⟨E^2⟩ − ⟨E⟩^2) / (N k_B T^2) where N = L^2 and k_B = 1, over a temperature grid that includes the low-temperature peak (roughly T ∈ [0.2, 0.5]). Output a CSV with columns T (float) and C (float).",
+    "output_file": "specific_heat_L36_x0.9.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Specific heat curve for the Ising transition at x=0.9; the checker will locate the peak and perform a scaling analysis.",
+    "output_schema": "CSV with columns T (float, temperature) and C (float, specific heat)."
+  },
+  {
+    "id": "ising_analysis",
+    "title": "Ising transition analysis",
+    "role": "scored",
+    "action": "Read specific_heat_L36_x0.9.csv. Identify the temperature T_l of the low-temperature maximum. Perform a scaling analysis: for temperatures near T_l (e.g., within 0.05), fit C vs |T−T_l| to a power law C ~ A |T−T_l|^{-α} to extract the critical exponent α. Output a JSON with keys T_l (float), alpha (float), and method (string describing the fitting procedure).",
+    "output_file": "Ising_analysis.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Extracted Ising transition temperature and critical exponent from specific heat. Checked for consistency with the checker's recomputation.",
+    "output_schema": "JSON object with keys 'T_l' (float), 'alpha' (float), 'method' (string)."
+  }
+]

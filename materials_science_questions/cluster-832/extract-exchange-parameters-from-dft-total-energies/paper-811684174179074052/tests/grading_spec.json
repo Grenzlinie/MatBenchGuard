@@ -1,0 +1,97 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Exchange constants are recomputed from the agent’s raw total energies (T1) and compared to paper-reported DFT values with tolerances that absorb toolchain variability; cross-check with self-reported exchange_parameters ensures consistency and structural correctness.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "total_energies.csv": "metric_recompute",
+    "exchange_parameters.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference J_FHF/k_B, J_pyz/k_B, and ratio values from the paper’s GGA+U calculations with Ueff=5,6,7 eV.",
+      "source_provenance": "Paper Supporting Information (reference [25]), reported in the paper text: J_FHF/k_B = −96.7, −80.5, −65.8 K and α = 0.66, 0.60, 0.53 for Ueff=5,6,7 eV, respectively.",
+      "generation_method": "Extracted directly from the published article; stored inline in grading_spec.json as gold_J_FHF and gold_ratio arrays.",
+      "why_not_fabricated": "These are the actual DFT-computed values for the same system, method, and conditions; they are the paper’s own results and the target of the reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "total_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "U_eff",
+            "state",
+            "total_energy"
+          ],
+          "units": {
+            "U_eff": "eV",
+            "total_energy": "eV per 4 formula units"
+          }
+        },
+        "description": "Raw total energies from DFT for three magnetic configurations (FM, AF1, AF2) at U_eff = 5, 6, 7 eV. The checker will recompute exchange coupling constants J_FHF and J_pyz from these energies and compare them against the paper's DFT-calculated values."
+      },
+      {
+        "file": "exchange_parameters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "U_eff",
+            "J_FHF",
+            "J_pyz",
+            "ratio_J_pyz_J_FHF"
+          ],
+          "units": {
+            "J_FHF": "K",
+            "J_pyz": "K",
+            "ratio_J_pyz_J_FHF": "dimensionless"
+          }
+        },
+        "description": "Derived exchange constants (J_FHF, J_pyz) and their ratio for each U_eff. The checker will cross-check these values for consistency with the exchange constants recomputed from total_energies.csv and verify the relative trend (|J_FHF| > |J_pyz|, ratio < 1)."
+      }
+    ],
+    "notes": "The spin density analysis (step_04) is a qualitative process step; it produces a text summary that is inspected for plausibility but carries negligible weight in scoring. The primary quantitative verification relies on the total_energies.csv and the recomputed exchange parameters."
+  },
+  "steps": [
+    {
+      "id": "step_02_recompute",
+      "output_file": "total_energies.csv",
+      "weight": 0.8,
+      "kind": "recompute_exchange",
+      "gold_J_FHF": [
+        -96.7,
+        -80.5,
+        -65.8
+      ],
+      "gold_ratio": [
+        0.66,
+        0.6,
+        0.53
+      ],
+      "tolerance_J_relative": 0.15,
+      "tolerance_J_decay_range": 0.3,
+      "tolerance_ratio_abs": 0.2,
+      "tolerance_ratio_decay_range": 0.4
+    },
+    {
+      "id": "step_03_consistency",
+      "output_file": "exchange_parameters.csv",
+      "weight": 0.15,
+      "kind": "consistency_check"
+    },
+    {
+      "id": "step_03_structural",
+      "output_file": "exchange_parameters.csv",
+      "weight": 0.05,
+      "kind": "structural_check"
+    }
+  ]
+}

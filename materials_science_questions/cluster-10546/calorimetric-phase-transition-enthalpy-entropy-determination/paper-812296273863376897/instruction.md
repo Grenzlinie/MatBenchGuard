@@ -4,7 +4,7 @@
 Statistical mechanics connects molecular structure and spectroscopic data to macroscopic thermodynamic behavior. For a molecule in the ideal-gas state, the thermodynamic functions – the free-energy function (F°–H0°)/T, the heat-content function (H°–H0°)/T, the heat content H°–H0°, the entropy S°, and the heat capacity at constant pressure C_p° – can be derived from the molecular partition function. The partition function depends on the principal moments of inertia, the set of vibrational frequencies, the potential energy barrier hindering internal rotations, and corrections for vibrational anharmonicity. Computing these functions for 2,3-dimethyl-2-butene tests whether a simple rigid-rotor harmonic-oscillator model, supplemented by a treatment of methyl internal rotation and an empirical anharmonicity correction, can reproduce the thermodynamic properties expected from calorimetric experiments.
 
 ## Approach
-The ideal-gas thermodynamic functions are obtained from the molecular partition function Q evaluated at each temperature. The translational contribution follows from the standard ideal-gas formula. The rotational contribution uses the rigid-rotor model with the given principal moments of inertia and overall symmetry number. The vibrational contribution treats each assigned normal mode as an independent harmonic oscillator. The hindered internal rotations of the methyl groups are handled by the Pitzer–Gwinn approximation, which employs the reduced moment of inertia for methyl rotation and a threefold potential barrier. An empirical anharmonicity correction, parameterized by a temperature-independent constant Z and a characteristic frequency ν, is then added to the harmonic result. Standard thermodynamic relations are used to compute (F°–H0°)/T, (H°–H0°)/T, H°–H0°, S°, and C_p° from Q and its temperature derivatives. The calculation must be carried out at the 15 temperatures listed in the reproduction target, using the molecular constants and vibrational frequency set provided below.
+The ideal-gas thermodynamic functions are obtained from the molecular partition function Q evaluated at each temperature. The translational contribution follows from the standard ideal-gas formula. The rotational contribution uses the rigid-rotor model with the given principal moments of inertia and overall symmetry number. The vibrational contribution treats each assigned normal mode as an independent harmonic oscillator. The hindered internal rotations of the methyl groups are handled by the Pitzer–Gwinn approximation, implemented here by numerical solution of the Mathieu equation to obtain the exact energy levels for a threefold barrier. An empirical anharmonicity correction, parameterized by a temperature-independent constant Z (cal/K/mol) and a characteristic frequency ν (cm⁻¹), is then added to the harmonic vibrational contribution. Standard thermodynamic relations are used to compute (F°–H0°)/T, (H°–H0°)/T, H°–H0°, S°, and C_p° from Q and its temperature derivatives. The calculation must be carried out at the 15 temperatures listed in the reproduction target, using the molecular constants and vibrational frequency set provided below.
 
 ## Reproduction target
 Using the vibrational frequencies, barrier height, and anharmonicity parameters derived in the preceding process steps, and the principal moments of inertia, product, symmetry number, and reduced moment for methyl internal rotation computed from molecular geometry in Step 1, compute the five ideal-gas thermodynamic functions at the following temperatures (K): 273.16, 298.16, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500. Write the results to the CSV file /app/outputs/thermodynamic_functions.csv with columns: T (K), F_minus_H0_over_T (cal/K/mol), H_minus_H0_over_T (cal/K/mol), H_minus_H0 (kcal/mol), S (cal/K/mol), and Cp (cal/K/mol).
@@ -15,6 +15,22 @@ Using the vibrational frequencies, barrier height, and anharmonicity parameters 
 - scipy: scipy
 
 ## Input data
+
+### Physical constants and standard state
+These constants were used in the original 1955 computations (1951 values):
+- Gas constant R = 1.9872 cal K⁻¹ mol⁻¹ (equivalent to 8.3144 × 10⁷ erg K⁻¹ mol⁻¹)
+- Boltzmann constant k_B = 1.3805 × 10⁻¹⁶ erg K⁻¹
+- Avogadro number N_A = 6.0228 × 10²³ mol⁻¹
+- Planck constant h = 6.6256 × 10⁻²⁷ erg s (already given below)
+- Speed of light c = 2.9979 × 10¹⁰ cm s⁻¹
+- Standard state: ideal gas at pressure P = 1 atm = 1.01325 × 10⁶ dyn cm⁻² (the thermodynamic functions in Table X refer to this pressure).
+The combination hc/k_B = 1.4388 cm·K is used for the vibrational temperature scale.
+
+### Atomic masses
+Use the 1951 International Atomic Weights:
+- C : 12.010 amu
+- H : 1.008 amu
+1 amu = 1.66042 × 10⁻²⁴ g.
 
 ### Molecular geometry and computed normal-mode frequencies
 The molecule is treated as having a planar carbon skeleton with V_h symmetry. The bond distances are: C=C 1.353 Å, C-C 1.54 Å, C-H 1.09 Å. Bond angles: C-C-C 120°, C-C-H and H-C-H 109°28'. The force constants from Kilpatrick and Pitzer (J. Research Natl. Bur. Standards 38, 191 (1947)) were used to compute harmonic vibrational frequencies (in cm⁻¹) by the GF matrix method. The computed frequencies for each symmetry class and approximate mode description are given below; use these together with the observed spectral lines (next section) to assign the fundamentals.
@@ -88,7 +104,7 @@ Raman (liquid) and infrared (liquid) frequencies below 1700 cm⁻¹ are listed i
 Additionally, the methyl bending and C-H stretching region contains broad bands; average frequencies of 1375 (4), 1450 (8), and 2950 (12) cm⁻¹ are used for those groups.
 
 ### Calorimetric data for barrier fitting
-The experimental gas-phase entropy at 298.16 K is S° = 87.16 cal/K/mol (from Table VII of the paper, derived from thermal measurements). The ideal-gas heat capacities C_p° measured at five temperatures (Table VI) are:
+The experimental gas-phase entropy at 298.16 K is S° = 87.16 cal/K/mol (derived from thermal measurements). The ideal-gas heat capacities C_p° measured at five temperatures are:
 - 334.20 K : C_p° = 32.34 cal/K/mol
 - 355.25 K : 33.94
 - 393.20 K : 36.96
@@ -97,11 +113,66 @@ The experimental gas-phase entropy at 298.16 K is S° = 87.16 cal/K/mol (from Ta
 
 Use these data to optimize the barrier height V₃ (cal/mol) for the threefold methyl internal rotation and the anharmonicity constants Z (cal/K/mol) and ν (cm⁻¹). Start from a reasonable initial guess (e.g., V₃ ≈ 700, Z=1.0, ν=1200) and fit the model to minimize the sum of squared deviations between calculated and observed S° and C_p° values, weighted appropriately.
 
+### Treatment of internal rotation (Pitzer–Gwinn via Mathieu equation)
+For each methyl group, the Hamiltonian for internal rotation is
+
+\[
+H = -F \frac{d^2}{d\phi^2} + \frac{1}{2} V_3 (1 - \cos 3\phi),
+\qquad
+F = \frac{h^2}{2 I_{\text{red}}}
+\]
+
+where \(h = 6.6256\times10^{-27}\) erg·s, \(I_{\text{red}}\) is the reduced moment (g·cm²) computed in Step 1, and \(V_3\) (erg) is the barrier height. Solutions are Mathieu functions; the characteristic values \(\lambda_n^{(\sigma)}\) (even \(\sigma=+\) from `scipy.special.mathieu_a`, odd \(\sigma=-\) from `scipy.special.mathieu_b`) are obtained with parameter \(q = V_3/(4F)\). The energy levels are
+
+\[
+E_n^{(\sigma)} = F \lambda_n^{(\sigma)} \quad (\text{erg}).
+\]
+
+The partition function for one rotor is \(q_{\text{int}} = \sum_{n,\sigma} \exp(-E_n^{(\sigma)}/k_{\text{B}}T)\). Sum over all methyl rotors to get the total internal-rotation contribution. Compute thermodynamic properties by numerical differentiation of \(\ln q_{\text{int}}\) with respect to \(T\):
+
+\[
+\frac{H^{\circ}-H_0^{\circ}}{T} = R \frac{\partial \ln q_{\text{int}}}{\partial \ln T},\quad
+S^{\circ} = R\left( \ln q_{\text{int}} + \frac{\partial \ln q_{\text{int}}}{\partial \ln T} \right),\quad
+C_p^{\circ} = R \frac{\partial^2 (T\ln q_{\text{int}})}{\partial T^2},
+\]
+\[
+\frac{F^{\circ}-H_0^{\circ}}{T} = -R \ln q_{\text{int}}.
+\]
+
+Carry out the sums over enough levels until convergence (e.g., retain levels up to several times \(k_{\text{B}}T\)).
+
+### Empirical anharmonicity correction
+The anharmonic correction to the harmonic vibrational contribution is added using the parameters \(Z\) (cal/K/mol) and \(\nu\) (cm⁻¹). Define
+
+\[
+u = \frac{h c \nu}{k_{\text{B}} T} = \frac{1.4388\,\nu}{T} \quad (\text{dimensionless}),
+\]
+
+where \(h c / k_{\text{B}} = 1.4388\) cm·K. The corrections to the thermodynamic functions are
+
+\[
+\Delta \left( \frac{F^{\circ}-H_0^{\circ}}{T} \right) = -Z \ln(1 - e^{-u}),
+\]
+\[
+\Delta \left( \frac{H^{\circ}-H_0^{\circ}}{T} \right) = Z \frac{u}{e^{u} - 1},
+\]
+\[
+\Delta (H^{\circ}-H_0^{\circ}) = Z\,T \frac{u}{e^{u} - 1},
+\]
+\[
+\Delta S^{\circ} = Z \left[ \frac{u}{e^{u} - 1} - \ln(1 - e^{-u}) \right],
+\]
+\[
+\Delta C_p^{\circ} = Z \frac{u^{2} e^{u}}{(e^{u} - 1)^{2}}.
+\]
+
+These are the formulae for an Einstein oscillator contribution scaled by the empirical constant \(Z\). Apply them to the total harmonic-oscillator results (sum over all normal modes) **before** adding the internal-rotation contributions.
+
 ## Workflow steps
 
 ### Step 1: Compute molecular moments of inertia and reduced moment for methyl rotation
 - Role: process
-- Action: From the molecular geometry (bond lengths: C=C 1.353 Å, C-C 1.54 Å, C-H 1.09 Å; bond angles: C-C-C 120°, C-C-H and H-C-H 109°28'), construct atomic coordinates for a planar carbon skeleton with V_h symmetry. Compute the center‑of‑mass moments of inertia tensor, diagonalize to obtain the three principal moments Ia, Ib, Ic (in g·cm²), and compute their product. The overall rotational symmetry number is σ=4. For each methyl group, estimate the reduced moment I_red for internal rotation using the formula I_red = I_α I_t / (I_α + I_t), where I_α ≈ 5.3×10⁻⁴⁰ g·cm² is the moment of the methyl rotor about its symmetry axis, and I_t is the moment of inertia of the remainder of the molecule projected onto the rotation axis. Write all computed constants to `/app/outputs/moments.json` as a JSON object with keys: Ia, Ib, Ic, product_IA, symmetry_number, I_red.
+- Action: From the molecular geometry (bond lengths: C=C 1.353 Å, C-C 1.54 Å, C-H 1.09 Å; bond angles: C-C-C 120°, C-C-H and H-C-H 109°28'), construct atomic coordinates for a planar carbon skeleton with V_h symmetry. Compute the center‑of‑mass moments of inertia tensor, diagonalize to obtain the three principal moments Ia, Ib, Ic (in g·cm²), and compute their product. The overall rotational symmetry number is σ=4. For each methyl group, estimate the reduced moment I_red for internal rotation as follows. The methyl rotor about its symmetry axis has a moment of inertia I_α ≈ 5.3×10⁻⁴⁰ g·cm². The moment of inertia of the remainder of the molecule projected onto the rotation axis, I_t, is computed by constructing the inertia tensor of the whole molecule EXCLUDING the methyl group in question, expressing this tensor in the coordinate system where the methyl C₃ axis is the z-axis, and taking the zz-component. Then I_red = I_α I_t / (I_α + I_t). If the four methyl groups are not all identical by symmetry, average their I_red values to obtain a single effective reduced moment. Write all computed constants to `/app/outputs/moments.json` as a JSON object with keys: Ia, Ib, Ic, product_IA, symmetry_number, I_red.
 - Evidence: `/app/outputs/moments.json`
 
 ### Step 2: Assign vibrational fundamentals
@@ -111,12 +182,12 @@ Use these data to optimize the barrier height V₃ (cal/mol) for the threefold m
 
 ### Step 3: Fit internal-rotation barrier and anharmonicity
 - Role: process
-- Action: Using the assigned vibrational frequencies from Step 2 and the molecular constants (principal moments of inertia, product, symmetry number, reduced moment I_red) computed in Step 1, compute the harmonic thermodynamic functions. Implement the Pitzer–Gwinn approximation for hindered methyl rotation (barrier height V₃) and the empirical anharmonicity correction (Z, ν). Vary V₃, Z, and ν to minimize the sum of squared residuals between the calculated and observed S° at 298.16 K and C_p° at the five temperatures given in the Input Data section. The fitting may use a simple grid search or an optimizer (e.g., scipy.optimize). The objective is to reproduce the calorimetric data as closely as possible. Write the optimized parameters to `/app/outputs/barrier_params.json` as a JSON object with keys: V3 (cal/mol), Z (cal/K/mol), nu (cm⁻¹).
+- Action: Using the assigned vibrational frequencies from Step 2 and the molecular constants (principal moments of inertia, product, symmetry number, reduced moment I_red) computed in Step 1, compute the harmonic thermodynamic functions. Implement the Pitzer–Gwinn approximation for hindered methyl rotation (barrier height V₃) via Mathieu‑equation level summation as described in Input Data. Also implement the empirical anharmonicity correction (Z, ν) with the explicit formulas given in Input Data. Vary V₃, Z, and ν to minimize the sum of squared residuals between the calculated and observed S° at 298.16 K and C_p° at the five temperatures given in the Input Data section. The fitting may use a simple grid search or an optimizer (e.g., scipy.optimize). The objective is to reproduce the calorimetric data as closely as possible. Write the optimized parameters to `/app/outputs/barrier_params.json` as a JSON object with keys: V3 (cal/mol), Z (cal/K/mol), nu (cm⁻¹).
 - Evidence: `/app/outputs/barrier_params.json`
 
 ### Step 4: Calculate thermodynamic functions
 - Role: scored (load-bearing)
-- Action: Using the assigned vibrational fundamentals from Step 2, the barrier height and anharmonicity constants from Step 3, and the molecular moments of inertia, symmetry number, and reduced moment computed in Step 1, compute the ideal‑gas thermodynamic functions (F°‑H0°)/T, (H°‑H0°)/T, H°‑H0°, S°, and Cp° at the 15 temperatures (273.16, 298.16, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500 K) via standard statistical‑mechanics formulas: rigid‑rotor harmonic‑oscillator partition function, Pitzer‑Gwinn approximation for internal rotation, and the empirical anharmonicity correction. Write the results to thermodynamic_functions.csv.
+- Action: Using the assigned vibrational fundamentals from Step 2, the barrier height and anharmonicity constants from Step 3, and the molecular moments of inertia, symmetry number, and reduced moment computed in Step 1, compute the ideal‑gas thermodynamic functions (F°‑H0°)/T, (H°‑H0°)/T, H°‑H0°, S°, and Cp° at the 15 temperatures (273.16, 298.16, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500 K) via standard statistical‑mechanics formulas: rigid‑rotor harmonic‑oscillator partition function, Pitzer‑Gwinn approximation for internal rotation (Mathieu summation), and the empirical anharmonicity correction as detailed in Input Data. Write the results to thermodynamic_functions.csv.
 - Output file: `/app/outputs/thermodynamic_functions.csv`
 - Format: csv
 - Contract: CSV with columns: T (K), F_minus_H0_over_T (cal/K/mol), H_minus_H0_over_T (cal/K/mol), H_minus_H0 (kcal/mol), S (cal/K/mol), Cp (cal/K/mol).
@@ -131,14 +202,14 @@ Write all artifacts under `/app/outputs`:
 
 ## Output contract
 
-Every file the hidden verifier reads is described below. Write each file under `/app/outputs` and follow its schema exactly.
+Every file listed below is used either for scoring or as process evidence. Write each file under `/app/outputs` and follow its schema exactly.
 
 ### thermodynamic_functions.csv
 - path: `/app/outputs/thermodynamic_functions.csv`
 - format: csv
 - purpose: scored
 - target_policy: reference_match
-- description: Computed ideal‑gas thermodynamic functions at the 15 specified temperatures, to be compared against reference values from the paper's Table X.
+- description: Computed ideal‑gas thermodynamic functions at the 15 specified temperatures, to be compared against reference values.
 - schema:
   - `type`: table
   - `required_columns`: `T`, `F_minus_H0_over_T`, `H_minus_H0_over_T`, `H_minus_H0`, `S`, `Cp`
@@ -149,6 +220,30 @@ Every file the hidden verifier reads is described below. Write each file under `
     - `H_minus_H0`: kcal/mol
     - `S`: cal/K/mol
     - `Cp`: cal/K/mol
+
+### moments.json
+- path: `/app/outputs/moments.json`
+- format: json
+- purpose: process
+- description: Principal moments of inertia, symmetry number, and reduced moment for methyl rotation.
+- schema:
+  - `required`: `Ia`, `Ib`, `Ic`, `product_IA`, `symmetry_number`, `I_red`
+
+### assigned_frequencies.csv
+- path: `/app/outputs/assigned_frequencies.csv`
+- format: csv
+- purpose: process
+- description: Assigned fundamental frequencies (one per mode).
+- schema:
+  - `required_columns`: `mode`, `frequency_cm1`
+
+### barrier_params.json
+- path: `/app/outputs/barrier_params.json`
+- format: json
+- purpose: process
+- description: Optimized barrier height and anharmonicity parameters.
+- schema:
+  - `required`: `V3`, `Z`, `nu`
 
 ## Self-check before finishing (optional, not scored)
 
@@ -183,7 +278,48 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
           "Cp": "cal/K/mol"
         }
       },
-      "description": "Computed ideal‑gas thermodynamic functions at the 15 specified temperatures, to be compared against reference values from the paper's Table X."
+      "description": "Computed ideal‑gas thermodynamic functions at the 15 specified temperatures, to be compared against reference values."
+    },
+    {
+      "file": "moments.json",
+      "format": "json",
+      "purpose": "process",
+      "schema": {
+        "required": [
+          "Ia",
+          "Ib",
+          "Ic",
+          "product_IA",
+          "symmetry_number",
+          "I_red"
+        ]
+      },
+      "description": "Principal moments of inertia, symmetry number, and reduced moment."
+    },
+    {
+      "file": "assigned_frequencies.csv",
+      "format": "csv",
+      "purpose": "process",
+      "schema": {
+        "required_columns": [
+          "mode",
+          "frequency_cm1"
+        ]
+      },
+      "description": "Assigned fundamental frequencies."
+    },
+    {
+      "file": "barrier_params.json",
+      "format": "json",
+      "purpose": "process",
+      "schema": {
+        "required": [
+          "V3",
+          "Z",
+          "nu"
+        ]
+      },
+      "description": "Optimized barrier height and anharmonicity parameters."
     }
   ],
   "notes": ""

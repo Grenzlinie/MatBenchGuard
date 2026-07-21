@@ -15,17 +15,16 @@ Compute the six configurational integral differences C(n) for water monolayer cl
 
 ## Assets
 
-- Stillinger-Rahman central force potential for water: 10.1063/1.435946
-- H2O-AgI interaction potential: 10.1063/1.439380
-- numpy: numpy
-- scipy: scipy
+- Stillinger-Rahman central force potential for water (see attached resource)
+- H₂O-AgI interaction potential (see attached resource)
+- numpy
+- scipy
 
 ## Workflow steps
 
 ### Step 1: Monte Carlo Free Energy Calculation
 - Role: process
 - Action: Run Metropolis Monte Carlo simulations using the Squire-Hoover thermodynamic integration technique to compute configurational integral differences C(n) = -\Delta w^s(n)/(kT) for water monolayer clusters of sizes n=1,2,3,4,6,24 adsorbed on a rigid AgI basal substrate at 265 K. Use the Stillinger-Rahman central force potential for water-water interactions and the Hale-Kiefer H₂O–AgI interaction potential. The computational technique should follow the thermodynamic integration method described by Squire and Hoover (J. Chem. Phys. 50, 701, 1969), where the potential is scaled by a parameter \lambda and the free energy difference is obtained by integrating <\Delta U> as a function of \lambda.
-- Evidence: `/app/outputs/mc_simulation.log`
 
 ### Step 2: Output C values
 - Role: scored (load-bearing)

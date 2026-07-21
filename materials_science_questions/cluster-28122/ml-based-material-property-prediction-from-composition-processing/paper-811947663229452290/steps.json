@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_data_compilation",
+    "title": "Data compilation",
+    "role": "process",
+    "action": "Compile the 60-alloy dataset from the specified handbooks (Massalski, Moffatt, ASM Handbook, Stark & Wallace, Aylward & Findlay). For each alloy system, record solvent, solute, atomic diameters (or radii converted to diameters), valence, electronegativity, and the maximum solid solubility limit in at.%. Save the raw table as a CSV file.",
+    "output_file": "",
+    "evidence": "60_alloy_raw.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_feature_engineering",
+    "title": "Feature engineering and scaling",
+    "role": "process",
+    "action": "Functionalize inputs: size factor = (d_solute - d_solvent)/d_solvent (use atomic diameters); valence as integer; electronegativity difference = χ_solute - χ_solvent. Apply min‑max scaling to map all inputs and the target solubility to the range [-1, 1]. Save the scaled feature matrix and target vector.",
+    "output_file": "",
+    "evidence": "scaled_data.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_model_training",
+    "title": "ANN training and hyperparameter optimization",
+    "role": "process",
+    "action": "Build a feed‑forward backpropagation network with two hidden layers: first hidden layer using tanh activation, second hidden layer linear (identity) with one neuron (solubility output). Train using Bayesian Regularization. Partition the 60 samples into 5 groups; use a 4:1 training:testing split. For a range of candidate numbers of neurons in the first hidden layer, loop over the 5-fold splits, train on 4 groups and test on the held-out group. For each test, compute linear regression of predicted vs experimental solubility and evaluate φ = |M-1| + (1-R) + |B/B_max| (where B_max is the maximum solubility in the dataset). Select the neuron count and fold split that minimize φ. Save the trained model and the indices of the selected test set.",
+    "output_file": "",
+    "evidence": "best_model.pkl and test_split_indices.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_test_predictions",
+    "title": "Test set prediction generation",
+    "role": "scored",
+    "action": "Load the best model and the chosen test split. Generate predicted solubility values for each system in the test set. Create a CSV file with columns: solvent, solute, experimental solubility (at.%), and predicted solubility (at.%).",
+    "output_file": "testing_predictions.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Per-sample predictions on the selected test set; the checker recomputes evaluation metrics from this file.",
+    "output_schema": "CSV with header: solvent (str), solute (str), experimental_solubility_at_pct (float), predicted_solubility_at_pct (float). Number of rows equals test set size (~12)."
+  },
+  {
+    "id": "step_metrics_report",
+    "title": "Compute and report evaluation metrics",
+    "role": "scored",
+    "action": "Using the predictions from testing_predictions.csv, fit a linear regression (experimental vs predicted) to obtain slope M, intercept B, and correlation coefficient R. Compute mean absolute error (mean modulus of error) in at.% and φ = |M-1| + (1-R) + |B/B_max|, where B_max is the maximum experimental solubility in the dataset. Write these values to a JSON file.",
+    "output_file": "final_metrics.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Summary metrics derived from the test set predictions; checked for correct structure.",
+    "output_schema": "JSON object with keys: R (float), M (float), B (float), mean_absolute_error_at_pct (float), phi (float)."
+  }
+]

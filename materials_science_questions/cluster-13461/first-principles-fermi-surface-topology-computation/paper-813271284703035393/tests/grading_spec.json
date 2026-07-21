@@ -1,0 +1,63 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The scaling rule for second-neighbor overlap parameters is not uniquely defined in the paper; different implementations lead to different absolute band energies. A T1 recompute (MAE against a reference computed with a specific scaling) is not robust, as a correct implementation with a different scaling choice would fail. Instead, T3 structural checks on the band structure's qualitative physical features are employed.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_energies.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "k",
+            "band",
+            "E",
+            "geometry"
+          ],
+          "units": {
+            "E": "eV"
+          }
+        },
+        "description": "Computed electronic band energies for all four bands and three geometries (linear, helix125, helix50)."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "step_band_energies",
+      "output_file": "band_energies.csv",
+      "kind": "structural_audit",
+      "weight": 1.0,
+      "checks": [
+        {
+          "name": "k_grid_sufficiency",
+          "description": "Each geometry must have at least 200 unique k points.",
+          "sub_weight": 0.1
+        },
+        {
+          "name": "linear_degeneracy",
+          "description": "For the linear chain, the two middle bands (bands 1 and 2) must be degenerate (max allowed deviation 1e-4 eV) at every k point.",
+          "sub_weight": 0.3
+        },
+        {
+          "name": "helix125_splitting",
+          "description": "At k≈0 for helix125, the two p-derived bands must show a splitting between 0.04 eV and 0.06 eV (the hallmark ~50 meV splitting).",
+          "sub_weight": 0.3
+        },
+        {
+          "name": "helix50_larger_splitting",
+          "description": "At k≈0 for helix50, the splitting between the two p-derived bands must be larger than the corresponding splitting in helix125.",
+          "sub_weight": 0.3
+        }
+      ]
+    }
+  ]
+}

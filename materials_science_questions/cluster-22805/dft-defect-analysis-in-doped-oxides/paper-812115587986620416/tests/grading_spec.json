@@ -1,0 +1,174 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute d_i from embedded d0 and LN bond lengths; recompute thresholds from agent's d_i_Li and hidden critical GII.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dopant_di_occupancy.csv": "metric_recompute",
+    "threshold_table.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "d0 parameters for cation-O bonds, LN bond lengths, critical GII, paper reference thresholds",
+      "source_provenance": "d0 back-calculated from paper's Table I to match reported d_i values; LN bond lengths from Lehnert et al. 1997; critical GII calibrated from ZnO threshold using paper Eq.8; paper Table III thresholds.",
+      "generation_method": "d0 values solved numerically to reproduce the paper's d_i values; bond lengths and GII taken directly from the paper; thresholds extracted from Table III.",
+      "why_not_fabricated": "All values are derived from or exactly match the paper's published numbers, not arbitrarily invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dopant_di_occupancy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "ion",
+            "d_i_Li",
+            "d_i_Nb",
+            "occupancy_predicted"
+          ],
+          "units": {
+            "d_i_Li": "v.u.",
+            "d_i_Nb": "v.u."
+          }
+        },
+        "description": "Bond-valence discrepancies and predicted site occupancies for 19 dopants. The checker recomputes d_i values from the same public inputs and compares with the agent's values (tolerance 0.001 v.u.), and cross-checks the occupancy assignment."
+      },
+      {
+        "file": "threshold_table.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "ion",
+            "threshold_concentration_mol_percent"
+          ],
+          "units": {
+            "threshold_concentration_mol_percent": "mol %"
+          }
+        },
+        "description": "Threshold concentrations for dopants. The checker recomputes thresholds from the agent's d_i values (from step 1) and the hidden critical GII, then compares with the paper’s reported values (absolute tolerance 0.05 mol %)."
+      }
+    ],
+    "notes": "The LN bond lengths (Li: 2.260 Å and 2.052 Å; Nb: 2.126 Å and 1.878 Å) and the B=0.37 constant are fixed. The bond-valence parameter database provides d0 values. The ZnO experimental threshold (5.3 mol %) is used for calibration."
+  },
+  "steps": [
+    {
+      "id": "step_di_occupancy",
+      "output_file": "dopant_di_occupancy.csv",
+      "kind": "recompute_di_and_occupancy",
+      "weight": 0.4,
+      "tolerance_di": 0.02,
+      "B": 0.37,
+      "li_bonds": [
+        [
+          2.26,
+          3
+        ],
+        [
+          2.052,
+          3
+        ]
+      ],
+      "nb_bonds": [
+        [
+          2.126,
+          3
+        ],
+        [
+          1.878,
+          3
+        ]
+      ],
+      "valence_map": {
+        "Mg": 2,
+        "Zn": 2,
+        "Mn": 2,
+        "Sc": 3,
+        "In": 3,
+        "Pr": 3,
+        "Nd": 3,
+        "Eu": 3,
+        "Ho": 3,
+        "Er": 3,
+        "Yb": 3,
+        "Al": 3,
+        "Cr": 3,
+        "Fe": 3,
+        "Ni": 3,
+        "Ti": 4,
+        "Hf": 4,
+        "Ta": 5,
+        "W": 6,
+        "Li": 1,
+        "Nb": 5
+      },
+      "d0_mapping": {
+        "Mg": 1.693,
+        "Zn": 1.7042,
+        "Mn": 1.79,
+        "Sc": 1.849,
+        "In": 1.902,
+        "Pr": 2.1813,
+        "Nd": 2.189,
+        "Eu": 2.212,
+        "Ho": 2.223,
+        "Er": 2.234,
+        "Yb": 2.244,
+        "Al": 1.618,
+        "Cr": 1.724,
+        "Fe": 1.759,
+        "Ni": 1.634,
+        "Ti": 1.815,
+        "Hf": 1.9445,
+        "Ta": 1.92,
+        "W": 1.9175,
+        "Li": 1.466,
+        "Nb": 1.911
+      }
+    },
+    {
+      "id": "step_threshold",
+      "output_file": "threshold_table.csv",
+      "kind": "reference_match",
+      "weight": 0.6,
+      "critical_GII": 0.1055,
+      "tolerance_threshold": 0.05,
+      "ion_list": [
+        "Mg",
+        "Zn",
+        "Sc",
+        "In",
+        "Mn",
+        "Al",
+        "Cr",
+        "Fe",
+        "Ni",
+        "Ti",
+        "Hf",
+        "Er",
+        "Yb"
+      ],
+      "thresholds_gold": {
+        "Mg": 5.2,
+        "Zn": 5.3,
+        "Sc": 2.62,
+        "In": 2.73,
+        "Mn": 5.03,
+        "Al": 1.27,
+        "Cr": 2.6,
+        "Fe": 2.02,
+        "Ni": 1.74,
+        "Ti": 1.03,
+        "Hf": 1.69,
+        "Er": 1.9,
+        "Yb": 2.2
+      }
+    }
+  ]
+}

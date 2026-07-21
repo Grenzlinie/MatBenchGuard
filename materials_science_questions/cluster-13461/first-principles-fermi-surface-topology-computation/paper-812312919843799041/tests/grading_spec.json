@@ -1,0 +1,55 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Cannot re-run DFT in verifier sandbox; compare agent-reported dos_at_ef to paper gold with an absolute tolerance, and verify saddle_point_present and flat_band_character against expected values. k_path_description weight set to zero because the path is no longer hard‑coded in the instruction to avoid answer leakage.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "electronic_structure_results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported total DOS at Fermi level (1.0 eV^{-1} Spin^{-1}), expected saddle point, and flat band character description.",
+      "source_provenance": "Paper Z. anorg. allg. Chem. (1996) 622, 119; states 'N(E_F)=1 eV^{-1}·Spin^{-1}' and discusses a saddle point from C2-π* band near Γ.",
+      "generation_method": "Extracted directly from the paper's reported numbers and qualitative band structure analysis.",
+      "why_not_fabricated": "These are the paper's own reported values, consistent with the reference solve.sh expected correct answer."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "electronic_structure_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "dos_at_ef": "float (states/eV/spin)",
+            "saddle_point_present": "boolean",
+            "flat_band_character": "string describing the orbital character of the flat band",
+            "k_path_description": "string describing the k‑point path used in the calculation"
+          }
+        },
+        "description": "The computed total density of states at the Fermi level, whether the flat band exhibits a saddle point, its orbital character, and the high‑symmetry k‑path used. k_path_description is no longer scored (weight 0) because the answer is no longer leaked in the instruction."
+      }
+    ],
+    "notes": "The scoring exact‑match policy applies with hidden tolerances; dos_at_ef is compared to the paper‑reported reference value within an absolute tolerance. saddle_point_present must be true, and flat_band_character is checked for the correct orbital character. k_path_description is not weighted."
+  },
+  "steps": [
+    {
+      "id": "step_electronic_structure",
+      "output_file": "electronic_structure_results.json",
+      "kind": "custom",
+      "weight": 1.0,
+      "description": "Check all required fields: dos_at_ef tolerance, saddle_point_present, flat_band_character substring. k_path_description is no longer scored.",
+      "dos_target": 1.0,
+      "dos_tolerance": 0.3,
+      "sub_weights": {
+        "dos_at_ef": 0.5,
+        "saddle_point_present": 0.25,
+        "flat_band_character": 0.25,
+        "k_path_description": 0.0
+      }
+    }
+  ]
+}

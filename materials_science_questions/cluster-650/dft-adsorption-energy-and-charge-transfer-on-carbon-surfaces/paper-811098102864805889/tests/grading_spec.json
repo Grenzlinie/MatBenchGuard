@@ -1,0 +1,78 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "DFT adsorption energies are the final computed output; recompute from raw artifacts is impossible in the verifier sandbox, so we compare the agent's reported values to the paper's gold with a tolerance of ±0.3 eV and verify four structural ordering trends.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "li_adsorption_energies.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported Li adsorption energies for the six molecular models",
+      "source_provenance": "Extracted from the paper text (Figure 5 and main text): bowl C30H10 inner −2.51 eV, flat C30H14 −1.88 eV, C60 inner −2.41 eV, C60 outer −2.31 eV, C54N4 all‑N5 −5.56 eV, C54N4 two N5+two N6 −6.03 eV.",
+      "generation_method": "Manual extraction from the published paper",
+      "why_not_fabricated": "Values are directly from the paper's reported DFT‑D2 results and match the reference solve.sh exactly; they are not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "li_adsorption_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "bowl_C30H10_inner": "number",
+            "flat_C30H14": "number",
+            "C60_inner": "number",
+            "C60_outer": "number",
+            "C54N4_all_N5": "number",
+            "C54N4_two_N5_two_N6": "number"
+          }
+        },
+        "description": "Lithium adsorption energies computed with DFT-D2 for the five molecular models. The values are compared to the paper-reported values and checked for structural trends (curved > flat, N-doped > undoped, mixed doping > all-N5) using hidden tolerances."
+      }
+    ],
+    "notes": "The hidden checker reads the agent's reported energies and compares each value to the paper's reference within ±0.3 eV, then verifies the following structural relationships: (1) bowl_C30H10_inner < flat_C30H14 (curved binds stronger), (2) both C54N4 entries < C60_inner, (3) C54N4_two_N5_two_N6 < C54N4_all_N5."
+  },
+  "steps": [
+    {
+      "id": "check_li_adsorption",
+      "output_file": "li_adsorption_energies.json",
+      "kind": "rubric",
+      "weight": 1.0,
+      "description": "Validate Li adsorption energies against paper reference and structural trends",
+      "params": {
+        "references": {
+          "bowl_C30H10_inner": -2.51,
+          "flat_C30H14": -1.88,
+          "C60_inner": -2.41,
+          "C60_outer": -2.31,
+          "C54N4_all_N5": -5.56,
+          "C54N4_two_N5_two_N6": -6.03
+        },
+        "abs_tolerance": 0.3,
+        "trends": [
+          {
+            "description": "curved binds stronger than flat",
+            "inequality": "bowl_C30H10_inner < flat_C30H14"
+          },
+          {
+            "description": "all-N5 doping enhances binding relative to undoped C60",
+            "inequality": "C54N4_all_N5 < C60_inner"
+          },
+          {
+            "description": "two N5+two N6 doping enhances binding relative to undoped C60",
+            "inequality": "C54N4_two_N5_two_N6 < C60_inner"
+          },
+          {
+            "description": "mixed N5+N6 doping stronger than all-N5",
+            "inequality": "C54N4_two_N5_two_N6 < C54N4_all_N5"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The headline transition pressure and volume change are computed from full static lattice energy minimizations and equation-of-state fitting that cannot be re-run in the verifier sandbox; the checker compares the agent's reported values against the paper's hidden gold with tolerances and structural ordering checks.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold transition pressures and relative volume changes for CIM-DQ and CIM no-polarization models, as reported in Table III of the paper.",
+      "source_provenance": "Table III of the published paper (see paper markdown in context).",
+      "generation_method": "Extracted directly from the paper's Table III: 'CIM, no polarization' Pt 18 GPa, ΔV -3.57%; 'CIM-DQ' Pt 194 GPa, ΔV -1.68%.",
+      "why_not_fabricated": "These are the exact reported values the agent is supposed to reproduce via the described simulation procedure."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "transition_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "array",
+          "required": {
+            "model": "string",
+            "Pt_GPa": "number",
+            "delta_V_percent": "number"
+          },
+          "items": {
+            "model": "string",
+            "Pt_GPa": "number",
+            "delta_V_percent": "number"
+          },
+          "required_columns": [],
+          "units": {
+            "Pt_GPa": "GPa",
+            "delta_V_percent": "percent"
+          }
+        },
+        "description": "A JSON array with two entries, one for each model variant (\"CIM-DQ\" and \"CIM no polarization\"). Each entry reports the calculated corundum→Rh₂O₃-II transition pressure (Pt_GPa) and relative volume change (delta_V_percent). The checker will apply threshold_or_better tolerances on Pt and delta_V, as well as a secondary structural ordering check."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "pt_cim_dq",
+      "output_file": "transition_results.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "gold": {
+        "model": "CIM-DQ",
+        "field": "Pt_GPa",
+        "value": 194,
+        "rel_tol": 0.1,
+        "abs_tol": 10
+      }
+    },
+    {
+      "id": "pt_cim_np",
+      "output_file": "transition_results.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "gold": {
+        "model": "CIM no polarization",
+        "field": "Pt_GPa",
+        "value": 18,
+        "rel_tol": 0.1,
+        "abs_tol": 10
+      }
+    },
+    {
+      "id": "dv_cim_dq",
+      "output_file": "transition_results.json",
+      "weight": 0.15,
+      "kind": "numeric",
+      "gold": {
+        "model": "CIM-DQ",
+        "field": "delta_V_percent",
+        "value": -1.68,
+        "abs_tol": 0.5
+      }
+    },
+    {
+      "id": "dv_cim_np",
+      "output_file": "transition_results.json",
+      "weight": 0.15,
+      "kind": "numeric",
+      "gold": {
+        "model": "CIM no polarization",
+        "field": "delta_V_percent",
+        "value": -3.57,
+        "abs_tol": 0.5
+      }
+    },
+    {
+      "id": "struct_pt_order",
+      "output_file": "transition_results.json",
+      "weight": 0.05,
+      "kind": "structural_ordering",
+      "gold": null
+    },
+    {
+      "id": "struct_dv_order",
+      "output_file": "transition_results.json",
+      "weight": 0.05,
+      "kind": "structural_ordering",
+      "gold": null
+    }
+  ]
+}

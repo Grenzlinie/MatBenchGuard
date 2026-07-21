@@ -1,0 +1,160 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full DFT recompute in the verifier sandbox is infeasible; the checker reads the agent's reported results and compares them to the paper‑reported values with appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "binding_energies.csv": "reference_match",
+    "single_zn_geometry.txt": "structural_audit",
+    "four_zn_pathway.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold binding energies (Table 1)",
+      "source_provenance": "Paper Table 1: ΔE and ΔG₃₈₃ (kcal/mol) for ZnEt substitution at μ-OH, OH, HB, H₂O sites.",
+      "generation_method": "Extracted directly from the paper's Table 1.",
+      "why_not_fabricated": "These are the actual reported values from the original publication, used as hidden reference for verification."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold single‑Zn coordination number and geometry",
+      "source_provenance": "Paper text describing DFT results: four‑coordinate Zn with distorted tetrahedral geometry; approximate Zn–O average distance ~1.97 Å from the computed structure.",
+      "generation_method": "Derived from the paper's computational description and the reference optimized structure.",
+      "why_not_fabricated": "These values reflect the paper's own computed findings and are used as verification targets."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold four‑Zn pathway free energies and preferred structure",
+      "source_provenance": "Paper Figure 2 and text: ΔG₃₈₃ values for 4[H₂O,OH] (–152.6), 2[H₂O/μOH] (–140.0), hydrated analogues, and conclusion that one Zn per face is favoured by 12.6 kcal/mol.",
+      "generation_method": "Extracted from the paper's reported pathway energies and the stated energetic preference.",
+      "why_not_fabricated": "These are the paper's actual computed results, used as the hidden gold for the four‑Zn deposition pathway check."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "binding_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "binding_site",
+            "delta_E",
+            "delta_G_383"
+          ],
+          "units": {
+            "delta_E": "kcal/mol",
+            "delta_G_383": "kcal/mol"
+          }
+        },
+        "description": "Relative electronic and free energies for ZnEt substitution at the four proton sites. The checker will compare the ordering and values (within tolerances) to the paper‑reported reference."
+      },
+      {
+        "file": "single_zn_geometry.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "Should contain lines with coordination_number, geometry, and avg_Zn_O_distance. The checker will verify coordination number = 4 and geometry described as tetrahedral."
+        },
+        "description": "Coordination number and geometry of a single Zn atom attached at the most favorable H₂O site."
+      },
+      {
+        "file": "four_zn_pathway.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "one_per_face_unhydrated": "number",
+            "two_per_face_unhydrated": "number",
+            "one_per_face_hydrated": "number",
+            "two_per_face_hydrated": "number",
+            "preferred_structure": "string"
+          }
+        },
+        "description": "Free energies for the two competing four‑Zn deposition pathways. The checker will confirm that the one‑per‑face unhydrated structure is lower in energy by at least 8 kcal/mol and that preferred_structure is 'one_per_face'."
+      }
+    ],
+    "notes": "All comparisons assume a toolchain spread from the paper's Gaussian 09/M06‑L/6‑31G(d)+SDD protocol. Tolerances will be chosen to absorb legitimate code‑to‑code variation."
+  },
+  "steps": [
+    {
+      "id": "check_binding_energies",
+      "output_file": "binding_energies.csv",
+      "weight": 0.4,
+      "kind": "numeric",
+      "hidden": {
+        "expected_sites": [
+          {
+            "binding_site": "μ-OH",
+            "delta_E_gold": 4.95,
+            "delta_E_tol": 5.0,
+            "delta_G_gold": 4.64,
+            "delta_G_tol": 5.0
+          },
+          {
+            "binding_site": "OH",
+            "delta_E_gold": 16.9,
+            "delta_E_tol": 5.0,
+            "delta_G_gold": 16.2,
+            "delta_G_tol": 5.0
+          },
+          {
+            "binding_site": "HB",
+            "delta_E_gold": 0.27,
+            "delta_E_tol": 5.0,
+            "delta_G_gold": 1.16,
+            "delta_G_tol": 5.0
+          },
+          {
+            "binding_site": "H2O",
+            "delta_E_gold": 0.0,
+            "delta_E_tol": 5.0,
+            "delta_G_gold": 0.0,
+            "delta_G_tol": 5.0
+          }
+        ],
+        "expected_order": [
+          "H2O",
+          "HB",
+          "μ-OH",
+          "OH"
+        ]
+      }
+    },
+    {
+      "id": "check_single_zn",
+      "output_file": "single_zn_geometry.txt",
+      "weight": 0.3,
+      "kind": "structural",
+      "hidden": {
+        "coord_num": 4,
+        "geometry_keyword": "tetrahedral",
+        "avg_Zn_O_gold": 1.97,
+        "avg_Zn_O_tol": 0.2
+      }
+    },
+    {
+      "id": "check_four_zn",
+      "output_file": "four_zn_pathway.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "hidden": {
+        "energies_gold": {
+          "one_per_face_unhydrated": -152.6,
+          "two_per_face_unhydrated": -140.0,
+          "one_per_face_hydrated": -192.8,
+          "two_per_face_hydrated": -218.4
+        },
+        "energies_tol": 15.0,
+        "preferred_structure": "one_per_face",
+        "min_diff": 8.0
+      }
+    }
+  ]
+}

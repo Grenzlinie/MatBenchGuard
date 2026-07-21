@@ -4,10 +4,63 @@
 The temperature dependence of elastic constants in rare-earth intermetallic compounds often deviates from simple phonon-like behavior. In particular, the shear modulus C55 can show unusual temperature variations due to coupling between the lattice strain and the crystal electric field (CEF) levels of the rare-earth or actinide ion. Understanding such magnetoelastic coupling provides insight into the driving mechanisms behind structural and magnetic phase transitions. In the compound U2Rh3Si5, elastic constant data indicate strong coupling to CEF levels, making it a test case to compute the CEF level scheme and the resulting C55(T) curve from a model that includes both the crystal field and strain coupling.
 
 ## Approach
-The theoretical model treats the uranium 5f^2 ion (J=4) in a cubic crystal field using Stevens operators O4^0 and O4^4. The Hamiltonian H_CEF = B4 (O4^0 + 5 O4^4) is diagonalized to obtain the CEF level scheme. The levels are labeled by their degeneracy and irreducible representations (Γ1, Γ3, Γ4, Γ5). to compute the elastic constant C55(T), a magnetoelastic strain coupling term η3 e_xy (J_x J_y + J_y J_x) is added to the Hamiltonian. By diagonalizing the full Hamiltonian for a small applied strain e_xy and using finite differences, one obtains the strain derivatives of the energy levels. The contribution ΔC55 is calculated from the second strain derivative of the free energy through the partition function over the nine CEF levels. This ΔC55 is then added to a background elastic constant described by the Varshni formula C_bg(T) = C0 - s/(exp(T_E/T)-1). The computation requires only the given parameters (B4, η3, N, C0, s, T_E) and standard linear algebra and thermodynamics.
+The theoretical model treats the uranium 5f^2 ion (J=4) in a cubic crystal field using Stevens operators O_4^0 and O_4^4. In the |J,m⟩ basis (m = 4,3,…,−4) the angular-momentum operators are:
+
+- J_z is diagonal: ⟨m|J_z|m⟩ = m.
+- J_±|m⟩ = √[J(J+1) − m(m±1)] |m±1⟩.
+- J_x = (J_+ + J_-)/2, J_y = (J_+ − J_-)/(2i).
+
+The Stevens operators for the fourth-order cubic crystal field are explicitly
+
+O_4^0 = 35 J_z⁴ − [30 J(J+1) − 25] J_z² + [3 J²(J+1)² − 6 J(J+1)] I  ,
+O_4^4 = ½ ( J_+⁴ + J_-⁴ ),
+
+where I is the identity matrix of dimension (2J+1)=9.
+
+The crystal-field Hamiltonian at zero strain is
+
+H_CEF = B₄ ( O_4^0 + 5 O_4^4 ),   with B₄ = −20.8×10⁻³ meV.
+
+Diagonalisation of H_CEF lifts the ninefold degeneracy, yielding a singlet (Γ₁), two triplets (Γ₄ and Γ₅), and a doublet (Γ₃). For the negative B₄ value used here the levels are ordered in energy as:
+
+Γ₁ (singlet) < Γ₄ (triplet) < Γ₃ (doublet) < Γ₅ (triplet).
+
+To compute the elastic constant C₅₅(T) a magnetoelastic strain coupling is added:
+
+H_coupling = η₃ e_{xy} (J_x J_y + J_y J_x),   with η₃ = 21 meV,
+
+where e_{xy} is the dimensionless shear strain. The full Hamiltonian at strain e = e_{xy} is
+
+H(e) = H_CEF + η₃ e (J_x J_y + J_y J_x).
+
+For a small strain e = ±h the nine eigenvalue curves E_i(e) are obtained by diagonalising H(e). The centre‑difference step size is h = 1×10⁻⁶. The first and second derivatives at e = 0 are
+
+∂E_i/∂e ≈ [E_i(+h) − E_i(−h)]/(2h),
+∂²E_i/∂e² ≈ [E_i(+h) − 2E_i(0) + E_i(−h)] / h².
+
+The contribution of the CEF coupling to C₅₅ is derived from the free energy F = −N k_B T ln(Z):
+
+ΔC₅₅ = N { (1/Z) Σᵢ (∂²E_i/∂e²) exp(−E_i/(k_B T))
+               − (1/(k_B T)) Σᵢ (∂E_i/∂e)² exp(−E_i/(k_B T)) },
+
+where the cross‑term involving (Σᵢ ∂E_i/∂e exp(−E_i/kT))² evaluates to zero and is omitted. N = 1.227×10²⁸ m⁻³ is the uranium atom density. The conversion from meV·m⁻³ to GPa uses
+
+1 meV = 1.602176634×10⁻²² J,   1 GPa = 10⁹ J/m³   ⇒   1 meV·m⁻³ = 1.602176634×10⁻³¹ GPa.
+
+The background elastic constant (uncoupled phonon contribution) is given by the Varshni formula:
+
+C_bg(T) = C₀ − s / [exp(T_E / T) − 1],
+
+with C₀ = 73.9 GPa, s = 18.3 GPa, T_E = 783 K. The total C₅₅ is
+
+C₅₅(T) = C_bg(T) + ΔC₅₅(T).
 
 ## Reproduction target
-Compute the CEF level scheme for a J=4 ion in a cubic crystal field with parameter B4 = −20.8×10⁻³ meV: the nine eigenvalues with their degeneracies and irreducible representation labels (Γ1, Γ3, Γ4, Γ5), with energies converted to Kelvin. Then, using the full model with magnetoelastic coupling (η3 = 21 meV, atom density N = 1.227×10²⁸ m⁻³) and the Varshni background (C0 = 73.9 GPa, s = 18.3 GPa, T_E = 783 K), compute the temperature-dependent shear modulus C55 at the specific temperatures 50 K, 100 K, 150 K, 200 K, 250 K, and 300 K. The output artifacts must be formatted exactly as specified in the workflow steps.
+1. Compute the CEF level scheme for J = 4 using H_CEF. Output nine levels with degeneracy and irrep label (Γ₁, Γ₄, Γ₃, Γ₅), energies converted to Kelvin (1 meV = 11.604 K), sorted by increasing energy.
+
+2. Using the full magnetoelastic model, compute C₅₅(T) at the temperatures T = 50, 100, 150, 200, 250, 300 K. Follow the finite‑difference procedure with h = 1×10⁻⁶ and the free‑energy expression above.
+
+All required parameters (B₄, η₃, N, C₀, s, T_E) are specified above; no fitting to experimental data is required.
 
 ## Assets
 
@@ -18,7 +71,7 @@ Compute the CEF level scheme for a J=4 ion in a cubic crystal field with paramet
 
 ### Step 1: Compute CEF levels
 - Role: scored (load-bearing)
-- Action: Build the 9×9 Hamiltonian matrix for a J=4 ion in a cubic crystal field using Stevens operators O_4^0 and O_4^4 with the given parameter B4. Diagonalize to obtain nine eigenvalues. Convert energies to Kelvin (1 meV = 11.604 K). Identify irreducible representations: singlet Γ1, doublet Γ3, triplet Γ4, triplet Γ5 based on degeneracy. Sort by increasing energy. Write array to cef_levels.json.
+- Action: Build the 9×9 Hamiltonian matrix H_CEF using the Stevens operators defined above. Diagonalise to obtain nine eigenvalues. Convert energies to Kelvin (1 meV = 11.604 K). Identify irreducible representations by degeneracy: Γ₁ (1), Γ₄ (3), Γ₃ (2), Γ₅ (3); for B₄ < 0 the energies increase in order Γ₁, Γ₄, Γ₃, Γ₅. Sort entries by increasing energy. Write array to cef_levels.json.
 - Output file: `/app/outputs/cef_levels.json`
 - Format: json
 - Contract: JSON array of objects, each with keys: energy_K (number), degeneracy (integer), irrep (string). Nine entries sorted by energy.
@@ -26,7 +79,7 @@ Compute the CEF level scheme for a J=4 ion in a cubic crystal field with paramet
 
 ### Step 2: Compute C55(T) curve
 - Role: scored (load-bearing)
-- Action: Construct the full Hamiltonian including the magnetoelastic coupling term with η3 = 21 meV and strain e_xy. Diagonalize for small strain and use finite differences to compute first and second derivatives of the nine eigenvalues with respect to e_xy at zero strain. Using the partition function over these nine levels, calculate ΔC55(T) via the formula that includes the strain derivatives (the squared term is zero). Add the Varshni background C_bg(T) = C0 - s/(exp(TE/T) - 1) with C0=73.9 GPa, s=18.3 GPa, TE=783 K. Compute total C55 at temperatures 50, 100, 150, 200, 250, 300 K. Write CSV with columns T_K and C55_GPa.
+- Action: Construct the full Hamiltonian H(e) = H_CEF + η₃ e (J_x J_y + J_y J_x). Choose finite‑difference step h = 1×10⁻⁶. Diagonalise H(0), H(+h), H(−h) and compute the strain derivatives ∂E_i/∂e and ∂²E_i/∂e² at e=0 using the centre‑difference formulas given above. For each requested temperature T, evaluate ΔC₅₅ using the partition‑function expression with the conversion factor 1.602176634×10⁻³¹ GPa·m³/meV. Add the Varshni background C_bg(T) = C₀ − s/(exp(T_E/T)−1). Write CSV with columns T_K and C55_GPa.
 - Output file: `/app/outputs/c55_curve.csv`
 - Format: csv
 - Contract: CSV with header: T_K, C55_GPa. Rows for T = 50,100,150,200,250,300 K (six rows). Values are floating point numbers.

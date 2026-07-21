@@ -1,0 +1,55 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Band gap and orbital character are recomputed from the agent's raw PDOS CSV; no trust in self-reported values.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "dos_and_pdos.csv": "metric_recompute"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dos_and_pdos.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "total_dos",
+            "pdos_f",
+            "pdos_ni_t2g",
+            "pdos_ni_eg"
+          ],
+          "units": {
+            "energy": "eV"
+          },
+          "description": "The file contains data blocks for FM and AFM phases, each preceded by a comment line '# FM phase' or '# AFM phase'."
+        },
+        "description": "Projected density of states and band gap. The checker recomputes the fundamental band gap (energy range where total_dos is zero) and verifies that at the valence band maximum, pdos_f + pdos_ni_t2g dominates, and at the conduction band minimum, pdos_f + pdos_ni_eg dominates, confirming the reported orbital character."
+      }
+    ],
+    "notes": "The band gap and orbital character are recomputed by the hidden checker from the raw PDOS data. No gold values or tolerances are disclosed."
+  },
+  "steps": [
+    {
+      "id": "step_03_dos_and_pdos",
+      "output_file": "dos_and_pdos.csv",
+      "kind": "numeric",
+      "weight": 1.0,
+      "target": {
+        "gap_eV": 20.0,
+        "gap_tolerance": 5.0
+      }
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold for band gap and orbital character compliance",
+      "source_provenance": "Paper states 'The band gap is about 20 eV' (Sec. III C, DOS discussion) and assigns the orbital character: highest valence band mainly F with Ni t2g, lowest conduction band mainly F with Ni eg.",
+      "generation_method": "Direct extraction from the paper's explicit statements; the reference synthetic DOS reproduces those values (gap of 20 eV, dominant contributions at band edges).",
+      "why_not_fabricated": "Values are the paper's own reported quantities."
+    }
+  ]
+}

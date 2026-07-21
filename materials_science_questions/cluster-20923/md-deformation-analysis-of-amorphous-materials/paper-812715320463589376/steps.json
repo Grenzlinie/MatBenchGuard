@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01",
+    "title": "Build amorphous AlN unit via melt-quench",
+    "role": "process",
+    "action": "Create a wurtzite AlN crystal unit cell (approx. 49.76 x 48.47 x 49.80 Å³), melt at 3500 K for 500 ps under NPT at zero pressure, then quench to 10 K at a cooling rate of 2e14 K/s. This produces a homogeneous amorphous AlN configuration.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Melt-quench preparation of amorphous AlN source structure.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Construct and relax ng-AlN sample (1 nm grain size)",
+    "role": "process",
+    "action": "Using the amorphous AlN unit from step_01 as a source, build a nanoglass sample with average grain size 1 nm by Voronoi tessellation with 436 randomly distributed seeds. Box dimensions: 262 Å (x) × 51 Å (y) × 523 Å (z). Delete overlapping atoms at grain interfaces. Minimise energy via conjugate gradient, then relax at 10 K under NPT for 200 ps.",
+    "output_file": "",
+    "evidence": "ng_aln_relaxed.data",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Construction and relaxation of the 1 nm nanoglass AlN sample. The relaxed configuration serves as input for subsequent property calculations and tensile test.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Compute elastic moduli of relaxed ng-AlN",
+    "role": "scored",
+    "action": "From the relaxed ng-AlN configuration, compute the elastic constants C11 and C12 (e.g., via strain fluctuations or small deformation). Derive bulk modulus B = (C11+2C12)/3 and Young's modulus Y = (C11+2C12)(C11-C12)/(C11+C12).",
+    "output_file": "elastic_constants.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Elastic moduli of ng-AlN (1 nm grain) at 10 K.",
+    "output_schema": "JSON object with keys: B (number, GPa), Y (number, GPa), C11 (number, GPa), C12 (number, GPa)."
+  },
+  {
+    "id": "step_04",
+    "title": "Compute coordination number fractions",
+    "role": "scored",
+    "action": "Analyse the relaxed ng-AlN configuration to obtain the distribution of coordination numbers (Al and N sites). Compute the fractions of threefold-, fourfold-, and fivefold-coordinated atoms.",
+    "output_file": "coordination_fractions.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Short-range order fractions of ng-AlN (1 nm grain).",
+    "output_schema": "JSON object with keys: threefold (number, fraction), fourfold (number, fraction), fivefold (number, fraction). The three fractions should sum to approximately 1."
+  },
+  {
+    "id": "step_05",
+    "title": "Compute RDF second-peak intensity and position",
+    "role": "scored",
+    "action": "Calculate the radial distribution function g(r) of the relaxed ng-AlN configuration. Locate the second peak (related to Al-Al and N-N correlations) and record its intensity (height) and position (r in Å).",
+    "output_file": "rdf_second_peak.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Medium-range order descriptor from RDF second peak.",
+    "output_schema": "JSON object with keys: intensity (number, dimensionless g(r) value), position (number, r in Å)."
+  },
+  {
+    "id": "step_06",
+    "title": "Run uniaxial tension MD simulation and record stress-strain curve",
+    "role": "scored",
+    "action": "Perform uniaxial tension along the z-direction on the relaxed ng-AlN configuration using NVE ensemble with a Langevin thermostat at 10 K. Use a constant strain rate of 1e8 s⁻¹, timestep 1 fs, with periodic boundaries in y and z and free surface in x. Run for 3000 ps. Record the engineering stress (virial) and strain as a time series.",
+    "output_file": "stress_strain.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Stress-strain curve for ng-AlN (1 nm grain) under uniaxial tension.",
+    "output_schema": "CSV with header: strain, stress (GPa). Rows cover the full deformation up to at least strain 0.30."
+  },
+  {
+    "id": "step_07",
+    "title": "Compute STZ fraction at selected strains from tension trajectory",
+    "role": "scored",
+    "action": "From the atomic trajectory of the tension simulation, compute the atomic von Mises shear strain for each atom. For the strains ε = 0.14, 0.18, 0.30, count the fraction of atoms with Mises strain greater than 0.2 (identified as shear transformation zones).",
+    "output_file": "stz_fraction.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "STZ activity at key deformation stages for ng-AlN (1 nm grain). Load-bearing: the STZ fractions depend on the full tension simulation and cannot be guessed without genuine execution.",
+    "output_schema": "CSV with header: strain, fraction (dimensionless). Rows: strain=0.14, 0.18, 0.30 with their corresponding STZ fractions."
+  }
+]

@@ -1,0 +1,103 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The main claim about energy equipartition requires verifying the shapes of kinetic and potential energy curves; a single recomputed metric cannot capture the trend. The volume‑energy scaling slope is checked against a theoretical reference via linear fit.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Theoretical slope for maximum disordered volume vs cascade energy (step_03)",
+      "source_provenance": "Derived from Eq. 3 of the source paper using UO₂ density from J.K. Fink, J. Nucl. Mater. 279 (2000) 1–18 at 700 K (ρ = 10.83 g/cm³ → number density of U atoms ≈ 2.74×10²⁸ m⁻³), melting temperature Tₘ = 3120 K, equilibrium temperature T_eq = 700 K, and Boltzmann constant k_B.",
+      "generation_method": "Slope = sqrt(3/(2π e³)) × 0.5 × 1.602×10⁻¹⁶ J/keV / [n_U × 1.5 k_B (Tₘ − T_eq)] = 9.0 nm³/keV.",
+      "why_not_fabricated": "The slope is computed from publicly reported material properties and the analytical formula in the paper; it is the expected value if the MD reproduction is correct. The agent must actually run the MD simulations to obtain a Vmax vs energy curve that yields a slope within the broad tolerance."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_cascade_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_ps",
+            "kinetic_norm",
+            "potential_norm"
+          ],
+          "units": {
+            "time_ps": "ps",
+            "kinetic_norm": "dimensionless (E/E0)",
+            "potential_norm": "dimensionless (ΔE/E0)"
+          }
+        },
+        "description": "Energy equipartition curves for 20 keV cascades at 700 K: kinetic_norm should drop from ~1.0 to ~0.5 and potential_norm should rise correspondingly within approximately 0.35 ps."
+      },
+      {
+        "file": "step_02_thermal_spike_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_ps",
+            "kinetic_norm",
+            "potential_norm"
+          ],
+          "units": {
+            "time_ps": "ps",
+            "kinetic_norm": "dimensionless (E/E0)",
+            "potential_norm": "dimensionless (ΔE/E0)"
+          }
+        },
+        "description": "Energy curves for a 20 keV thermal spike at 700 K: kinetic_norm should stay near 1.0 and potential_norm should show little variation, indicating no equipartition."
+      },
+      {
+        "file": "step_03_max_volume_vs_energy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_keV",
+            "max_volume_nm3"
+          ],
+          "units": {
+            "energy_keV": "keV",
+            "max_volume_nm3": "nm³"
+          }
+        },
+        "description": "Maximum disordered volume as a function of cascade energy. The checker will perform a linear fit and compare the slope to the theoretical value derived from Eq. 3 (using UO₂ density at 700 K, melting temperature, and E₀/2)."
+      }
+    ],
+    "notes": "The structural checks on step_01 and step_02 verify the direction and magnitude of the energy transfer; the reference_match on step_03 tests agreement with the analytical model slope within a tolerance that absorbs tool‑chain variation."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_cascade_energies.csv",
+      "kind": "structural_audit",
+      "weight": 0.35,
+      "description": "Energy equipartition in 20 keV cascade: check kinetic_norm drops to ~0.5 and potential_norm rises within ~0.35 ps."
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_thermal_spike_energies.csv",
+      "kind": "structural_audit",
+      "weight": 0.35,
+      "description": "No equipartition in thermal spike: kinetic_norm stays near 1.0, potential_norm low."
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_max_volume_vs_energy.csv",
+      "kind": "reference_match",
+      "weight": 0.3,
+      "target": 9.0,
+      "tolerance": 0.5,
+      "tolerance_mode": "relative",
+      "description": "Max disordered volume vs cascade energy slope compared to theoretical value 9.0 nm³/keV from paper's Eq. 3."
+    }
+  ]
+}

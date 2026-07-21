@@ -1,0 +1,57 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "T1 recompute infeasible because the agent submits only derived quantities, not raw coordinates; comparison to paper-derived gold with tolerance is robust and monotonic.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "analysis_results.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for the expected structural flags (1, True, True, 'staggered') and torsion angle reference (60° ±5°).",
+      "source_provenance": "Derived from the published crystallographic analysis of (NH4)4P2S6·2H2O: the anion is reported as isolated, ethane-like, with staggered conformation (torsion angles ~60°).",
+      "generation_method": "Fixed constants based on reported crystal structure; verified that the reference solve.sh writes exactly these values.",
+      "why_not_fabricated": "Based on the actual paper's structural determination; torsion angle tolerance reflects expected numerical spread from different implementations."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "analysis_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "p2_s6_units": "integer",
+            "isolated": "boolean",
+            "ethane_like": "boolean",
+            "torsion_angles": "array of float (degrees)",
+            "conformation": "string"
+          }
+        },
+        "description": "Contains the number of P2S6^4- units, whether they are isolated and ethane-like, the computed torsion angles in degrees, and the conformation classification ('staggered' or 'eclipsed'). The checker will verify the torsion angles meet the expected staggered threshold and the structural flags match the expected values."
+      }
+    ],
+    "notes": "The atomic coordinates and cell parameters are provided in the instruction. The main scored quantity is the torsion angles; the other fields (count, flags, label) are exact deterministic outcomes from the correct analysis."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "analysis_results.json",
+      "weight": 1.0,
+      "kind": "rubric",
+      "description": "Validate all fields of the structural analysis output against paper-derived gold.",
+      "gold": {
+        "p2_s6_units": 1,
+        "isolated": true,
+        "ethane_like": true,
+        "conformation": "staggered",
+        "torsion_angle_ref": 60.0,
+        "torsion_tolerance": 5.0,
+        "min_torsion_angles": 1
+      }
+    }
+  ]
+}

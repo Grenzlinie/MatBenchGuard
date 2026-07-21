@@ -1,0 +1,56 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes expected values from the analytical model and compares agent CSV row-wise with relative tolerance 1e-6.",
+  "pass_threshold": 0.9,
+  "target_policies": {
+    "staggered_thermal_results.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference normalized values computed from paper's formulas for four aspect ratios.",
+      "source_provenance": "Paper analytical model (Eqs. 13-33) with given material and geometry parameters.",
+      "generation_method": "Recomputed on-the-fly in checker prepare block using the same formulas; no static table needed.",
+      "why_not_fabricated": "These values are deterministic from the paper's closed-form model; the checker re-evaluates them at scoring time, ensuring consistency with the reference solution."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "staggered_thermal_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "aspect_ratio",
+            "normalized_alpha_x",
+            "normalized_alpha_y",
+            "normalized_sigma_x_H",
+            "normalized_sigma_y_H"
+          ],
+          "units": {
+            "aspect_ratio": "dimensionless",
+            "normalized_alpha_x": "dimensionless",
+            "normalized_alpha_y": "dimensionless",
+            "normalized_sigma_x_H": "dimensionless",
+            "normalized_sigma_y_H": "dimensionless"
+          }
+        },
+        "description": "Thermoelastic properties of staggered composites at four aspect ratios, normalized as specified."
+      }
+    ],
+    "notes": "The hidden checker independently implements the same analytical model to compute reference values and compares row-wise with a relative tolerance. No FEM simulations or parameter studies beyond these four aspect ratios are required."
+  },
+  "steps": [
+    {
+      "id": "check_staggered_csv",
+      "output_file": "staggered_thermal_results.csv",
+      "kind": "row_wise_comparison",
+      "weight": 1.0,
+      "tolerance": 1e-06,
+      "tolerance_type": "relative"
+    }
+  ]
+}

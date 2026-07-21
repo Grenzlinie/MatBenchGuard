@@ -1,0 +1,240 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute CV5 statistics (mean, oscillation amplitude) from the raw CSV (T1); compare other reported aggregate values against paper gold with tolerances (T0 fallback for summaries).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "eta1_3b1_CV5_timeseries.csv": "metric_recompute",
+    "eta1_3b1_md_summary.json": "reference_match",
+    "eta3_3b1_md_summary.json": "reference_match",
+    "free_energy_barriers.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for all scored artifacts.",
+      "source_provenance": "The paper's text and figures (Unbiased DFT-MD results for η1-3b1, MD3 conversion, metadynamics free energy barriers). Specifically: average CVs from paper section 'DFT-MD simulation starting from η1-3b1 (MD2)' and Table S1; conversion time 30.6 ps from MD3 description; free energy barriers 8.1, ~16, 9.1 kcal/mol from metadynamics sections / Fig. 10.",
+      "generation_method": "Extracted numeric values from the published paper and matched to the reference solve.sh outputs.",
+      "why_not_fabricated": "Gold values are the paper's reported numbers for the same quantities, units and conditions; they are the authentic reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "eta1_3b1_CV5_timeseries.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_ps",
+            "CV5_angstrom"
+          ],
+          "units": {
+            "time_ps": "ps",
+            "CV5_angstrom": "angstrom"
+          }
+        },
+        "description": "Time series of CV5 = d(Pd-C22)-d(Pd-C21) over the 100 ps unbiased DFT-MD of eta1-3b1. Checker will recompute average and oscillation amplitude and compare against paper reference."
+      },
+      {
+        "file": "eta1_3b1_md_summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "average_CV1",
+            "average_CV2",
+            "average_CV3",
+            "average_CV4",
+            "average_CV5",
+            "average_CV6",
+            "full_cr_rotation_observed"
+          ],
+          "properties": {
+            "average_CV1": {
+              "type": "float",
+              "unit": "angstrom"
+            },
+            "average_CV2": {
+              "type": "float",
+              "unit": "none"
+            },
+            "average_CV3": {
+              "type": "float",
+              "unit": "angstrom"
+            },
+            "average_CV4": {
+              "type": "float",
+              "unit": "degree"
+            },
+            "average_CV5": {
+              "type": "float",
+              "unit": "angstrom"
+            },
+            "average_CV6": {
+              "type": "float",
+              "unit": "degree"
+            },
+            "full_cr_rotation_observed": {
+              "type": "boolean"
+            }
+          }
+        },
+        "description": "Summary of averaged collective variables and whether full Cr(CO)3 rotation occurred during the eta1-3b1 MD simulation."
+      },
+      {
+        "file": "eta3_3b1_md_summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "conversion_time_ps",
+            "average_CV1_before",
+            "average_CV1_after"
+          ],
+          "properties": {
+            "conversion_time_ps": {
+              "type": "float",
+              "unit": "ps"
+            },
+            "average_CV1_before": {
+              "type": "float",
+              "unit": "angstrom"
+            },
+            "average_CV1_after": {
+              "type": "float",
+              "unit": "angstrom"
+            }
+          }
+        },
+        "description": "Summary of the eta3->eta1 conversion observed in the MD simulation of syn eta3-3b1."
+      },
+      {
+        "file": "free_energy_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "indenyl_slippage_deltaG_kcal_mol",
+            "cr_co3_rotation_deltaG_kcal_mol",
+            "allyl_rotation_deltaG_kcal_mol"
+          ],
+          "properties": {
+            "indenyl_slippage_deltaG_kcal_mol": {
+              "type": "float",
+              "unit": "kcal/mol"
+            },
+            "cr_co3_rotation_deltaG_kcal_mol": {
+              "type": "float",
+              "unit": "kcal/mol"
+            },
+            "allyl_rotation_deltaG_kcal_mol": {
+              "type": "float",
+              "unit": "kcal/mol"
+            }
+          }
+        },
+        "description": "Free energy barriers extracted from the metadynamics simulations."
+      }
+    ],
+    "notes": "All output files must be placed under /app/outputs. The hidden checker compares the agent's reported numbers to paper reference values using tolerances appropriate for the method (e.g., ±2 kcal/mol for free energy barriers)."
+  },
+  "steps": [
+    {
+      "id": "cv5_timeseries",
+      "output_file": "eta1_3b1_CV5_timeseries.csv",
+      "kind": "recompute_metric",
+      "weight": 0.25,
+      "targets": {
+        "mean": -0.363,
+        "tolerance_mean": 0.05,
+        "min_amplitude": 1.6,
+        "weight_mean": 0.6,
+        "weight_amplitude": 0.4
+      }
+    },
+    {
+      "id": "md2_summary",
+      "output_file": "eta1_3b1_md_summary.json",
+      "kind": "numeric",
+      "weight": 0.15,
+      "targets": {
+        "average_CV1": {
+          "value": -1.289,
+          "tolerance": 0.05
+        },
+        "average_CV2": {
+          "value": 4.301,
+          "tolerance": 0.1
+        },
+        "average_CV3": {
+          "value": 2.76,
+          "tolerance": 0.05
+        },
+        "average_CV4": {
+          "value": -63.8,
+          "tolerance": 2.0
+        },
+        "average_CV5": {
+          "value": -0.363,
+          "tolerance": 0.05
+        },
+        "average_CV6": {
+          "value": 76.2,
+          "tolerance": 2.0
+        },
+        "full_cr_rotation_observed": {
+          "value": false,
+          "exact": true
+        }
+      }
+    },
+    {
+      "id": "md3_summary",
+      "output_file": "eta3_3b1_md_summary.json",
+      "kind": "numeric",
+      "weight": 0.1,
+      "targets": {
+        "conversion_time_ps": {
+          "value": 30.6,
+          "tolerance": 2.0
+        },
+        "average_CV1_before": {
+          "value": 0.0,
+          "tolerance": 0.05
+        },
+        "average_CV1_after": {
+          "value": -1.289,
+          "tolerance": 0.05
+        }
+      }
+    },
+    {
+      "id": "free_energies",
+      "output_file": "free_energy_barriers.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "targets": {
+        "indenyl_slippage_deltaG_kcal_mol": {
+          "value": 8.1,
+          "tolerance": 2.0
+        },
+        "cr_co3_rotation_deltaG_kcal_mol": {
+          "value": 16.0,
+          "tolerance": 2.0
+        },
+        "allyl_rotation_deltaG_kcal_mol": {
+          "value": 9.1,
+          "tolerance": 2.0
+        }
+      }
+    }
+  ]
+}

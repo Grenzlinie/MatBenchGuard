@@ -1,0 +1,220 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Full recompute of the Hartree-Fock self-consistent loop and topological invariant extraction is computationally prohibitive in the lightweight verifier sandbox. The agent reports phase labels and invariants directly; the checker compares these against hidden gold reference points extracted from the paper's Fig. 6, with tolerance on U/t alignment. This is a legitimate result-level comparison.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_tkt_phase_diagram.csv": "reference_match",
+    "step_02_bilayer_phase_diagram.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold phase diagram reference for TKT trilayer (phase and Chern number at specific U/t values)",
+      "source_provenance": "Extracted from Fig. 6 of paper 867751518625857563; the golden points represent the expected Chern insulator window (U/t 2.5-4.0, Chern=1) and the overall phase sequence (M→I→CI→MI) as described in the paper.",
+      "generation_method": "Derived from the paper's reported phase boundaries and the reference solve.sh output, which encodes the same boundaries.",
+      "why_not_fabricated": "These points correspond exactly to the phase boundaries and topological invariants reported in the paper's Fig. 6 for the Y2Ir2O7 TKT trilayer. The Chern insulator region with Chern number ±1 is the main published result."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold phase diagram reference for bilayer (phase and Z2 invariant at specific U/t values)",
+      "source_provenance": "Extracted from Fig. 6 of paper 867751518625857563; the golden points reflect the Z2 topological insulator window (U/t 0.5-1.5, Z2=1) and the sequence M→TI→MI.",
+      "generation_method": "Derived from the paper's reported phase boundaries and the reference solve.sh output.",
+      "why_not_fabricated": "These points represent the Z2 TI phase region with Z2=1 that the paper reports for the Y2Ir2O7 bilayer, as visible in Fig. 6."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_tkt_phase_diagram.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "U_t",
+            "phase",
+            "Chern_number"
+          ],
+          "columns_descriptions": {
+            "U_t": "ratio U/t (float)",
+            "phase": "phase label string (M: metallic, I: trivial insulator, TI: topological insulator, MC: magnetic conductor, MI: magnetic insulator, CI: Chern insulator)",
+            "Chern_number": "Chern number (integer, may be negative)"
+          }
+        },
+        "description": "Hartree-Fock phase diagram for the TKT trilayer as a function of U/t, with phase labels and Chern numbers."
+      },
+      {
+        "file": "step_02_bilayer_phase_diagram.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "U_t",
+            "phase",
+            "Z2_invariant"
+          ],
+          "columns_descriptions": {
+            "U_t": "ratio U/t (float)",
+            "phase": "phase label string (M, I, TI, etc.)",
+            "Z2_invariant": "Z2 topological invariant (0 or 1)"
+          }
+        },
+        "description": "Hartree-Fock phase diagram for the bilayer as a function of U/t, with phase labels and Z2 invariant."
+      }
+    ],
+    "notes": "The checker compares the agent's reported phase sequence and topological invariants per U/t to a hidden gold reference derived from the paper's Fig. 6, with tolerance on phase boundaries (±0.5 U/t)."
+  },
+  "steps": [
+    {
+      "id": "score_tkt",
+      "output_file": "step_01_tkt_phase_diagram.csv",
+      "kind": "phase_diagram",
+      "weight": 0.6,
+      "tolerance_ut": 0.3,
+      "gold_points": [
+        {
+          "U_t": 0.0,
+          "phase": "M",
+          "Chern_number": 0
+        },
+        {
+          "U_t": 0.5,
+          "phase": "M",
+          "Chern_number": 0
+        },
+        {
+          "U_t": 1.0,
+          "phase": "I",
+          "Chern_number": 0
+        },
+        {
+          "U_t": 1.5,
+          "phase": "I",
+          "Chern_number": 0
+        },
+        {
+          "U_t": 2.0,
+          "phase": "I",
+          "Chern_number": 0
+        },
+        {
+          "U_t": 2.5,
+          "phase": "CI",
+          "Chern_number": 1
+        },
+        {
+          "U_t": 3.0,
+          "phase": "CI",
+          "Chern_number": 1
+        },
+        {
+          "U_t": 3.5,
+          "phase": "CI",
+          "Chern_number": 1
+        },
+        {
+          "U_t": 4.0,
+          "phase": "CI",
+          "Chern_number": 1
+        },
+        {
+          "U_t": 4.5,
+          "phase": "MI",
+          "Chern_number": 0
+        },
+        {
+          "U_t": 5.0,
+          "phase": "MI",
+          "Chern_number": 0
+        },
+        {
+          "U_t": 5.5,
+          "phase": "MI",
+          "Chern_number": 0
+        },
+        {
+          "U_t": 6.0,
+          "phase": "MI",
+          "Chern_number": 0
+        }
+      ]
+    },
+    {
+      "id": "score_bilayer",
+      "output_file": "step_02_bilayer_phase_diagram.csv",
+      "kind": "phase_diagram",
+      "weight": 0.4,
+      "tolerance_ut": 0.3,
+      "gold_points": [
+        {
+          "U_t": 0.0,
+          "phase": "M",
+          "Z2_invariant": 0
+        },
+        {
+          "U_t": 0.5,
+          "phase": "TI",
+          "Z2_invariant": 1
+        },
+        {
+          "U_t": 1.0,
+          "phase": "TI",
+          "Z2_invariant": 1
+        },
+        {
+          "U_t": 1.5,
+          "phase": "TI",
+          "Z2_invariant": 1
+        },
+        {
+          "U_t": 2.0,
+          "phase": "MI",
+          "Z2_invariant": 0
+        },
+        {
+          "U_t": 2.5,
+          "phase": "MI",
+          "Z2_invariant": 0
+        },
+        {
+          "U_t": 3.0,
+          "phase": "MI",
+          "Z2_invariant": 0
+        },
+        {
+          "U_t": 3.5,
+          "phase": "MI",
+          "Z2_invariant": 0
+        },
+        {
+          "U_t": 4.0,
+          "phase": "MI",
+          "Z2_invariant": 0
+        },
+        {
+          "U_t": 4.5,
+          "phase": "MI",
+          "Z2_invariant": 0
+        },
+        {
+          "U_t": 5.0,
+          "phase": "MI",
+          "Z2_invariant": 0
+        },
+        {
+          "U_t": 5.5,
+          "phase": "MI",
+          "Z2_invariant": 0
+        },
+        {
+          "U_t": 6.0,
+          "phase": "MI",
+          "Z2_invariant": 0
+        }
+      ]
+    }
+  ]
+}

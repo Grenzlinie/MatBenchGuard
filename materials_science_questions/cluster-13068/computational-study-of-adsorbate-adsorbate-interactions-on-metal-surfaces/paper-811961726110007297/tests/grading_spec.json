@@ -1,0 +1,103 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute from raw artifacts is infeasible for MD in the checker sandbox; analytical restoring force is compared to paper's reported 9 meV/Å (T0) with tolerance, and MD friction curves are scored by structural properties (monotonic decrease, pressure range, near-vanishing at high pressure).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported equilibrium restoring force and critical distance for Xe/Cu(111)",
+      "source_provenance": "Paper Fig. 3 and text: restoring force at z_eq approx 9 meV/Å; critical distance z_c = 2.78 Å",
+      "generation_method": "Extracted from paper statement",
+      "why_not_fabricated": "Directly quoted from paper's reported values"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "analytical_restoring_force.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "z_eq_Ang": "float (Å)",
+            "restoring_force_at_equilibrium_meV_per_Ang": "float (meV/Å)",
+            "critical_z_Ang": "float (Å)",
+            "critical_pressure_GPa": "float (GPa)",
+            "z_vs_F": "array of objects"
+          },
+          "items": {
+            "z_Ang": "float (Å)",
+            "pressure_GPa": "float (GPa)",
+            "restoring_force_meV_per_Ang": "float (meV/Å)"
+          }
+        },
+        "description": "Contains the equilibrium adatom–surface distance, the analytical restoring force at equilibrium (proxy for static friction), the critical distance and pressure where anticorrugation vanishes, and a list of force vs. distance/pressure data. The checker compares the equilibrium force and critical values to hidden paper‑derived references, and audits the trend for monotonic decrease."
+      },
+      {
+        "file": "static_friction_vs_pressure.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_GPa",
+            "static_friction_meV_per_Ang"
+          ],
+          "units": {
+            "pressure_GPa": "GPa",
+            "static_friction_meV_per_Ang": "meV/Å"
+          }
+        },
+        "description": "Static friction force measured from MD depinning, as a function of applied normal pressure. The checker verifies monotonic decreasing trend and near‑vanishing at high pressure (≤ 20% of the maximum value in the submitted series)."
+      },
+      {
+        "file": "kinetic_friction_vs_pressure.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_GPa",
+            "kinetic_friction_meV_per_Ang"
+          ],
+          "units": {
+            "pressure_GPa": "GPa",
+            "kinetic_friction_meV_per_Ang": "meV/Å"
+          }
+        },
+        "description": "Kinetic friction force from MD sliding simulations, as a function of applied normal pressure. Checked for monotonic decreasing trend and pressure‑induced reduction analogous to static friction."
+      }
+    ],
+    "notes": "The MD simulations are computationally intensive and may benefit from parallel/GPU resources. The agent should decide the numerical convergence parameters (timestep, force ramping rate, thermostat settings) within standard MD practice. The checker only reads the declared output fields; no hidden tolerances are disclosed."
+  },
+  "steps": [
+    {
+      "id": "analytical_restoring_force",
+      "output_file": "analytical_restoring_force.json",
+      "weight": 0.3,
+      "kind": "analytical_friction_scorer",
+      "equilibrium_force_target_meV_per_Ang": 9.0,
+      "equilibrium_force_tolerance_abs": 3.0,
+      "critical_z_target_Ang": 2.78,
+      "critical_z_tolerance_abs": 0.1
+    },
+    {
+      "id": "static_friction",
+      "output_file": "static_friction_vs_pressure.csv",
+      "weight": 0.4,
+      "kind": "structural_friction_scorer",
+      "friction_column": "static_friction_meV_per_Ang"
+    },
+    {
+      "id": "kinetic_friction",
+      "output_file": "kinetic_friction_vs_pressure.csv",
+      "weight": 0.3,
+      "kind": "structural_friction_scorer",
+      "friction_column": "kinetic_friction_meV_per_Ang"
+    }
+  ]
+}

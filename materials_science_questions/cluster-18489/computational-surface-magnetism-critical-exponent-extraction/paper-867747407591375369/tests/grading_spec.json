@@ -1,0 +1,73 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The paper reports qualitative trends (decrease, faster decay, size ordering) rather than exact numeric values; Monte Carlo results vary with implementation, so structural checks of the required trends are used.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_radial_profile.csv": "structural_audit",
+    "step_02_thermal_magnetization.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_radial_profile.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "reduced_temperature",
+            "radial_bin",
+            "local_magnetization"
+          ],
+          "units": {
+            "radial_bin": "normalised distance (unitless)",
+            "local_magnetization": "dimensionless"
+          }
+        },
+        "description": "Radial profile of local magnetisation for the 3140-spin nanoparticle. The checker will compute derived quantities (centre-to-surface decrease, temperature-dependent drop) from the submitted data and compare against hidden reference values."
+      },
+      {
+        "file": "step_02_thermal_magnetization.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "particle_size",
+            "reduced_temperature",
+            "core_magnetization",
+            "surface_magnetization",
+            "mean_magnetization"
+          ],
+          "units": {
+            "reduced_temperature": "unitless",
+            "core_magnetization": "per-site dimensionless",
+            "surface_magnetization": "per-site dimensionless",
+            "mean_magnetization": "per-site dimensionless"
+          }
+        },
+        "description": "Thermal magnetisation curves for two particle sizes. The checker will evaluate the relative ordering (surface decays faster than core, surface critical region at lower τ_core) and the size dependence from the submitted data, comparing derived ratios and inflection points to hidden reference values."
+      }
+    ],
+    "notes": "Both scored artifacts are produced from independent Monte Carlo runs. The agent must implement the full Hamiltonian and simulation protocol. The hidden checker performs structural audits on the submitted tables (computing summary metrics from the data) and compares them to paper-derived gold thresholds; the target policies are structural_audit to reflect this honest structural scoring."
+  },
+  "steps": [
+    {
+      "id": "step_01_radial_profile",
+      "output_file": "step_01_radial_profile.csv",
+      "weight": 0.5,
+      "kind": "structural",
+      "description": "Structural check: centre>surface, monotonic decrease, temperature ordering, drop near surface increases with temperature."
+    },
+    {
+      "id": "step_02_thermal_magnetization",
+      "output_file": "step_02_thermal_magnetization.csv",
+      "weight": 0.5,
+      "kind": "structural",
+      "description": "Structural check: core>=surface, surface decays early, core size dependence (909<3766 at tau≈0.7), surface drop by 0.5."
+    }
+  ]
+}

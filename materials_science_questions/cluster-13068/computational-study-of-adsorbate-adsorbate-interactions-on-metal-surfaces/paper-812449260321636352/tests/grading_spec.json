@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Both adiabatic quantities and average current can be recomputed analytically from the public formulas and parameters embedded in the checker; no third-party gold or hidden labels are needed.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "adiabatic_quantities.csv": "reference_match",
+    "current_results.csv": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adiabatic_quantities.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "q",
+            "occupation",
+            "rate"
+          ],
+          "units": {
+            "q": "dimensionless (0 to 1)",
+            "occupation": "dimensionless",
+            "rate": "arbitrary units (rate formula multiplied by 0.05)"
+          }
+        },
+        "description": "Adiabatic occupation probability ⟨n_a(q)⟩ and electron transfer rate k(q) for the parameter set Δ1=Δ2=0.01 eV, λ=0.6 eV, V_b=0.2 V, η=0, computed on a dense q grid."
+      },
+      {
+        "file": "current_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "scenario",
+            "independent_variable",
+            "independent_value",
+            "current"
+          ],
+          "units": {
+            "independent_value": "V",
+            "current": "dimensionless (normalised to 1)"
+          }
+        },
+        "description": "Time-averaged (or Boltzmann-averaged) electron tunneling current, normalised, for current vs. bias and current vs. overpotential curves across multiple system parameters."
+      }
+    ],
+    "notes": "The checker recomputes reference values from the public formulas and parameters; it does not rely on digitised gold curves. For adiabatic_quantities.csv it compares pointwise against analytical recomputation with a relative tolerance and verifies monotonicity of occupation. For current_results.csv it computes expected Boltzmann averages from the same formulas and compares submitted currents with an absolute tolerance, also checking qualitative trends (increase with bias, peak near η=0)."
+  },
+  "steps": [
+    {
+      "id": "step1_adiabatic",
+      "output_file": "adiabatic_quantities.csv",
+      "weight": 0.3,
+      "kind": "recompute",
+      "description": "Compare computed occupation and rate pointwise against analytical recomputation, with 5% relative tolerance, and verify monotonicity of occupation.",
+      "target_policy": "reference_match",
+      "tolerance_relative": 0.05,
+      "check_monotonic_occupation": true
+    },
+    {
+      "id": "step2_current",
+      "output_file": "current_results.csv",
+      "weight": 0.7,
+      "kind": "recompute",
+      "description": "Compare normalised average current against analytical recomputation (Boltzmann average) for each scenario, with 0.2 absolute tolerance, and verify qualitative trends (current increases with bias, peaks near η=0).",
+      "target_policy": "reference_match",
+      "tolerance_absolute": 0.2,
+      "check_trends": true
+    }
+  ]
+}

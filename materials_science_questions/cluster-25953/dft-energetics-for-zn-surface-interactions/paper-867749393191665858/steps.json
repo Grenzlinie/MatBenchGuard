@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01",
+    "title": "Acquire and prepare MOF-74 crystal structure",
+    "role": "process",
+    "action": "Obtain the experimental atomic coordinates of MOF-74 (Zn) from the public crystallographic database (CCDC deposition 279484) or supplementary material, and convert to a DFT input format.",
+    "output_file": "",
+    "evidence": "structure_prepared.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Ensure the host MOF-74 geometry is available for all subsequent DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Zn-site potential energy surface scan",
+    "role": "process",
+    "action": "Using the prepared structure and vdW-DF, compute the MOF–H2 interaction energy on a grid of H2 positions near the unsaturated Zn atom for 1 H2 per primitive cell (1/6 H2 per Zn). Record the energy map.",
+    "output_file": "",
+    "evidence": "zn_pes_data.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Generates the data needed to locate the primary Zn-site minimum and extract its binding energy and geometry.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Fixed-host relaxation at the O site",
+    "role": "process",
+    "action": "With the same host structure and a loading of 12 D2 per cell, keep the MOF atoms fixed and relax the dihydrogen positions using vdW-DF until forces are converged to ~12 meV/Å. Identify the relaxed positions and the closest sorbate–sorbent distance above the oxygen triangle.",
+    "output_file": "",
+    "evidence": "o_site_relaxation.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Locates the secondary O-site adsorption minimum.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Orientational potential calculations",
+    "role": "process",
+    "action": "At the Zn-site minimum (1 H2/cell) and the O-site minimum (12 H2/cell), compute the MOF–H2 interaction energy as a function of molecular orientation (θ, φ) using vdW-DF. Output the orientation-dependent potential for each site.",
+    "output_file": "",
+    "evidence": "orientational_potentials.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Provides the potential energy surfaces required for the rigid-rotor analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Translational potential curves via small displacements",
+    "role": "process",
+    "action": "For both the Zn and O sites, displace the H2 molecule along the normal coordinate directions (n1, n2, n3) and compute the vdW-DF energy and forces. Generate the 1D potential energy curves for each translational mode.",
+    "output_file": "",
+    "evidence": "translational_potentials.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Supplies the potentials needed for solving the translational Schrödinger equation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "Full‑cell relaxation with 24 H2 (optional, for qualitative agreement)",
+    "role": "process",
+    "action": "Using the experimental host structure, place 24 H2 molecules per primitive cell with symmetry‑adapted initial positions and relax all H2 coordinates with fixed host using vdW-DF. The result provides the hydrogen uptake geometry but is not numerically scored.",
+    "output_file": "",
+    "evidence": "full_cell_positions.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Confirm the third and fourth adsorption sites; only qualitative agreement with experiment is noted.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_07",
+    "title": "Compute derived adsorption properties and write final artifact",
+    "role": "scored",
+    "action": "From the raw DFT data, locate the Zn-site minimum to extract binding energy (meV) and Zn–H2 distance (Å); from the O-site relaxation extract the closest sorbate–sorbent distance (Å); fit the orientational potentials to spherical harmonics, solve the rigid-rotor Schrödinger equation, and report the three para–ortho transition energies for Zn and O sites (meV); solve the 1D translational Schrödinger equation for each normal mode to obtain the three fundamental frequencies for Zn and O sites (meV/ħ); compute rotational and translational zero‑point energies and subtract them from raw binding energies to obtain zero‑point corrected effective binding energies (meV). Write all quantities to `/app/outputs/adsorption_properties.json`.",
+    "output_file": "adsorption_properties.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Consolidates all headline, checkable adsorption properties into a single artifact.",
+    "output_schema": "JSON object with keys: binding_energy_Zn_meV (number), Zn_H2_distance_A (number), O_site_closest_distance_A (number), rotational_transitions_Zn_meV (array of 3 numbers), rotational_transitions_O_meV (array of 3 numbers), translational_frequencies_Zn_meVps (array of 3 numbers), translational_frequencies_O_meVps (array of 3 numbers), effective_binding_energy_Zn_meV (number), effective_binding_energy_O_meV (number)."
+  }
+]

@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes the analytical formulas (Eqs. 33,34,25,42,43) from the agent's output points and compares with relative tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_sigma.csv": "reference_match",
+    "step_02_phase_shift.txt": "reference_match",
+    "step_03_interaction_energy.csv": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_sigma.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Omega",
+            "Lambda",
+            "Delta"
+          ],
+          "units": {
+            "Omega": "dimensionless",
+            "Lambda": "Ry",
+            "Delta": "Ry"
+          }
+        },
+        "description": "Self-energy components at Omega values [0.05, 0.1, 0.2, 0.3, 0.5, 1.0]. The checker recomputes the reference values from the analytical formulas."
+      },
+      {
+        "file": "step_02_phase_shift.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "required": [
+            "value"
+          ],
+          "units": {
+            "value": "radians"
+          }
+        },
+        "description": "Phase shift η(εF) in radians. The checker recomputes the reference value from the analytical formulas."
+      },
+      {
+        "file": "step_03_interaction_energy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "d",
+            "W_ab"
+          ],
+          "units": {
+            "d": "a0",
+            "W_ab": "Ry"
+          }
+        },
+        "description": "Indirect interaction energy for inter-adatom distances d = 2,3,4,5,6,7,8,9,10,12,15,20 a0. The checker recomputes the reference values via numerical integration of the analytical expressions."
+      }
+    ],
+    "notes": "All outputs are compared to reference values recomputed by the checker using the same analytical formulas and parameters (β=0.8, l=0.244 a0, Vaa=-0.019 Ry, εa=0.102 Ry, kF=0.55 a0^-1, εF=0.3 Ry). Tolerances accommodate minor numerical integration differences but require correct implementation."
+  },
+  "steps": [
+    {
+      "id": "step_01_sigma",
+      "output_file": "step_01_sigma.csv",
+      "weight": 0.2,
+      "tolerance": {
+        "rel": 1e-06,
+        "abs_min": 1e-09
+      },
+      "description": "Compare agent Lambda and Delta at each of the 6 Omega values to recomputed values."
+    },
+    {
+      "id": "step_02_phase_shift",
+      "output_file": "step_02_phase_shift.txt",
+      "weight": 0.2,
+      "tolerance": {
+        "rel": 1e-06,
+        "abs_min": 1e-09
+      },
+      "description": "Compare agent phase shift at εF=0.3 Ry to recomputed value."
+    },
+    {
+      "id": "step_03_interaction_energy",
+      "output_file": "step_03_interaction_energy.csv",
+      "weight": 0.6,
+      "tolerance": {
+        "rel": 2e-05,
+        "abs_min": 1e-06
+      },
+      "description": "Compare agent W_ab at each distance to recomputed value via numerical integration of Eq. (42)."
+    }
+  ]
+}

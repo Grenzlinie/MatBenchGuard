@@ -1,0 +1,28 @@
+[
+  {
+    "id": "step_0",
+    "title": "Compute optimal shunt and control parameters",
+    "role": "process",
+    "action": "Compute the optimal shunt inductance L* and resistance R* for the first mode (1,1) using the linearized coupled equations that ignore hysteresis. A, J₂, ω₁₁, I_shape as defined. Then compute Vc_over_F (complex V/N) from the given formula. Save L*, R*, Vc_over_F to `/app/outputs/optimal_params.json`.",
+    "output_file": "",
+    "evidence": "/app/outputs/optimal_params.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Pre-computation of optimal passive shunt components and hybrid active voltage coefficient per unit force. The JSON file consists of a dictionary with keys 'L_star' (float, H), 'R_star' (float, Ohm), 'Vc_over_F_real' (float, V/N), 'Vc_over_F_imag' (float, V/N).",
+    "output_schema": "{\"L_star\": \"number\", \"R_star\": \"number\", \"Vc_over_F_real\": \"number\", \"Vc_over_F_imag\": \"number\"}"
+  },
+  {
+    "id": "step_1",
+    "title": "Simulate vibration response with hysteresis",
+    "role": "scored",
+    "action": "Implement the Ishlinskii hysteresis model (IM, n=5) using the provided elastic coefficients and slide constants. Implement the single-mode coupled electromechanical equations for the simply-supported plate with bonded PZT wafer. Using the optimal L*, R*, Vc* from step_0, compute the steady-state transverse displacement amplitude at the measurement point (x_m=279.4 mm, y_m=133.3 mm) for harmonic point-force excitation at the first natural frequency. Perform the simulation for force amplitudes F = 1 N and F = 5 N, and for three shunt configurations: open circuit (no shunt), optimized LR shunt (passive), and hybrid (LR shunt + active voltage Vc*). Write the results to a CSV file with columns: force_amplitude, shunt_case, displacement_amplitude.",
+    "output_file": "plate_displacement_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "This CSV contains the simulated displacement amplitudes that demonstrate the effect of hysteresis on vibration attenuation. The checker verifies the structural trend that the reduction in amplitude from open circuit to passive shunt is smaller (ratio higher) at the larger force amplitude.",
+    "output_schema": "CSV with columns: force_amplitude (float, N), shunt_case (string: one of 'open', 'passive', 'hybrid'), displacement_amplitude (float, m). There must be six rows (2 forces × 3 cases)."
+  }
+]

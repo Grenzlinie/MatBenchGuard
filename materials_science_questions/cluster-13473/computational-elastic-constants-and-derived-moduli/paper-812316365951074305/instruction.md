@@ -1,137 +1,150 @@
 # Multi-Scale Modeling of Elastic Properties of Nanoparticle/Polymer Composites
 
 ## Problem background
-Nanoparticle-reinforced polyimide composites are candidates for lightweight structural materials. Their bulk elastic stiffness depends on nanoscale features, particularly the molecular structure and density of the polymer region adjacent to the nanoparticle surface. Capturing how interfacial treatments and particle size influence the overall mechanical response, and whether a continuum model with an effective interface can bridge molecular simulations and macroscopic predictions, is a challenging multiscale problem. The work develops a quantitative pipeline that combines molecular modeling and continuum micromechanics to investigate this size- and interface-dependent behaviour of silica nanoparticle/polyimide composites.
+Nanoparticle‑reinforced polyimide composites are candidates for lightweight structural materials. Their bulk elastic stiffness depends on nanoscale features, particularly the molecular structure and density of the polymer region adjacent to the nanoparticle surface. Capturing how interfacial treatments and particle size influence the overall mechanical response, and whether a continuum model with an effective interface can bridge molecular simulations and macroscopic predictions, is a challenging multi‑scale problem. This work implements a quantitative pipeline that combines molecular modeling and continuum micromechanics to investigate this size‑ and interface‑dependent behaviour of silica nanoparticle/polyimide composites.
 
-## Approach
-A multiscale computational procedure is employed. First, atomistic representative volume elements are prepared via a coarse-grained linked-vector model of the BPDA/APB polyimide, Monte Carlo equilibration with a hard-sphere nanoparticle, and reverse mapping to atomistic detail. Constant-pressure NPT molecular dynamics (300 K, 1 atm, 200 ps) using the CVFF force field provides equilibrated configurations for pure silica, pure polyimide, and four composite variants that differ by nanoparticle surface treatment: untreated, hydroxylated, phenoxybenzene, and covalently functionalized. From each equilibrated RVE, elastic stiffness constants C11 and C12 are computed via the static-deformation energy-difference approach; isotropic Young's modulus E and shear modulus G are then derived. Next, two micromechanics models are applied. The classical Mori–Tanaka two-phase model (spherical inclusions, Eshelby tensor) uses the pure phase properties and an effective particle volume fraction of 1.7 % to produce a baseline prediction. An effective-interface three-phase model introduces a spherical interface of fixed thickness (12 Å) between the particle and the matrix; its elastic properties are solved for by requiring the model to reproduce the MD composite moduli, given the geometry (particle inner radius 6 Å, interface outer radius 18 Å, volume fractions 1.7 % particle / 45.2 % interface / 53.1 % matrix) and an assumed interface Poisson's ratio of 0.4. Finally, using the extracted interface properties and the pure phase constants, the composite E and G are predicted for both models across a wide range of effective particle radii (10–10,000 Å) at a fixed particle volume fraction of 5 %. This yields radius-dependent curves that reveal how the interface influence decays with particle size.
+## MD elastic constants (input data)
+The table below lists the Young’s and shear moduli obtained from atomistic molecular dynamics simulations on six material systems. These values serve as the primary input for all subsequent micromechanics models. **You must use these exact numbers exactly as given.**
 
-## Reproduction target
-Produce the following quantitative results through the full computational pipeline described in the Workflow steps:
+| system                     | E (GPa) | G (GPa) |
+|----------------------------|---------|---------|
+| silica                     | 88.7    | 41.0    |
+| polyimide                  | 4.2     | 1.5     |
+| silica_composite           | 3.4     | 1.2     |
+| hydroxylated_composite     | 3.3     | 1.2     |
+| phenoxybenzene_composite   | 2.2     | 0.8     |
+| functionalized_composite   | 4.0     | 1.5     |
 
-- MD-derived Young's modulus (E) and shear modulus (G) for the six material systems: silica, polyimide, silica_composite, hydroxylated_composite, phenoxybenzene_composite, functionalized_composite.
-- Mori–Tanaka two-phase micromechanics predictions (E_MT, G_MT) at the RVE volume fraction (1.7 %) for the four composite types, using the pure phase E and G from MD.
-- Effective interface Young's modulus (E_interface) and shear modulus (G_interface) for each of the four composites, obtained by solving the effective-interface model with the geometry and volume fractions stated above and the MD and Mori–Tanaka results.
-- Radius-dependent composite moduli (E, G) for both the effective-interface and Mori–Tanaka models at a particle volume fraction of 5 %, for at least 10 logarithmically spaced radii between 10 Å and 10,000 Å. Include all four composite types and distinguish the model type with a column.
+The MD simulations were performed on atomistic RVEs with the following protocol (for reference only):
+- **Force field:** CVFF (ffcvff2.cff), as distributed with LAMMPS.
+- **Molecular system:** BPDA/APB polyimide, 7 chains each containing 10 repeat units; silica nanoparticle with an α‑quartz core of radius 6 Å.
+- **Box size:** originally cubic ∼42 Å, refined to 37.6–39.9 Å by constant‑pressure MD.
+- **Equilibration:** 200 ps NPT MD at 300 K and 1 atm, time step 1 fs, Nosé–Hoover thermostat and barostat.
+- **Elastic constants:** calculated via the static‑deformation energy‑difference method; small uniaxial (ε = ±0.003) and pure shear (γ = ±0.003) deformations were applied and the system was energy‑minimised after each deformation; C₁₁ and C₁₂ were extracted from the quadratic energy profiles and isotropic E and G were derived.
 
-All moduli are reported in GPa; radii in Å. The expected outputs are the CSV files listed under "Output files" with the exact column schemas described in each step. The elastic constants must be physically admissible (E > 0, G > 0) and the effective-interface predictions should exhibit monotonic behaviour with radius and approach the Mori–Tanaka predictions as the radius increases.
+## Micromechanics models (complete description)
 
-## Assets
+All calculations assume linear‑elastic isotropic behaviour. Stiffness matrices are expressed in standard Voigt notation (6‑component).
 
-- LAMMPS (open-source MD engine): https://lammps.sandia.gov
-- CVFF force field parameters: ffcvff2.cff (from LAMMPS distribution or Discover force field library)
-- Python with NumPy/SciPy: numpy scipy
+### Mori–Tanaka two‑phase model
+For a matrix with stiffness **C**ₘ, spherical inclusions with stiffness **C**ₚ, and particle volume fraction cₚ, the effective stiffness **C**ₑ is given by
+
+\[
+\begin{aligned}
+\mathbf{C}_{\text{eff}} &= (c_m\mathbf{C}_m + c_p\mathbf{C}_p\mathbf{T}_p)\,(c_m\mathbf{I} + c_p\mathbf{T}_p)^{-1}, \\
+\mathbf{T}_p &= [\mathbf{I} + \mathbf{S}\,\mathbf{C}_m^{-1}(\mathbf{C}_p - \mathbf{C}_m)]^{-1},
+\end{aligned}
+\tag{1}
+\]
+
+where \(c_m = 1 - c_p\) and **S** is the Eshelby tensor for a spherical inclusion in an isotropic matrix with Poisson’s ratio νₘ:
+
+\[
+S_{1111} = \frac{7-5\nu_m}{15(1-\nu_m)},\quad
+S_{1122} = \frac{5\nu_m-1}{15(1-\nu_m)},\quad
+S_{1212} = \frac{4-5\nu_m}{15(1-\nu_m)}.
+\tag{2}
+\]
+
+### Effective‑interface three‑phase model
+The composite consists of three concentric spheres: a particle of radius \(r_p\) (stiffness **C**ₚ), an effective interface of uniform thickness \(t\) (stiffness **C**ᵢ), and the matrix (stiffness **C**ₘ). The total volume is determined by a prescribed particle volume fraction \(v_f^{\text{(given)}}\):
+
+\[
+V_{\text{particle}} = \frac{4}{3}\pi r_p^3,\qquad
+V_{\text{total}} = \frac{V_{\text{particle}}}{v_f^{\text{(given)}}},\qquad
+R = r_p + t.
+\]
+
+The volume fractions are
+
+\[
+v_f^p = v_f^{\text{(given)}},\qquad
+v_f^i = \frac{\frac{4}{3}\pi(R^3 - r_p^3)}{V_{\text{total}}},\qquad
+v_f^m = 1 - v_f^p - v_f^i \ (\ge 0).
+\tag{3}
+\]
+
+The effective stiffness **C**ₑ is obtained through a two‑step homogenisation that combines the particle and the interface into an equivalent inclusion before embedding it in the matrix:
+
+\[
+\begin{aligned}
+\mathbf{C}_{\text{eff}} &= \mathbf{C}_m + \bigl[(v_f^p+v_f^i)(\mathbf{C}_i-\mathbf{C}_m)\mathbf{T}_{pi} + v_f^p(\mathbf{C}_p-\mathbf{C}_i)\mathbf{T}_p\bigr]\,
+\bigl[v_f^m\mathbf{I} + (v_f^p+v_f^i)\mathbf{T}_{pi}\bigr]^{-1}, \\
+\mathbf{T}_{pi} &= \mathbf{I} - \mathbf{S}\Bigl(\frac{v_f^p}{v_f^p+v_f^i}[\mathbf{S}+(\mathbf{C}_p-\mathbf{C}_m)^{-1}\mathbf{C}_m]^{-1} +
+\frac{v_f^i}{v_f^p+v_f^i}[\mathbf{S}+(\mathbf{C}_i-\mathbf{C}_m)^{-1}\mathbf{C}_m]^{-1}\Bigr), \\
+\mathbf{T}_p &= \mathbf{I} - \mathbf{S}\,[\mathbf{S}+(\mathbf{C}_p-\mathbf{C}_m)^{-1}\mathbf{C}_m]^{-1}.
+\end{aligned}
+\tag{4}
+\]
+
+Here **S** is the same Eshelby tensor (Eq. 2), computed with the matrix Poisson’s ratio νₘ. After evaluating **C**ₑ, the effective Young’s modulus \(E\) and shear modulus \(G\) are extracted in the usual way:
+
+\[
+K = \frac{C_{11}+2C_{12}}{3},\qquad
+G = C_{44},\qquad
+E = \frac{9KG}{3K+G}.
+\tag{5}
+\]
+
+### Solving for the interface properties
+Given **C**ₚ, **C**ₘ, and the MD composite stiffness **C**_{MD}, together with the geometry \((r_p, t, v_f^{\text{(given)}})\) and an assumed interface Poisson’s ratio νᵢ = 0.4, the two unknown interface constants \(E_i\) and \(G_i\) are determined by requiring that the effective‑interface model predicts exactly **C**_{MD}. In practice, this is a two‑variable root‑finding problem:
+
+\[
+\min_{E_i,G_i} \bigl\| \mathbf{C}_{\text{eff}}(E_i,G_i) - \mathbf{C}_{MD} \bigr\|,
+\tag{6}
+\]
+
+where the norm is evaluated on the independent stiffness components (e.g. \(C_{11}\) and \(C_{12}\)). The solution must satisfy \(E_i>0,\ G_i>0\). For the RVE geometry used in the paper, \(r_p = 6\) Å, \(t = 12\) Å, and \(v_f^{\text{(given)}} = 0.017\). You must solve this problem numerically for each of the four composite types.
+
+### Radius‑dependent predictions
+To study the size effect, the particle inner radius \(r_p\) is varied while keeping the interface thickness fixed at \(t = 12\) Å and the particle volume fraction fixed at \(v_f^{\text{(given)}} = 0.05\). For each chosen \(r_p\), the interface volume fraction \(v_f^i\) is recomputed according to Eq. 3. The effective‑interface model (Eq. 4) then yields the composite moduli using the interface properties obtained at the RVE scale. The Mori–Tanaka prediction is also evaluated at the same 5 % volume fraction (it is independent of particle radius). These calculations should be performed for a set of at least 10 logarithmically spaced radii between 10 Å and 10 000 Å (for example, generated by `np.logspace(1,4, 15)`).
 
 ## Workflow steps
 
-### Step 1: Atomistic RVE preparation via coarse-grained modeling and MD equilibration
-- Role: process
-- Action: Construct coarse-grained linked-vector model of BPDA/APB polyimide chains; perform Monte Carlo equilibration with a hard-sphere nanoparticle (diameter ∼15 Å) in a cubic simulation box (∼42 Å side); reverse-map to atomistic detail; apply energy minimization; run constant-pressure NPT MD at 300 K and 1 atm for 200 ps using LAMMPS with the CVFF force field to obtain equilibrated atomistic configurations for pure silica, pure polyimide, and the four composite variants (untreated, hydroxylated, phenoxybenzene, functionalized).
-- Evidence: `/app/outputs/md_equilibration.log`
-
-### Step 2: Compute elastic constants from MD
+### Step 1: Output the MD elastic constants
 - Role: scored
-- Action: For each of the six equilibrated systems, apply small static deformations and energy minimizations according to the static-deformation energy-difference approach. Use the resulting energy differences to calculate the isotropic elastic stiffness components C11 and C12, then derive Young's modulus (E) and shear modulus (G). Write the results to a CSV file.
+- Action: Write the elastic constants from the table above to a CSV file.
 - Output file: `/app/outputs/elastic_constants_systems.csv`
 - Format: csv
-- Contract: columns: system (string: 'silica','polyimide','silica_composite','hydroxylated_composite','phenoxybenzene_composite','functionalized_composite'), E (float, GPa), G (float, GPa). One row per system.
-- Scoring: scored by hidden verifier
+- Contract: columns: system, E, G (one row per system, exactly six rows, values in GPa). The six systems are: `silica`, `polyimide`, `silica_composite`, `hydroxylated_composite`, `phenoxybenzene_composite`, `functionalized_composite`. Use the exact numeric values shown in the table.
 
-### Step 3: Mori–Tanaka predictions at RVE volume fraction
+### Step 2: Mori–Tanaka predictions at the RVE volume fraction
 - Role: scored
-- Action: Using the pure silica and polyimide elastic constants from Step 2, apply the Mori–Tanaka two-phase model with an effective particle volume fraction of 1.7% and the Eshelby tensor for spherical inclusions to predict composite Young's and shear moduli for the four composite systems. Save the results to a CSV.
+- Action: Using the pure silica and polyimide elastic constants, apply the Mori–Tanaka two‑phase model (Eq. 1) with \(c_p = 0.017\) and the Eshelby tensor for spherical inclusions (Eq. 2) to compute the composite Young’s and shear moduli. Save the results.
 - Output file: `/app/outputs/mori_tanaka_rve.csv`
 - Format: csv
-- Contract: columns: composite (string: 'silica_composite','hydroxylated_composite','phenoxybenzene_composite','functionalized_composite'), E_MT (float, GPa), G_MT (float, GPa). Four rows.
-- Scoring: scored by hidden verifier
+- Contract: columns: composite, E_MT, G_MT (four rows, `composite` identical to the names: `silica_composite`, `hydroxylated_composite`, `phenoxybenzene_composite`, `functionalized_composite`).
 
-### Step 4: Determine effective interface elastic properties
+### Step 3: Determine effective interface elastic properties
 - Role: scored
-- Action: For each composite, take the MD composite elastic constants (Step 2) together with the pure silica and polyimide constants. Using the effective interface geometry (inner radius 6 Å, outer radius 18 Å, thickness 12 Å, corresponding volume fractions: particle 1.7%, interface 45.2%, matrix 53.1%) and an assumed interface Poisson's ratio of 0.4, solve the effective-interface micromechanics equations to extract the isotropic interface Young's modulus (E_i) and shear modulus (G_i). Write the interface properties to a CSV.
+- Action: For each composite, take the MD composite moduli (from the table in Step 1) and the pure silica and polyimide constants. With \(r_p = 6\) Å, \(t = 12\) Å, \(v_f^{\text{(given)}}=0.017\), and νᵢ = 0.4, solve Eq. 6 to find the isotropic interface Young’s modulus \(E_i\) and shear modulus \(G_i\). Store the results.
 - Output file: `/app/outputs/effective_interface_properties.csv`
 - Format: csv
-- Contract: columns: composite_type (string: 'silica_composite','hydroxylated_composite','phenoxybenzene_composite','functionalized_composite'), E_interface (float, GPa), G_interface (float, GPa). Four rows.
-- Scoring: scored by hidden verifier
+- Contract: columns: composite_type, E_interface, G_interface (four rows, `composite_type` naming as above).
 
-### Step 5: Radius-dependent composite moduli (effective-interface and Mori–Tanaka)
-- Role: scored (load-bearing)
-- Action: For each composite type, compute the composite Young's modulus (E) and shear modulus (G) at a particle volume fraction of 5% for a set of effective particle radii (logarithmically spaced from 10 Å to 10,000 Å, at least 10 points). Use the effective-interface model with interface thickness 12 Å and the interface properties from Step 4; also compute the constant Mori–Tanaka predictions at each radius using the pure phase constants from Step 2. Combine both sets into one file, distinguishing them with a model_type column. Save as CSV.
+### Step 4: Radius‑dependent composite moduli (effective‑interface and Mori–Tanaka)
+- Role: scored (load‑bearing)
+- Action: For each composite type, compute the composite Young’s modulus \(E\) and shear modulus \(G\) at a fixed particle volume fraction of 5 % for at least 10 logarithmically spaced radii between 10 Å and 10 000 Å. Use the effective‑interface model (Eq. 4) with \(t = 12\) Å and the interface properties determined in Step 3. Also compute the constant Mori–Tanaka predictions (Eq. 1) at each radius using the pure phase constants. Combine both model types in a single CSV.
 - Output file: `/app/outputs/moduli_vs_radius.csv`
 - Format: csv
-- Contract: columns: composite_type (string: 'silica_composite','hydroxylated_composite','phenoxybenzene_composite','functionalized_composite'), radius_A (float, angstrom), model_type (string: 'Mori-Tanaka' or 'Effective-Interface'), E (float, GPa), G (float, GPa). At least 10 radius values per composite.
-- Scoring: scored by hidden verifier
+- Contract: columns: composite_type, radius_A, model_type, E, G. `model_type` is either `Mori-Tanaka` or `Effective-Interface`. Each composite must have at least 20 rows (10 radii × 2 models). Radii must be logarithmically spaced.
 
-## Output files
-Write all artifacts under `/app/outputs`:
-- `/app/outputs/elastic_constants_systems.csv`
-- `/app/outputs/mori_tanaka_rve.csv`
-- `/app/outputs/effective_interface_properties.csv`
-- `/app/outputs/moduli_vs_radius.csv`
+All moduli are in GPa; radii in Å.
 
-## Output contract
+## How you are scored
+A hidden verifier independently examines each scored output file. For Step 1 it compares your submitted values against the reference table above. For all subsequent steps it performs a **self-consistency** check:
+- It recomputes the Mori–Tanaka predictions from the pure silica and polyimide constants you submitted.
+- It verifies that the interface properties you report, when inserted into the effective‑interface model, reproduce the MD composite moduli you listed in Step 1.
+- It recomputes the radius‑dependent effective‑interface curves using the pure phase constants and the interface properties you submitted, and checks that they match your submitted curves (within 1 %).
+- It also verifies that Mori–Tanaka curves are correct relative to the pure phase constants, and that physical trends (monotonic increase, convergence at large radii, expected ordering among composites) are satisfied.
 
-Every file the hidden verifier reads is described below. Write each file under `/app/outputs` and follow its schema exactly.
-
-### elastic_constants_systems.csv
-- path: `/app/outputs/elastic_constants_systems.csv`
-- format: csv
-- purpose: scored
-- target_policy: exact_match
-- description: MD-derived Young's (E) and shear (G) moduli for the six material systems.
-- schema:
-  - `type`: table
-  - `required_columns`: `system`, `E`, `G`
-  - `units`:
-    - `E`: GPa
-    - `G`: GPa
-
-### mori_tanaka_rve.csv
-- path: `/app/outputs/mori_tanaka_rve.csv`
-- format: csv
-- purpose: scored
-- target_policy: exact_match
-- description: Mori–Tanaka predicted composite moduli at the RVE volume fraction.
-- schema:
-  - `type`: table
-  - `required_columns`: `composite`, `E_MT`, `G_MT`
-  - `units`:
-    - `E_MT`: GPa
-    - `G_MT`: GPa
-
-### effective_interface_properties.csv
-- path: `/app/outputs/effective_interface_properties.csv`
-- format: csv
-- purpose: scored
-- target_policy: exact_match
-- description: Effective interface Young's and shear moduli for each composite.
-- schema:
-  - `type`: table
-  - `required_columns`: `composite_type`, `E_interface`, `G_interface`
-  - `units`:
-    - `E_interface`: GPa
-    - `G_interface`: GPa
-
-### moduli_vs_radius.csv
-- path: `/app/outputs/moduli_vs_radius.csv`
-- format: csv
-- purpose: scored
-- target_policy: metric_recompute
-- description: Radius-dependent composite moduli from both effective-interface and Mori–Tanaka models; checker recomputes effective-interface curves for consistency.
-- schema:
-  - `type`: table
-  - `required_columns`: `composite_type`, `radius_A`, `model_type`, `E`, `G`
-  - `units`:
-    - `radius_A`: Å
-    - `E`: GPa
-    - `G`: GPa
-
-Notes: All moduli are in GPa. Radii in Å. The effective-interface model curves will be recomputed from the submitted interface properties and pure phase constants; internal consistency (within 1%) is required.
+There is no reliance on pre‑loaded hidden gold data; the verifier only uses the reference table for Step 1 and the physical models described in this instruction.
 
 ## Self-check before finishing (optional, not scored)
 
-A machine-readable copy of the output contract is below. Before you finish, write and run a small script that checks every file under `/app/outputs` against it: each declared file exists, JSON objects contain the required keys, and CSV/TSV files contain the required columns. Fix any mismatch before finishing.
+A machine‑readable copy of the output contract is below. Before you finish, write and run a small script that checks every file under `/app/outputs` against it: each declared file exists, and CSV files contain the required columns. Fix any mismatch before finishing.
 
-This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific correctness, and passing it does not mean your answer is correct.
+This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific correctness.
 
 ```json
 {
@@ -143,15 +156,8 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
       "target_policy": "exact_match",
       "schema": {
         "type": "table",
-        "required_columns": [
-          "system",
-          "E",
-          "G"
-        ],
-        "units": {
-          "E": "GPa",
-          "G": "GPa"
-        }
+        "required_columns": ["system", "E", "G"],
+        "units": {"E": "GPa", "G": "GPa"}
       },
       "description": "MD-derived Young's (E) and shear (G) moduli for the six material systems."
     },
@@ -162,15 +168,8 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
       "target_policy": "exact_match",
       "schema": {
         "type": "table",
-        "required_columns": [
-          "composite",
-          "E_MT",
-          "G_MT"
-        ],
-        "units": {
-          "E_MT": "GPa",
-          "G_MT": "GPa"
-        }
+        "required_columns": ["composite", "E_MT", "G_MT"],
+        "units": {"E_MT": "GPa", "G_MT": "GPa"}
       },
       "description": "Mori–Tanaka predicted composite moduli at the RVE volume fraction."
     },
@@ -181,15 +180,8 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
       "target_policy": "exact_match",
       "schema": {
         "type": "table",
-        "required_columns": [
-          "composite_type",
-          "E_interface",
-          "G_interface"
-        ],
-        "units": {
-          "E_interface": "GPa",
-          "G_interface": "GPa"
-        }
+        "required_columns": ["composite_type", "E_interface", "G_interface"],
+        "units": {"E_interface": "GPa", "G_interface": "GPa"}
       },
       "description": "Effective interface Young's and shear moduli for each composite."
     },
@@ -200,18 +192,8 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
       "target_policy": "metric_recompute",
       "schema": {
         "type": "table",
-        "required_columns": [
-          "composite_type",
-          "radius_A",
-          "model_type",
-          "E",
-          "G"
-        ],
-        "units": {
-          "radius_A": "Å",
-          "E": "GPa",
-          "G": "GPa"
-        }
+        "required_columns": ["composite_type", "radius_A", "model_type", "E", "G"],
+        "units": {"radius_A": "Å", "E": "GPa", "G": "GPa"}
       },
       "description": "Radius-dependent composite moduli from both effective-interface and Mori–Tanaka models; checker recomputes effective-interface curves for consistency."
     }
@@ -219,6 +201,3 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
   "notes": "All moduli are in GPa. Radii in Å. The effective-interface model curves will be recomputed from the submitted interface properties and pure phase constants; internal consistency (within 1%) is required."
 }
 ```
-
-## How you are scored
-A hidden verifier independently examines each scored output file. It checks that the reported numerical values are consistent with the physics of the problem and with the internal relationships among the different models. Specifically, the verifier will verify that all moduli are positive, that the relative ordering among the different composite surface treatments follows a physically expected pattern, that the effective-interface moduli increase monotonically with increasing particle radius, and that they asymptotically approach the Mori–Tanaka baseline at large radii. The verifier also recomputes the effective-interface radius-dependent curves from the interface properties and pure phase constants you report, requiring internal consistency. Each scored artifact contributes a predefined weight to the overall reward (a single float between 0 and 1). Simply writing down values that match the paper's published numbers is not sufficient; the workflow must be executed genuinely to produce the required artifacts.

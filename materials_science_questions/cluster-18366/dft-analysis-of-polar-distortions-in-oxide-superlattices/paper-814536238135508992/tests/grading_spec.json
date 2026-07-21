@@ -1,0 +1,93 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The analytical three-band T_C model can be fully recomputed from the agent's submitted n_s and T_C curves using the known physical parameters and the deterministic calibration constants; no hidden labels or external data are needed.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "tc_vs_ns.csv": "metric_recompute",
+    "maxima.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Canonical calibrated parameters a_B=5.8e-7 cm, const=0.2 used for recomputation.",
+      "source_provenance": "Paper's calibration procedure: matching the first-band T_C maximum to the experimental observation (n_s≈2×10^18 cm^{-3}, T_C≈0.2 K) via x_max=7.18 yields a_B≈5.8e-7 cm and const≈1/5.",
+      "generation_method": "Derived analytically from the published experimental references.",
+      "why_not_fabricated": "These are the paper's own reported values and the required outcome of the deterministic calibration step the agent must perform."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "tc_vs_ns.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "n_s",
+            "T_C_1",
+            "T_C_2",
+            "T_C_3"
+          ],
+          "units": {
+            "n_s": "cm^{-3}",
+            "T_C_1": "K",
+            "T_C_2": "K",
+            "T_C_3": "K"
+          }
+        },
+        "description": "CSV file with T_C values for the three bands as functions of carrier concentration n_s."
+      },
+      {
+        "file": "maxima.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "band",
+            "n_s_max",
+            "T_C_max"
+          ],
+          "units": {
+            "n_s_max": "cm^{-3}",
+            "T_C_max": "K"
+          }
+        },
+        "description": "CSV file with the maximum T_C and corresponding concentration for each band."
+      }
+    ],
+    "notes": "The model uses only analytical formulas; no numerical simulation or external datasets are required. The agent must implement the multi-band coupling constants and the T_C expression as described in the instruction."
+  },
+  "steps": [
+    {
+      "id": "check_tc_vs_ns",
+      "output_file": "tc_vs_ns.csv",
+      "kind": "recompute_metric",
+      "weight": 0.6,
+      "target_policy": "metric_recompute",
+      "params": {
+        "a_B_cm": 5.8e-07,
+        "const": 0.2,
+        "grid_ns_start": 5e+17,
+        "grid_ns_stop": 1e+20,
+        "grid_ns_num": 300,
+        "max_rel_err": 0.5
+      }
+    },
+    {
+      "id": "check_maxima",
+      "output_file": "maxima.csv",
+      "kind": "recompute_metric",
+      "weight": 0.4,
+      "target_policy": "metric_recompute",
+      "params": {
+        "a_B_cm": 5.8e-07,
+        "const": 0.2,
+        "max_rel_err_maxima": 0.5
+      }
+    }
+  ]
+}

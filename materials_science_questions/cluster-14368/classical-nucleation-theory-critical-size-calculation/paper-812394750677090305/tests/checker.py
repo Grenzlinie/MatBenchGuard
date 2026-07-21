@@ -98,30 +98,35 @@ def prepare(outputs_dir, spec):
 
 # === block: score_0 (check id='step_01') ===
 def score_0(artifact, step, ctx):
+    # Load thermodynamic properties from the same CSV that the agent uses.
+    csv_path = "/app/assets/h2so4_properties.csv"
+    if not os.path.exists(csv_path):
+        csv_path = "h2so4_properties.csv"  # fallback
+    X_vals = []
+    rho_vals = []
+    drho_dx_scaled = []
+    sigma_vals = []
+    dsigma_dx_scaled = []
+    a_w_vals = []
+    with open(csv_path, newline="") as f:
+        reader = csv.reader(f)
+        header = next(reader)  # skip header
+        for row in reader:
+            X_vals.append(float(row[0]))
+            rho_vals.append(float(row[1]))
+            drho_dx_scaled.append(float(row[2]))   # ×10³
+            sigma_vals.append(float(row[3]))
+            dsigma_dx_scaled.append(float(row[4]))  # ×10²
+            a_w_vals.append(float(row[5]))
+
+    # Constants (same as provided in instruction)
+    M_w = 18.015          # g/mol
+    R_gas = 8.314         # used as given
+    T_K = 298.15          # K
+    rho_pure = 1.84       # g/cm³, pure H₂SO₄
+
     dry_radii = [0.001, 0.005, 0.05, 0.1, 0.5]
     rh_list = [0, 10, 30, 50, 70, 80, 90, 100, 101, 110]
-    M_w = 18.015
-    R_gas = 8.314
-    T_K = 298.15
-    rho_pure = 1.84
-    table = [
-        (0.5, 1.000, 8.1, 72.0, 12.0, 0.998),
-        (1.0, 1.004, 7.4, 72.1,  8.6, 0.996),
-        (5.0, 1.030, 6.7, 72.3,  5.5, 0.982),
-        (10.0, 1.064, 7.0, 72.6,  8.0, 0.958),
-        (20.0, 1.136, 7.5, 73.7, 11.4, 0.880),
-        (25.0, 1.175, 7.9, 74.3, 11.3, 0.823),
-        (40.0, 1.299, 8.8, 75.8, 10.0, 0.555),
-        (50.0, 1.391, 9.8, 76.8,  6.4, 0.340),
-        (66.0, 1.560, 11.3, 75.2, -30.0, 0.075),
-        (85.0, 1.773, 8.7, 68.7, -72.0, 0.001),
-    ]
-    X_vals = [r[0] for r in table]
-    rho_vals = [r[1] for r in table]
-    drho_dx_scaled = [r[2] for r in table]
-    sigma_vals = [r[3] for r in table]
-    dsigma_dx_scaled = [r[4] for r in table]
-    a_w_vals = [r[5] for r in table]
 
     def interp(x, xs, ys):
         if x <= xs[0]:
@@ -141,9 +146,12 @@ def score_0(artifact, step, ctx):
         r0_cm = r0_um * 1e-4
         V0_cm3 = (4/3)*math.pi * r0_cm**3
         m_acid = V0_cm3 * rho_pure
+
         best_X = None
         min_abs = float('inf')
-        for X in [x/10.0 for x in range(5, 851)]:
+        # scan mass fraction X from 0.5 to 85 % with step 0.1
+        X_candidates = [x/10.0 for x in range(5, 851)]
+        for X in X_candidates:
             if X < X_vals[0] or X > X_vals[-1]:
                 continue
             aw = interp(X, X_vals, a_w_vals)
@@ -154,17 +162,20 @@ def score_0(artifact, step, ctx):
             sigma = interp(X, X_vals, sigma_vals)
             drho_dx = interp(X, X_vals, drho_dx_scaled) / 1000.0
             dsigma_dx = interp(X, X_vals, dsigma_dx_scaled) / 100.0
+
             total_mass = m_acid * (100.0 / X)
             V_cm3 = total_mass / rho
             r_cm = (3*V_cm3/(4*math.pi))**(1/3)
+
             corr = 1.0 + (X/rho)*drho_dx - 1.5*(X/sigma)*dsigma_dx
-            rhs = (2*M_w*sigma)/(R_gas*T_K*rho)*(1.0/r_cm)*corr
+            rhs = (2*M_w*sigma)/(R_gas*T_K*rho) * (1.0/r_cm) * corr
             val = lhs - rhs
             if abs(val) < min_abs:
                 min_abs = abs(val)
                 best_X = X
             if abs(val) < 1e-12:
                 break
+
         if best_X is None:
             return r0_um
         X_eq = best_X
@@ -172,7 +183,7 @@ def score_0(artifact, step, ctx):
         total_mass = m_acid * (100.0 / X_eq)
         V_eq = total_mass / rho_eq
         r_eq_cm = (3*V_eq/(4*math.pi))**(1/3)
-        return r_eq_cm * 1e4
+        return r_eq_cm * 1e4   # cm -> µm
 
     if not artifact:
         return 0.0
@@ -185,11 +196,12 @@ def score_0(artifact, step, ctx):
             agent_data[(dry, rh)] = eq
         except (KeyError, ValueError, TypeError):
             continue
+
     ok = 0
     for r in dry_radii:
         for rh in rh_list:
             expected = compute_expected(r, rh)
-            agent_r = agent_data.get((r, rh))
+            agent_r = agent_data.get((r, float(rh)))
             if agent_r is not None:
                 denom = max(expected, 1e-12)
                 if abs(agent_r - expected) / denom <= 0.05:

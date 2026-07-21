@@ -34,7 +34,7 @@ All outputs must be written to `/app/outputs/` following the exact column schema
 - Output file: `/app/outputs/phase_diagram.csv`
 - Format: csv
 - Contract: Columns: sqrt_g (float), kBT (float), phase_label (string, one of: cubic, tet_less, tet_more, ortho).
-- Scoring: scored by hidden verifier
+- Scoring: The checker compares the phase label at the nearest grid point to a hidden gold label for each reference point.
 
 ### Step 3: Compute temperature dependence of symmetry strains at √g=11.2
 - Role: scored
@@ -67,7 +67,7 @@ Every file the hidden verifier reads is described below. Write each file under `
 - format: csv
 - purpose: scored
 - target_policy: metric_recompute
-- description: Grid of (√g, k_BT) points with the computed stable phase label. The checker recomputes phase boundaries from these labels and compares them to hidden reference values.
+- description: Grid of (√g, k_BT) points with the computed stable phase label. The checker compares the phase label at the nearest grid point to a hidden gold label for each reference point.
 - schema:
   - `type`: table
   - `required_columns`: `sqrt_g`, `kBT`, `phase_label`
@@ -165,6 +165,3 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
   "notes": "No solver internals or gold values are disclosed. The output files contain the computed grid points and quantities; the hidden checker extracts and compares the relevant features with appropriate tolerances."
 }
 ```
-
-## How you are scored
-A hidden verifier independently evaluates each of the three scored artifacts. It extracts phase boundaries from your `phase_diagram.csv` and compares them to reference boundaries, and checks the strain and MSDW average values at selected temperature points against reference curves. The evaluation rewards reproduction of the correct physical trends and quantitative predictions; reporting numbers alone is not sufficient—the verifier re-derives quantities from your output. The final reward is a weighted combination of the scores from the individual artifacts.

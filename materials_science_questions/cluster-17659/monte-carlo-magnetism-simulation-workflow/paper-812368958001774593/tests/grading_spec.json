@@ -1,0 +1,103 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Endpoint temperatures extracted from raw CSV and compared to paper-reported gold; distinctness verified by direct data comparison.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "order_parameter_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "protocol",
+            "temperature",
+            "stag_mag"
+          ],
+          "units": {
+            "temperature": "K",
+            "stag_mag": "dimensionless magnitude of staggered magnetization per spin"
+          }
+        },
+        "description": "CSV file containing staggered magnetization vs temperature for all simulated protocols. The checker will recompute the maximum temperature reached by the heating branches for the N=1000 reversal and validate that ZFC/FC curves are distinct; it will compare these recomputed endpoint temperatures to hidden gold values. The temperature range should cover from ~30 K to ~70 K with a step of 0.01 K."
+      }
+    ],
+    "notes": "The checker extracts structural properties (hysteresis distinctness) and endpoint temperatures from the raw CSV; no self-reported metrics are used. The solving agent must ensure the CSV covers all listed protocol labels and temperature steps continuously."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold endpoint temperatures for N=1000 heating branches",
+      "source_provenance": "Paper Fig. 2 caption: 'reached 64.7 and 64.2 K for the lower and upper curves'",
+      "generation_method": "Directly from paper text",
+      "why_not_fabricated": "Values are exact paper-reported numbers, no synthesis."
+    }
+  ],
+  "steps": [
+    {
+      "id": "csv_structure",
+      "output_file": "order_parameter_curves.csv",
+      "weight": 0.05,
+      "kind": "structural",
+      "params": {}
+    },
+    {
+      "id": "distinct_zfc_fc_n200",
+      "output_file": "order_parameter_curves.csv",
+      "weight": 0.15,
+      "kind": "structural",
+      "params": {
+        "protocols": [
+          "ZFC_N200",
+          "FC_N200"
+        ],
+        "min_diff_threshold": 0.05
+      }
+    },
+    {
+      "id": "distinct_zfc_fc_n1000",
+      "output_file": "order_parameter_curves.csv",
+      "weight": 0.15,
+      "kind": "structural",
+      "params": {
+        "protocols": [
+          "ZFC_N1000",
+          "FC_N1000"
+        ],
+        "min_diff_threshold": 0.05
+      }
+    },
+    {
+      "id": "reversal_n200_irreversibility",
+      "output_file": "order_parameter_curves.csv",
+      "weight": 0.15,
+      "kind": "structural",
+      "params": {
+        "protocol_prefix": "rev_N200_",
+        "min_diff": 0.05
+      }
+    },
+    {
+      "id": "reversal_n1000_endpoints",
+      "output_file": "order_parameter_curves.csv",
+      "weight": 0.5,
+      "kind": "numeric",
+      "params": {
+        "protocols": [
+          "rev_N1000_0.6_heating_lower",
+          "rev_N1000_0.6_heating_upper"
+        ],
+        "gold_max_temp": [
+          64.7,
+          64.2
+        ],
+        "tolerance": 0.5
+      }
+    }
+  ],
+  "target_policies": {
+    "order_parameter_curves.csv": "structural_audit"
+  }
+}

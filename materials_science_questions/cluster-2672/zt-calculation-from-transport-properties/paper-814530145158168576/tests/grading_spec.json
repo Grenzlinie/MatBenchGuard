@@ -1,0 +1,114 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Cannot recompute ZT from the CSV because the underlying transport model is not re-executable in the checker; compare agent's computed ZT values at hidden concentration points to paper-derived reference values within tolerance, plus peak checks.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference ZT values at selected electron concentrations for n-type Bi2Te2.7Se0.3 at 500 K, and peak thresholds/concentrations, derived from the paper's Fig. 2 and Section III A.",
+      "source_provenance": "Physical Review B 93, 165209 (2016), Fig. 2 and the discussion of maximum ZT values (max. bulk ZT ~1.0 at 3e19 cm-3, barrier ZT ~1.7 at 1e19 cm-3).",
+      "generation_method": "The maximum values are taken directly from the paper's text. Approximate curve values at intermediate concentrations were estimated consistently with the described shape and the bipolar suppression effect.",
+      "why_not_fabricated": "Values are anchored to the paper's reported maximum ZT and the qualitative curve behaviour; approximate reference values at intermediate points are physically consistent with the model. The tolerance (15%) is chosen to absorb implementation differences."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "zT_output.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "electron_concentration_cm3",
+            "zT_bulk",
+            "zT_barrier"
+          ],
+          "units": {
+            "electron_concentration_cm3": "cm⁻³",
+            "zT_bulk": "dimensionless",
+            "zT_barrier": "dimensionless"
+          }
+        },
+        "description": "CSV table of zT values as a function of electron concentration for n-type Bi2Te2.7Se0.3 at 500 K, for both bulk and barrier cases. The hidden checker compares these values against reference values derived from the paper's computations with tolerance for numerical differences."
+      }
+    ],
+    "notes": "Checker will compare the reported zT values at a set of electron concentration points against hidden reference values. Additional check on peak zT meeting or exceeding the paper-reported level is included."
+  },
+  "steps": [
+    {
+      "id": "check_csv_shape",
+      "output_file": "zT_output.csv",
+      "kind": "custom_shape",
+      "weight": 0.01,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "check_zT_values",
+      "output_file": "zT_output.csv",
+      "kind": "custom_reference_compare",
+      "weight": 0.6,
+      "target_policy": "reference_match",
+      "config": {
+        "concentrations": [
+          1000000000000000000,
+          3000000000000000000,
+          10000000000000000000,
+          30000000000000000000,
+          100000000000000000000,
+          300000000000000000000,
+          1000000000000000000000
+        ],
+        "zT_bulk_ref": [
+          0.03,
+          0.15,
+          0.5,
+          1.0,
+          0.7,
+          0.4,
+          0.2
+        ],
+        "zT_barrier_ref": [
+          0.3,
+          0.64,
+          1.7,
+          1.2,
+          0.75,
+          0.42,
+          0.2
+        ],
+        "max_relative_error": 0.15,
+        "score_decay_factor": 2.0
+      }
+    },
+    {
+      "id": "check_peak_zT",
+      "output_file": "zT_output.csv",
+      "kind": "custom_peak_zT",
+      "weight": 0.25,
+      "target_policy": "threshold_or_better",
+      "config": {
+        "bulk_peak_threshold": 0.9,
+        "barrier_peak_threshold": 1.53
+      }
+    },
+    {
+      "id": "check_peak_concentration",
+      "output_file": "zT_output.csv",
+      "kind": "custom_peak_concentration",
+      "weight": 0.14,
+      "target_policy": "threshold_or_better",
+      "config": {
+        "bulk_conc_range": [
+          10000000000000000000,
+          100000000000000000000
+        ],
+        "barrier_conc_range": [
+          3000000000000000000,
+          30000000000000000000
+        ]
+      }
+    }
+  ]
+}

@@ -38,6 +38,21 @@ class MaterialsRepairEvidenceDocsTests(unittest.TestCase):
         self.assertNotIn('"reward":', text)
         self.assertNotIn('"breakdown":', text)
 
+    def test_repair_docs_define_assisted_provenance_and_score_gates(self) -> None:
+        for path in (REPAIR_SKILL, EVIDENCE_NOTE):
+            text = path.read_text(encoding="utf-8")
+            for term in (
+                "source_kind",
+                "exact_quote",
+                "source_hash",
+                "retrieval_metadata",
+                "core_science_change",
+                "below 60",
+                "HIGH/FATAL",
+            ):
+                with self.subTest(path=path, term=term):
+                    self.assertIn(term, text)
+
 
 if __name__ == "__main__":
     unittest.main()

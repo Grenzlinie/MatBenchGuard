@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_simulate",
+    "title": "Run micromechanical model simulations",
+    "role": "process",
+    "action": "Implement the 8-element micromechanical model with 1000 parallel elements using the provided material constants (CAL1) and glass transition temperature distribution, and simulate the thermomechanical cycles EXP1 and EXP2 to obtain time-series of stress, strain, and temperature.",
+    "output_file": "",
+    "evidence": "simulation_log.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "This required intermediate step executes the model. The agent must implement a solver for the constitutive equations, handle the latch mechanism for Tg crossing, and simulate the loading/unloading/heating protocol. Output data is used in the following scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_fixed_ratios",
+    "title": "Compute fixed strain ratios",
+    "role": "scored",
+    "action": "From the simulation results, compute the fixed strain ratio (residual strain after unloading divided by maximum applied strain, expressed as percentage) for EXP1 and EXP2. Write the two values to fixed_strain_ratios.json.",
+    "output_file": "fixed_strain_ratios.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Quantifies how much strain remains after shape fixation. The simulation must reproduce the reported ratios.",
+    "output_schema": "JSON object with keys 'EXP1' and 'EXP2', each a float representing the percentage."
+  },
+  {
+    "id": "step_residual_curves",
+    "title": "Generate residual fixed strain ratio curves",
+    "role": "scored",
+    "action": "Using the heating-phase simulation data, compute the residual fixed strain ratio (current strain divided by fixed strain after unloading, expressed as percentage) for temperatures from 0 to 50°C at 0.5°C intervals for both EXP1 and EXP2. Write to residual_fixed_strain_ratios.csv with columns: temperature, exp1_ratio, exp2_ratio.",
+    "output_file": "residual_fixed_strain_ratios.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "These curves show how much of the fixed strain is recovered as temperature rises. The simulation must capture the experimentally observed difference: EXP2 recovers more at lower temperatures than EXP1.",
+    "output_schema": "CSV with header: temperature,exp1_ratio,exp2_ratio. Values at 0.5°C intervals from 0 to 50°C inclusive (101 rows). All columns are floats."
+  }
+]

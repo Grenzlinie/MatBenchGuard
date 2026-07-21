@@ -1,0 +1,53 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The final connection ratio is computed by the agent's heavy simulation; recomputing from raw profiles is infeasible in the lightweight verifier. A result-level comparison against paper-derived structural constraints (threshold crossing and monotonic trend) is the strongest feasible tier.",
+  "pass_threshold": 0.7,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "connection_ratios.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "thickness_um",
+            "rc_percent",
+            "disconnection"
+          ],
+          "units": {
+            "thickness_um": "um",
+            "rc_percent": "%"
+          }
+        },
+        "description": "Computed connection ratio and disconnection status for SiO₂ film thicknesses 2.0, 2.5, 3.0 µm. The disconnection flag is true when rc_percent < 100%."
+      }
+    ],
+    "notes": "The checker will evaluate whether the connection ratio exceeds 95% for 2.0 µm, falls below 95% for 2.5 and 3.0 µm, decreases monotonically, and that disconnection is true only for thickness ≥2.5 µm. These are structural constraints that verify the paper's disconnection claim."
+  },
+  "steps": [
+    {
+      "id": "connection_ratios",
+      "output_file": "connection_ratios.csv",
+      "kind": "rubric",
+      "weight": 1.0,
+      "description": "Verify connection ratio and disconnection flag against paper-derived structural constraints.",
+      "constraints": {
+        "rc_threshold_high_percent": 95.0,
+        "rc_threshold_low_percent": 95.0,
+        "rc_monotonic_decreasing": true,
+        "disconnection_match": true
+      }
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference target values for connection ratio and disconnection flag derived from Fig.11 and text, used only as structural constraints.",
+      "source_provenance": "Paper Fig.11 and Section V.B: Rc ~100% at less than 2.0 µm, disconnection occurs at ≥2.5 µm with typical values ~80% at 2.5 µm and ~60% at 3.0 µm.",
+      "generation_method": "Values taken from paper-reported trend and hardcoded as threshold/trend requirements in grading_spec.",
+      "why_not_fabricated": "Values are consistent with the paper's claimed behaviour; they are used only for structural verification, not as exact-match targets."
+    }
+  ]
+}

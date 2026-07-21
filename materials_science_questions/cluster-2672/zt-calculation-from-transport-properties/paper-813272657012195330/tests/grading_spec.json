@@ -1,0 +1,59 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker interpolates the agent's raw power factor vs. Seebeck coefficient data at 200 μV/K to compute the reduction ratio and rank order, comparing against paper-derived thresholds.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "power_factor_vs_seebeck.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden thresholds for power factor reduction ratio and ordering condition derived from paper's claim.",
+      "source_provenance": "Paper text: 'when the impurity band is at the edge of the main band the power factor is reduced by about 30%' and 'power factor is marginally greater...4kT...marginally less...kT'. Fig. 5.",
+      "generation_method": "Derived from the paper's stated 30% reduction and relative ordering description.",
+      "why_not_fabricated": "These are the paper's own quantitative claims."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "power_factor_vs_seebeck.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "impurity_band_depth",
+            "seebeck_muV_per_K",
+            "power_factor_arb_units"
+          ],
+          "units": {
+            "seebeck_muV_per_K": "μV/K",
+            "power_factor_arb_units": "arbitrary units"
+          }
+        },
+        "description": "CSV file containing the power factor versus Seebeck coefficient for each impurity band depth (none, 0, kT, 4kT)."
+      }
+    ],
+    "notes": "Power factor is in arbitrary units, so only relative reductions and ordering are meaningful. The checker will interpolate at a specific Seebeck coefficient to verify the paper's numerical claim."
+  },
+  "steps": [
+    {
+      "id": "check_pf_ratio",
+      "output_file": "power_factor_vs_seebeck.csv",
+      "weight": 0.7,
+      "target_policy": "exact_match",
+      "kind": "recompute_metric",
+      "description": "Interpolate power factor at Seebeck=200 μV/K for no-impurity-band and E_I=0 cases, compute ratio, check it is within [0.65, 0.75]."
+    },
+    {
+      "id": "check_pf_ordering",
+      "output_file": "power_factor_vs_seebeck.csv",
+      "weight": 0.3,
+      "target_policy": "structural_audit",
+      "kind": "structural",
+      "description": "At Seebeck=200 μV/K, verify the power factor ordering: 4kT > none > kT > 0."
+    }
+  ]
+}

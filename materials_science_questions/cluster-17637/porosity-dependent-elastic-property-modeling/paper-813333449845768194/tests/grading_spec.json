@@ -1,0 +1,68 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All scored artifacts can be recomputed from the public input data (single-layer elastic constants and layer thicknesses) using the same formulas, without any hidden labels or external ground truth. Tolerances account for floating-point variations.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "sl_elastic_constants.csv": "metric_recompute",
+    "porosity_fit_exponents.json": "metric_recompute"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "sl_elastic_constants.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "sample",
+            "c11",
+            "c13",
+            "c33",
+            "c44"
+          ],
+          "units": {
+            "c11": "GPa",
+            "c13": "GPa",
+            "c33": "GPa",
+            "c44": "GPa"
+          }
+        },
+        "description": "Superlattice effective elastic constants predicted by the GN model; the checker recomputes them from the same input data and compares within a hidden tolerance."
+      },
+      {
+        "file": "porosity_fit_exponents.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "gamma_11": "number (dimensionless)",
+            "gamma_44": "number (dimensionless)"
+          }
+        },
+        "description": "Fitted porosity exponents γ11 and γ44; the checker independently refits the same empirical model and compares the values within a hidden tolerance."
+      }
+    ],
+    "notes": "The hidden checker recomputes both artifacts from the same single-layer elastic constants and superlattice parameters that are provided in the public instruction. Tolerances are hidden but designed to accommodate legitimate numerical differences from reimplementation while rejecting unconstrained guesses."
+  },
+  "steps": [
+    {
+      "id": "step_compute_sl_elastic_constants",
+      "output_file": "sl_elastic_constants.csv",
+      "weight": 0.6,
+      "kind": "recompute_metric",
+      "tolerance_rel": 1e-05
+    },
+    {
+      "id": "step_fit_porosity_exponents",
+      "output_file": "porosity_fit_exponents.json",
+      "weight": 0.4,
+      "kind": "recompute_metric",
+      "tolerance_gamma_abs": 0.01
+    }
+  ]
+}

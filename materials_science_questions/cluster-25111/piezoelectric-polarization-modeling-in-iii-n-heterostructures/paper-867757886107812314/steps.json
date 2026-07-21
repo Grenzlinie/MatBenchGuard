@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step01",
+    "title": "Electroelastic simulation",
+    "role": "process",
+    "action": "Construct the 3D geometry of the InP island with facets {001}, {101}, {111} on an In0.2Ga0.8As quantum well located 8.25 nm below the island. Solve the coupled electroelastic equations (continuum elasticity with piezoelectric coupling, linear constitutive relation) using a finite-element method with tetrahedral second-order elements and the material parameters provided. Obtain the full strain tensor, piezoelectric potential, and deformation potentials.",
+    "output_file": "",
+    "evidence": "electroelastic_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "This process step runs the finite-element simulation that produces strain and potential fields required by all downstream steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02",
+    "title": "Potential minima depths",
+    "role": "scored",
+    "action": "Extract the local extrema of the electron and hole potentials in the quantum well midplane from the computed fields. Report, relative to the strain-free band edges, the depths of the hole piezoelectric potential (PEP) minima, the hole deformation-potential (DP) minimum, the electron DP minimum, and the electron PEP minima, in meV.",
+    "output_file": "step_02_potential_minima.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing the four potential minima depths (hole PEP, hole DP, electron DP, electron PEP) in meV.",
+    "output_schema": "{\"hole_PEP\": number (meV), \"hole_DP\": number (meV), \"electron_DP\": number (meV), \"electron_PEP\": number (meV)}"
+  },
+  {
+    "id": "step03",
+    "title": "Eight-band k·p electronic structure calculation",
+    "role": "process",
+    "action": "Discretize the eight-band k·p Hamiltonian (strain-free part plus strain-dependent part including deformation potentials and piezoelectric potential) on a finite-difference grid. Diagonalize using an implicitly restarted Lanczos method to obtain confined electron and hole eigenstates and eigenenergies.",
+    "output_file": "",
+    "evidence": "kdotp_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "This process step runs the expensive k·p diagonalization whose outputs are consumed by the DOS and PL spectrum steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step04",
+    "title": "Density of states",
+    "role": "scored",
+    "action": "Using the eigenenergies from step03, compute the total density of states (DOS) and the DOS of only the optically active (DP-localized) states. Output a CSV with energy in meV, total DOS, and DP-only DOS.",
+    "output_file": "step_04_dos.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the density of states data: energy in meV, total DOS, and DP-only DOS.",
+    "output_schema": "energy(meV),DOS_total,DOS_DP_only"
+  },
+  {
+    "id": "step05",
+    "title": "Photoluminescence spectrum",
+    "role": "scored",
+    "action": "Compute interband radiative transition rates using the electric dipole approximation and the eigenstates from step03. Convolve with a Gaussian broadening of 6 meV and sum over all transitions to obtain the continuous-wave photoluminescence spectrum. Output a CSV with energy in eV and intensity.",
+    "output_file": "step_05_pl_spectrum.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the simulated CW photoluminescence spectrum with columns energy(eV) and intensity.",
+    "output_schema": "energy(eV),intensity"
+  }
+]

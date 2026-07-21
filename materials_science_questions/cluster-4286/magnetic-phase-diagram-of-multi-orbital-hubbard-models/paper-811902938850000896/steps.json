@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_solve_mft",
+    "title": "Self-consistent slave-boson mean-field solution",
+    "role": "scored",
+    "action": "Implement the slave-boson mean-field theory for a bilayer t-t'-J model with interlayer hopping (t_perp) and site potential (W). Solve the self-consistent equations for order parameters (d-wave pairing amplitudes Δ₁, Δ₂, uniform bond orders χ₁, χ₂, antiferromagnetic moments m₁, m₂, holon density δ_h₁, doublon density δ_d₂, chemical potential μ) on a grid of total electron density n (0.85 to 1.0), site potential W/t (0 to about 0.2), and interlayer hopping strengths t_perp/t ∈ {0.0, 0.2, 0.5, 0.8}. Use J/t=1/3, t'/t=-0.4, and interlayer dispersion ε_{⊥,k} = (t_perp/4)(cos k_x - cos k_y)².",
+    "output_file": "order_parameters.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the converged mean-field order parameters for each (n,W,t_perp/t) combination. This provides the raw data for the order parameter dependencies and phase diagram.",
+    "output_schema": "Columns: n (float), W (float), t_perp_t (float), delta_1 (float), delta_2 (float), chi_1 (float), chi_2 (float), m_1 (float), m_2 (float), delta_h_1 (float), delta_d_2 (float), mu (float). One row per converged (n,W,t_perp_t) point."
+  },
+  {
+    "id": "step_phase_diagram",
+    "title": "Phase diagram construction",
+    "role": "scored",
+    "action": "From the order parameters in order_parameters.csv for t_perp/t=0.5, classify each (n,W) point into phases: if both m₁ and Δ₁ are non-zero (and similarly for layer 2), label 'AFM+SC'; if only Δ is non-zero, label 'SC'; if only m is non-zero, label 'AFM'. Output a CSV mapping each (n,W) to its phase label.",
+    "output_file": "phase_diagram.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file mapping each (n,W) grid point (with t_perp/t=0.5) to its phase label.",
+    "output_schema": "Columns: n (float), W (float), t_perp_t (float, always 0.5), phase (string: 'AFM', 'SC', or 'AFM+SC'). One row per grid point."
+  },
+  {
+    "id": "step_fermi_bands",
+    "title": "Fermi surface and band dispersion calculation",
+    "role": "scored",
+    "action": "For doping points n=0.98, 0.95, 0.90, 0.85 with W/t=0.05 and t_perp/t=0.5, take the corresponding self-consistent parameters from order_parameters.csv. Build the mean-field Hamiltonian matrix in the magnetic Brillouin zone, compute its eigenvalues along the k-path (0,0)-(π,0)-(π/2,π/2)-(0,0), and determine Fermi surface features (pocket locations, flat bands, and the presence or absence of interlayer splitting).",
+    "output_file": "fermi_dispersions.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object containing for each doping point the k-path coordinates, the four band energies, and a 'features' string summarizing pocket geometry, flat bands, and whether nodal splitting is present.",
+    "output_schema": "A JSON object with keys for each doping case (e.g., 'n=0.98'). Each value is an object with 'k_path' (list of [kx,ky] coordinates), 'energies' (list of four lists of floats, one per band), and 'features' (string describing pockets, flat bands, gap opening, and nodal splitting observation)."
+  }
+]

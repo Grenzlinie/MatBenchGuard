@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_bulk_opt",
+    "title": "Bulk lattice optimization of Pt and Pt₃Sn",
+    "role": "process",
+    "action": "Optimize the bulk lattice constants of fcc Pt and Pt₃Sn using DFT with the GGA-PBE functional and PAW pseudopotentials. The Pt₃Sn structure is a simple cubic cell with space group Pm-3m.",
+    "output_file": "",
+    "evidence": "bulk_opt_evidence.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Evidence JSON recording the optimized lattice parameters (Å) and total energies (eV) for Pt and Pt₃Sn. This step generates the bulk references needed for all subsequent slab constructions.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_simulated_xrd",
+    "title": "Simulated XRD of Pt and Pt₃Sn",
+    "role": "process",
+    "action": "Using the optimized bulk structures, compute powder X-ray diffraction patterns with Cu-Kα radiation (λ = 1.5406 Å) to obtain lists of (2θ, intensity) peaks for both materials.",
+    "output_file": "",
+    "evidence": "simulated_xrd.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Evidence JSON with peak positions and intensities. Used to document the structural setup and verify lattice expansion in Pt₃Sn.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_slab_relax",
+    "title": "Slab model construction and relaxation",
+    "role": "process",
+    "action": "Build six-layer p(2×2) slabs for Pt(100), Pt(110), Pt₃Sn(100), and Pt₃Sn(110) using the optimized bulk lattice parameters, with 14 Å vacuum. Relax the top four layers while fixing the bottom two at bulk positions. Use the same functional and pseudopotentials as for the bulk.",
+    "output_file": "",
+    "evidence": "slab_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Evidence JSON with the total energies (eV) of the relaxed clean slabs for the four surfaces.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_h_adsorption",
+    "title": "Hydrogen adsorption energy calculations",
+    "role": "process",
+    "action": "For each relaxed slab, place a single H atom at the most stable adsorption site (top, bridge, or hollow) and relax the H position together with the top four layers. Also compute the total energy of an isolated H₂ molecule in a periodic box. Calculate the adsorption energy ΔE_H* = E(slab+H*) − E(slab) − ½ E(H₂).",
+    "output_file": "",
+    "evidence": "adsorption_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Evidence JSON containing the ΔE_H* values (eV) for each surface.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_her_free_energy",
+    "title": "HER free energy diagram computation",
+    "role": "scored",
+    "action": "From the most stable ΔE_H* site on each surface, compute the Gibbs free energy of hydrogen adsorption ΔG_H* = ΔE_H* + ΔZPE − TΔS + ΔG_pH at T = 298 K and pH = 0. Include zero-point energy and entropy corrections. Report the four ΔG_H* values (in eV) and their ordering from smallest to largest absolute magnitude.",
+    "output_file": "dG_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final ΔG_H* values and ordering for Pt(100), Pt(110), Pt₃Sn(100), and Pt₃Sn(110). This is the main scored artifact; the pipeline must be run to obtain these quantities.",
+    "output_schema": "{\n  \"Pt_100_dG\": float (eV),\n  \"Pt_110_dG\": float (eV),\n  \"Pt3Sn_100_dG\": float (eV),\n  \"Pt3Sn_110_dG\": float (eV),\n  \"ordering\": [string] sorted from smallest to largest |ΔG_H*| (most favorable first)\n}"
+  }
+]

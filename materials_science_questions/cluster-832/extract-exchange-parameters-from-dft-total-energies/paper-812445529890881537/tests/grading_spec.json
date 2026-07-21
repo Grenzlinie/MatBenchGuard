@@ -1,0 +1,119 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes exchange parameters from formulas and inputs using high-precision arithmetic and compares each field with absolute tolerance.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "ambient_J_values.json": "exact_match",
+    "pressure_derivatives.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold ambient J values and pressure derivatives computed from the paper's formulas with CODATA2018 constants",
+      "source_provenance": "Recomputed from the paper's Eqs. 6-10 using the published inputs and CODATA2018 values for Bohr magneton and Boltzmann constant; consistent with solution/solve.sh output.",
+      "generation_method": "Python implementation mirroring solve.sh arithmetic",
+      "why_not_fabricated": "The values are the deterministic output of the given algebraic formulas with the specified constants; they are not arbitrary numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ambient_J_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "J0_kB",
+            "J1_kB",
+            "J2_kB",
+            "J3_kB"
+          ],
+          "properties": {
+            "J0_kB": {
+              "type": "number",
+              "unit": "K"
+            },
+            "J1_kB": {
+              "type": "number",
+              "unit": "K"
+            },
+            "J2_kB": {
+              "type": "number",
+              "unit": "K"
+            },
+            "J3_kB": {
+              "type": "number",
+              "unit": "K"
+            }
+          }
+        },
+        "description": "Ambient-pressure exchange parameters J0/kB, J1/kB, J2/kB, J3/kB in Kelvin, computed from the given critical fields and Néel temperature using the mean-field ANNNI model."
+      },
+      {
+        "file": "pressure_derivatives.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "dlnJ0_dP",
+            "dlnJ1_dP",
+            "dlnJ2_dP",
+            "dlnJ3_dP"
+          ],
+          "properties": {
+            "dlnJ0_dP": {
+              "type": "number",
+              "unit": "%/GPa"
+            },
+            "dlnJ1_dP": {
+              "type": "number",
+              "unit": "%/GPa"
+            },
+            "dlnJ2_dP": {
+              "type": "number",
+              "unit": "%/GPa"
+            },
+            "dlnJ3_dP": {
+              "type": "number",
+              "unit": "%/GPa"
+            }
+          }
+        },
+        "description": "Logarithmic pressure derivatives of J0, J1, J2, J3 in %/GPa, computed by differentiating the exchange formulas with respect to pressure."
+      }
+    ],
+    "notes": "All inputs are provided in the instructions. Physical constants should use standard CODATA2018 values. The computation is deterministic and simple; results can be recomputed independently."
+  },
+  "steps": [
+    {
+      "id": "ambient_J",
+      "output_file": "ambient_J_values.json",
+      "kind": "numeric",
+      "weight": 0.4,
+      "gold": {
+        "J0_kB": 38.09,
+        "J1_kB": -20.84,
+        "J2_kB": -9.91,
+        "J3_kB": -2.84
+      },
+      "tolerance": 0.1
+    },
+    {
+      "id": "pressure_derivatives",
+      "output_file": "pressure_derivatives.json",
+      "kind": "numeric",
+      "weight": 0.6,
+      "gold": {
+        "dlnJ0_dP": -0.25,
+        "dlnJ1_dP": 6.13,
+        "dlnJ2_dP": -1.95,
+        "dlnJ3_dP": 4.42
+      },
+      "tolerance": 0.1
+    }
+  ]
+}

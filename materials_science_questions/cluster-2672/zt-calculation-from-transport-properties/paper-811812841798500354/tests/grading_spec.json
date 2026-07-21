@@ -1,0 +1,86 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes the peak excess temperature and total thermal resistance from the analytical model using the given parameters, providing a deterministic reference against which the agent's reported values are compared.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "hot_spot_results.json": "metric_recompute"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "hot_spot_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "kxy5_excess_temp": "number (float)",
+            "kxy350_excess_temp": "number (float)",
+            "kxy1800_excess_temp": "number (float)",
+            "kxy350_opt_thickness": "number (float)",
+            "kxy350_total_thermal_resistance": "number (float)"
+          },
+          "units": {
+            "kxy5_excess_temp": "°C",
+            "kxy350_excess_temp": "°C",
+            "kxy1800_excess_temp": "°C",
+            "kxy350_opt_thickness": "µm",
+            "kxy350_total_thermal_resistance": "K/W"
+          }
+        },
+        "description": "Peak hot-spot excess temperatures for three in-plane conductivities, the optimum spreader thickness for k_xy=350 W/mK, and the corresponding minimum total thermal resistance."
+      }
+    ],
+    "notes": "All parameters are as specified in the action. The analytical solution requires truncation of infinite Fourier-Bessel series; convergence should be ensured. The optimum thickness can be found via sweep or minimizer. The computed values are compared against paper-reported values with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "excess_temp_kxy5",
+      "output_file": "hot_spot_results.json",
+      "kind": "numeric_compare",
+      "field": "kxy5_excess_temp",
+      "weight": 0.18,
+      "tolerance_absolute": 0.1
+    },
+    {
+      "id": "excess_temp_kxy350",
+      "output_file": "hot_spot_results.json",
+      "kind": "numeric_compare",
+      "field": "kxy350_excess_temp",
+      "weight": 0.18,
+      "tolerance_absolute": 0.1
+    },
+    {
+      "id": "excess_temp_kxy1800",
+      "output_file": "hot_spot_results.json",
+      "kind": "numeric_compare",
+      "field": "kxy1800_excess_temp",
+      "weight": 0.18,
+      "tolerance_absolute": 0.1
+    },
+    {
+      "id": "opt_thickness",
+      "output_file": "hot_spot_results.json",
+      "kind": "numeric_compare",
+      "field": "kxy350_opt_thickness",
+      "weight": 0.2,
+      "tolerance_absolute": 1.0
+    },
+    {
+      "id": "opt_resistance",
+      "output_file": "hot_spot_results.json",
+      "kind": "numeric_compare",
+      "field": "kxy350_total_thermal_resistance",
+      "weight": 0.2,
+      "tolerance_absolute": 0.01
+    },
+    {
+      "id": "trend_check",
+      "output_file": "hot_spot_results.json",
+      "kind": "structural",
+      "weight": 0.06
+    }
+  ]
+}

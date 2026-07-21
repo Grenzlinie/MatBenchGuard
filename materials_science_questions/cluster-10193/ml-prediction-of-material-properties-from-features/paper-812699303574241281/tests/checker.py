@@ -94,26 +94,32 @@ def load_artifact(path):
 
 
 def prepare(outputs_dir, spec):
-    def prepare(outputs_dir, spec):
-        pred_path = os.path.join(outputs_dir, 'step_01_predictions.csv')
-        if not os.path.exists(pred_path):
-            return {'r2_computed': None, 'mae_computed': None}
-        with open(pred_path, newline='') as f:
-            reader = csv.DictReader(f)
-            exp = []
-            pred = []
-            for row in reader:
-                exp.append(float(row['experimental_t50']))
-                pred.append(float(row['predicted_t50']))
-        n = len(exp)
-        if n == 0:
-            return {'r2_computed': None, 'mae_computed': None}
-        mean_exp = sum(exp) / n
-        ss_res = sum((e - p) ** 2 for e, p in zip(exp, pred))
-        ss_tot = sum((e - mean_exp) ** 2 for e in exp)
-        r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
-        mae = sum(abs(e - p) for e, p in zip(exp, pred)) / n
-        return {'r2_computed': r2, 'mae_computed': mae}
+    pred_path = os.path.join(outputs_dir, 'step_01_predictions.csv')
+    if not os.path.exists(pred_path):
+        return {'r2_computed': None, 'mae_computed': None}
+    with open(pred_path, newline='') as f:
+        reader = csv.DictReader(f)
+        exp = []
+        pred = []
+        for row in reader:
+            exp.append(float(row['experimental_t50']))
+            pred.append(float(row['predicted_t50']))
+    n = len(exp)
+    if n == 0:
+        return {'r2_computed': None, 'mae_computed': None}
+    mean_exp = sum(exp) / n
+    ss_res = sum((e - p) ** 2 for e, p in zip(exp, pred))
+    ss_tot = sum((e - mean_exp) ** 2 for e in exp)
+    r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
+    mae = sum(abs(e - p) for e, p in zip(exp, pred)) / n
+    return {'r2_computed': r2, 'mae_computed': mae}
+
+
+# Hardcoded thresholds (not visible to the agent)
+_R2_THRESHOLD = 0.68
+_MAE_THRESHOLD = 35.0
+_R2_TOL = 0.05
+_MAE_TOL = 5.0
 
 
 # === block: score_0 (check id='step_01_predictions') ===
@@ -135,41 +141,36 @@ def score_0(artifact, step, ctx):
     r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
     mae = sum(abs(e - p) for e, p in zip(exp, pred)) / n
 
-    r2_thresh = float(step.get('r2_threshold', 0.68))
-    mae_thresh = float(step.get('mae_threshold', 35.0))
     # r2 score: higher is better, full credit if r2 >= threshold
-    if r2 >= r2_thresh:
+    if r2 >= _R2_THRESHOLD:
         r2_score = 1.0
     else:
-        r2_score = max(0.0, r2 / r2_thresh)
+        r2_score = max(0.0, r2 / _R2_THRESHOLD)
     # mae score: lower is better, full credit if mae <= threshold
-    if mae <= mae_thresh:
+    if mae <= _MAE_THRESHOLD:
         mae_score = 1.0
     else:
-        decay = (mae - mae_thresh) / (200.0 - mae_thresh)
+        decay = (mae - _MAE_THRESHOLD) / (200.0 - _MAE_THRESHOLD)
         mae_score = max(0.0, 1.0 - decay)
     return (r2_score + mae_score) / 2.0
 
 
 # === block: score_1 (check id='step_02_metrics') ===
 def score_1(artifact, step, ctx):
-    def score_metrics(artifact, step, ctx):
-        if artifact is None or not isinstance(artifact, dict):
-            return 0.0
-        r2_exp = ctx.get('r2_computed', None)
-        mae_exp = ctx.get('mae_computed', None)
-        if r2_exp is None or mae_exp is None:
-            return 0.0
-        r2_agent = artifact.get('r2')
-        mae_agent = artifact.get('mae')
-        if r2_agent is None or mae_agent is None:
-            return 0.0
-        r2_tol = float(step.get('r2_tol', 0.05))
-        mae_tol = float(step.get('mae_tol', 5.0))
-        if abs(float(r2_agent) - r2_exp) <= r2_tol and abs(float(mae_agent) - mae_exp) <= mae_tol:
-            return 1.0
-        else:
-            return 0.0
+    if artifact is None or not isinstance(artifact, dict):
+        return 0.0
+    r2_exp = ctx.get('r2_computed', None)
+    mae_exp = ctx.get('mae_computed', None)
+    if r2_exp is None or mae_exp is None:
+        return 0.0
+    r2_agent = artifact.get('r2')
+    mae_agent = artifact.get('mae')
+    if r2_agent is None or mae_agent is None:
+        return 0.0
+    if abs(float(r2_agent) - r2_exp) <= _R2_TOL and abs(float(mae_agent) - mae_exp) <= _MAE_TOL:
+        return 1.0
+    else:
+        return 0.0
 
 
 _SCORERS = {

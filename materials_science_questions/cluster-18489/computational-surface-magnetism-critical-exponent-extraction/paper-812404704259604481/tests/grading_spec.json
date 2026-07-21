@@ -1,0 +1,93 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The task produces curves from a known secular equation; the checker recomputes every point independently using the same equation, then compares within tolerance. No hidden labels or gold tables are required.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phase_diagram.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Delta_S",
+            "t_c",
+            "param_label"
+          ],
+          "units": {
+            "Delta_S": "dimensionless",
+            "t_c": "dimensionless (fraction of bulk Tc)",
+            "param_label": "string"
+          }
+        },
+        "description": "Surface phase diagram: reduced critical temperature vs. Δ_S for pure and amorphized surfaces."
+      },
+      {
+        "file": "critical_values.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "D_S",
+            "Delta_c_S"
+          ],
+          "units": {
+            "D_S": "dimensionless",
+            "Delta_c_S": "dimensionless"
+          }
+        },
+        "description": "Critical enhancement Δ_S^c vs. disorder D_S at the special surface-bulk transition (t_c=1)."
+      },
+      {
+        "file": "reentrant_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "delta_S",
+            "t_c"
+          ],
+          "units": {
+            "delta_S": "dimensionless",
+            "t_c": "dimensionless"
+          }
+        },
+        "description": "Re-entrant curve: surface ordering temperature vs. structural fluctuation δ_S for Δ_S=7.0, Δ_1=-0.9."
+      }
+    ],
+    "notes": "The verifier implements the same linearized RFA secular equation and recomputes t_c (or Δ_S^c) for each submitted parameter set. For phase_diagram.csv, the verifier recomputes t_c for every (Δ_S, param_label) point and checks absolute deviation within tolerance. For critical_values.csv, it solves for the root giving t_c=1 and compares submitted Δ_c_S to its recomputed value within tolerance, and checks monotonicity. For reentrant_curve.csv, it recomputes t_c for each δ_S point. The hidden reference is the verifier’s own recomputation using the publicly known equations; no external gold dataset is used."
+  },
+  "steps": [
+    {
+      "id": "step_01_phase_diagram",
+      "output_file": "phase_diagram.csv",
+      "weight": 0.35,
+      "kind": "recompute_pointwise",
+      "tolerance_abs": 0.001,
+      "description": "For each row (Delta_S, param_label), recompute t_c from the secular equation and check absolute error."
+    },
+    {
+      "id": "step_02_critical_delta",
+      "output_file": "critical_values.csv",
+      "weight": 0.25,
+      "kind": "recompute_root",
+      "tolerance_abs": 0.01,
+      "description": "For each D_S, recompute Δ_S^c solving A_S(t=1,Δ,D_S)=5/24 and compare to submitted."
+    },
+    {
+      "id": "step_03_reentrant_curve",
+      "output_file": "reentrant_curve.csv",
+      "weight": 0.4,
+      "kind": "recompute_pointwise",
+      "tolerance_abs": 0.001,
+      "description": "For each δ_S, compute D_S = δ_S*(1+Δ_S), recompute t_c and check absolute error against submitted."
+    }
+  ]
+}

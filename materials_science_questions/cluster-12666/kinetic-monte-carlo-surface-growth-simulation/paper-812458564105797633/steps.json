@@ -1,0 +1,54 @@
+[
+  {
+    "id": "simulate_clusters",
+    "title": "Simulate cluster growth (modified Eden model)",
+    "role": "process",
+    "action": "Implement the modified Eden model on a tetragonal lattice (FCC with two-point basis, coordination 4, cubic cell L=64) with monomer-specific poisoning. For each specified functionality distribution — (1:0:0:0), (3:3:3:1), (0:1:1:0), (2:0:1:0) — grow clusters by repeatedly selecting monomers from the distribution and attaching them to available growth sites according to the geometric acceptance criterion until 5×10⁴ monomers have been added. Discard dead clusters and restart to obtain 100 independent realizations per distribution.",
+    "output_file": "",
+    "evidence": "simulation_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "This step implements the core growth algorithm. Its output (cluster configurations) is consumed by the subsequent structure factor computation. An optional log file may record the number of successful clusters and monomers per distribution.",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_sk",
+    "title": "Compute circularly averaged structure factor S(k)",
+    "role": "scored",
+    "action": "For each distribution and each realization, compute the static structure factor S(k) from the final cluster configuration using the intensity formula. Average S(k) over all directions (circularly) and then average over the 100 realizations. Export the averaged S(k) curves.",
+    "output_file": "Sk_curves.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Raw scattering intensity data that allows the checker to independently refit α and verify consistency. Contains the circularly averaged S(k) as a function of wavevector k for each distribution.",
+    "output_schema": "Columns: distribution (str), k (float), S (float). One row per (distribution, k) point. Data should cover a sufficient range of k to include the large-k power-law regime."
+  },
+  {
+    "id": "extract_alpha",
+    "title": "Extract scattering exponent α",
+    "role": "scored",
+    "action": "Fit a power law S(k) ~ k^{-α} to the large-k portion of each averaged S(k) curve (the exact k range should follow the paper's method). Report the fitted α and its standard error.",
+    "output_file": "alpha_distributions.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Fitted power-law exponent α for each functionality distribution. The checker will compare the agent-reported α to hidden gold values and also verify consistency with recomputed α from Sk_curves.csv.",
+    "output_schema": "Columns: distribution (str), alpha (float), alpha_error (float). One row per specified functionality distribution."
+  },
+  {
+    "id": "derive_relation",
+    "title": "Derive analytical mean functionality relation",
+    "role": "scored",
+    "action": "Using the probabilistic model (binomial hydrolysed sites) and the calibrated hydrolysis capacity parameter ε = 5, compute the mean monomer functionality ⟨n⟩ as a function of the water ratio W for W = 1,2,3,4 via the formula ⟨n⟩ = 4W / (W + 1/ε).",
+    "output_file": "analytical_relation.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Table of W and the corresponding mean functionality ⟨n⟩ from the derived analytical relation with ε=5. The values are exact and will be checked against precomputed gold.",
+    "output_schema": "Columns: W (int, 1..4), mean_n (float). One row per W."
+  }
+]

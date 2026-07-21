@@ -8,7 +8,6 @@ from unittest import mock
 
 from tests.test_materials_benchmark_review_e1 import (
     SOURCE_PACKAGE,
-    bind_public_fixture,
     copy_source_package,
 )
 
@@ -81,7 +80,7 @@ class MaterialsIssue20Tests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            run_review.run_review(package, known_valid_output=None)
+            run_review.run_review(package)
 
             checker_path = package / "benchmark_audit/checker_tests.json"
             report_path = package / "benchmark_audit/audit_report.json"
@@ -109,7 +108,6 @@ class MaterialsIssue20Tests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "E1-only"):
                 run_review.run_review(
                     package,
-                    known_valid_output=None,
                     execution_level="E2",
                 )
 
@@ -120,7 +118,7 @@ class MaterialsIssue20Tests(unittest.TestCase):
             package = Path(temporary) / SOURCE_PACKAGE.name
             copy_source_package(package)
 
-            run_review.run_review(package, known_valid_output=None)
+            run_review.run_review(package)
             report = json.loads(
                 (
                     package / "benchmark_audit/audit_report.json"
@@ -168,17 +166,16 @@ class MaterialsIssue20Tests(unittest.TestCase):
 
     def test_public_fixture_is_not_the_positive_control(self) -> None:
         results = [
-            usable_result("known_valid_public"),
-            usable_result("quality_gradient_small_error"),
-            usable_result("quality_gradient_large_error"),
-            usable_result("metamorphic_equivalent_representation"),
+            usable_result("positive_oracle"),
+            usable_result("random_baseline"),
         ]
 
         flags = dynamic_checker_probe.probe_assessment_flags(results)
 
-        self.assertFalse(flags["positive"])
-        self.assertTrue(flags["discrimination"])
-        self.assertTrue(flags["equivalence"])
+        self.assertTrue(flags["positive"])
+        self.assertTrue(flags["negative"])
+        self.assertFalse(flags["discrimination"])
+        self.assertFalse(flags["equivalence"])
 
     def test_checker_cases_record_sandbox_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -192,7 +189,7 @@ class MaterialsIssue20Tests(unittest.TestCase):
             }
 
             result = dynamic_checker_probe.dynamic_checker_probe(
-                package, output, known_valid_output=None
+                package, output
             )
 
             self.assertTrue(result["tests"])
@@ -243,7 +240,6 @@ class MaterialsIssue20Tests(unittest.TestCase):
             result = dynamic_checker_probe.dynamic_checker_probe(
                 package,
                 Path(temporary) / "checker.json",
-                known_valid_output=None,
             )
 
             self.assertEqual(result["runtime"]["status"], "ASSESSED")
@@ -271,7 +267,6 @@ class MaterialsIssue20Tests(unittest.TestCase):
             result = dynamic_checker_probe.dynamic_checker_probe(
                 package,
                 Path(temporary) / "checker.json",
-                known_valid_output=None,
             )
 
             self.assertEqual(result["runtime"]["status"], "ASSESSED")
@@ -839,66 +834,15 @@ class MaterialsIssue20Tests(unittest.TestCase):
             )
         )
 
-    def test_package_local_known_valid_fixture_is_rejected(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            package = Path(temporary) / SOURCE_PACKAGE.name
-            copy_source_package(package)
-            fake = package / "tests/fake-public-fixture"
-            fake.mkdir()
-            (fake / "dispersion_curves.csv").write_text(
-                "direction,mode,k,frequency\n100,L,0,0\n",
-                encoding="utf-8",
-            )
-
-            with self.assertRaisesRegex(ValueError, "external"):
-                dynamic_checker_probe.dynamic_checker_probe(
-                    package,
-                    Path(temporary) / "checker.json",
-                    known_valid_output=fake,
-                )
-
-    def test_external_fixture_requires_source_bound_manifest(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            package = Path(temporary) / SOURCE_PACKAGE.name
-            copy_source_package(package)
-            fixture = Path(temporary) / "public-fixture"
-            fixture.mkdir()
-            (fixture / "dispersion_curves.csv").write_text(
-                "direction,mode,k,frequency\n100,L,0,0\n",
-                encoding="utf-8",
-            )
-
-            with self.assertRaisesRegex(ValueError, "fixture manifest"):
-                dynamic_checker_probe.dynamic_checker_probe(
-                    package,
-                    Path(temporary) / "checker.json",
-                    known_valid_output=fixture,
-                )
-
-    def test_fixture_manifest_rejects_stale_source_binding(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            package = Path(temporary) / SOURCE_PACKAGE.name
-            copy_source_package(package)
-            fixture = Path(temporary) / "public-fixture"
-            fixture.mkdir()
-            (fixture / "dispersion_curves.csv").write_text(
-                "direction,mode,k,frequency\n100,L,0,0\n",
-                encoding="utf-8",
-            )
-            bind_public_fixture(package, fixture)
-            instruction = package / "instruction.md"
-            instruction.write_text(
-                instruction.read_text(encoding="utf-8")
-                + "\nA source change invalidates the fixture assessment.\n",
-                encoding="utf-8",
-            )
-
-            with self.assertRaisesRegex(ValueError, "source-bound"):
-                dynamic_checker_probe.dynamic_checker_probe(
-                    package,
-                    Path(temporary) / "checker.json",
-                    known_valid_output=fixture,
-                )
+    def test_removed_external_fixture_api_is_not_available(self) -> None:
+        self.assertFalse(hasattr(dynamic_checker_probe, "fixture_hashes"))
+        self.assertFalse(
+            hasattr(dynamic_checker_probe, "validate_known_valid_fixture")
+        )
+        self.assertNotIn(
+            "known_valid_output",
+            dynamic_checker_probe.dynamic_checker_probe.__code__.co_varnames,
+        )
 
     def test_batch_snapshot_rejects_non_e1_report(self) -> None:
         template = json.loads(

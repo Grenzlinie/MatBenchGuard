@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step1",
+    "title": "Build sample and dipole-coupling lookup table",
+    "role": "process",
+    "action": "Construct a spherical sample of N=9171 spins on a simple cubic lattice (diameter 27a, a=1). Compute and store all pairwise dipole couplings K_ij = 2 * E_dm * a^3 / r_ij^3 * (1 - 3*z_ij^2/r_ij^2) using E_dm = 50 * Delta_2 and Delta_2 = 2.0.",
+    "output_file": "",
+    "evidence": "coupling_table.pkl",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Precompute the full dipole interaction matrix for subsequent Monte Carlo simulation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Monte Carlo simulation of magnetization decay curve",
+    "role": "scored",
+    "action": "Initialize all spins up. Evolve using the modified flip protocol: at each time step dt = 0.01 * E_dm / Delta_2^2, compute bias E_i at every site, then flip spin i with probability Gamma_0 * dt if |E_i| <= W, where Gamma_0 = Delta_2^2/(4W) and W = 2.5 * Delta_2. Record magnetization m(t) at every time step. Repeat for at least 10 independent runs and average. Save the averaged magnetization at the normalized times t/tau = [0.1, 0.3, 0.5, 1.0, 3.0, 5.0] (tau = E_dm/Delta_2^2).",
+    "output_file": "magnetization_curve.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Averaged magnetization vs. normalized time from Monte Carlo simulations, used to validate the short-time decay behavior.",
+    "output_schema": "CSV with header: time, magnetization. Rows correspond to the six normalized times listed."
+  },
+  {
+    "id": "step3",
+    "title": "Fit sqrt(t) law and report coefficient",
+    "role": "scored",
+    "action": "Using the full magnetization time series obtained from the simulation, fit the short-time magnetization for t/tau <= 5 to the form 1 - sqrt(G * t) and report the best-fit G.",
+    "output_file": "sqrt_coefficient.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Fitted coefficient of the sqrt(t) law, G, which characterizes the short-time relaxation.",
+    "output_schema": "Single line containing the numerical value of G (unitless)."
+  }
+]

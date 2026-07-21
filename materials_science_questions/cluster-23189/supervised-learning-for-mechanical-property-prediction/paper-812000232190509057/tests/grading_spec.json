@@ -1,0 +1,50 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing the full annealing training is computationally infeasible for the hidden checker sandbox; the artifact is compared to paper-reported reference values.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "equivalent_surrogate.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "atoms": "array of floats",
+            "probabilities": "array of floats",
+            "final_distortion": "float"
+          }
+        },
+        "description": "The final codebook (atoms and probabilities) and the final expected distortion achieved by the trained deterministic annealing vector quantizer. The checker compares these against the paper's reported values, verifying that the equivalent homogeneous surrogate correctly captures the displacement-targeted upscaling result."
+      }
+    ],
+    "notes": "Only the displacement-targeted experiment is reproduced; pointwise stress, total reaction, and other cases are omitted. The finite-element solver for computing displacements is left open-ended (the agent may use a direct stiffness solver on the pixel grid or an analytical approximation for the homogeneous case)."
+  },
+  "steps": [
+    {
+      "id": "equiv_surrogate",
+      "output_file": "equivalent_surrogate.json",
+      "weight": 1.0,
+      "kind": "result_compare",
+      "description": "Verify that the learned equivalent modulus is a single atom near 2.67 and final distortion is at most a small multiple of the paper-reported 1.74e-4.",
+      "target_atom": 2.67,
+      "atom_abs_tolerance": 0.05,
+      "target_distortion": 0.000174,
+      "distortion_rel_tolerance": 0.2,
+      "distortion_decay_rel": 0.5,
+      "atom_weight": 0.5,
+      "distortion_weight": 0.5
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for equivalent modulus and distortion from the displacement-targeted experiment in the paper (Section 3.1.2, Fig. 5).",
+      "source_provenance": "Koutsourelakis, J. Comput. Phys. 226 (2007) 301-325. The atom 2.67 and distortion 1.74e-4 are explicitly stated in the text describing Fig. 5.",
+      "generation_method": "Extracted directly from the paper's description of the displacement-based vector quantization result.",
+      "why_not_fabricated": "These are the reported values; the solver must produce a result consistent with the paper's experiment."
+    }
+  ]
+}

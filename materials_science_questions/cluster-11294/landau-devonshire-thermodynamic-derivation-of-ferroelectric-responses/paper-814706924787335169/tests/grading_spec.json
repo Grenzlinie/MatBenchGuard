@@ -1,0 +1,74 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The analytical relation (Eq. 5a) with the constants from Table I is a closed-form expression. The checker can recompute epsilon_3 for each required grid point and compare element-wise with a tight floating-point tolerance, making T1 straightforward and natural.",
+  "pass_threshold": 1.0,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference epsilon_3 values for E_kV_per_cm grid points computed from Eq. 5a using the constants in Table I.",
+      "source_provenance": "Derived from the paper's Eq. 5a and the material constants in Table I (Q₁₃, s₁₁ᴱ, d₃₁,PZT, ε₀, ε₃(0)). The reference solve.sh computes using the same expression.",
+      "generation_method": "Hardcoded computation of the closed-form expression in grading_spec.json",
+      "why_not_fabricated": "Every value is a direct consequence of the paper’s published model and constants; it is exactly the result a correct reproduction must produce."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "epsilon_vs_field.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "E_kV_per_cm",
+            "epsilon_3"
+          ],
+          "units": {
+            "E_kV_per_cm": "kV/cm",
+            "epsilon_3": "dimensionless"
+          }
+        },
+        "description": "CSV file with the computed BT relative permittivity ε₃ for each electric field grid point. The checker recomputes ε₃ from the reported E_kV_per_cm using the same analytical expression and compares epsilon_3 values element-wise with a relative error tolerance."
+      }
+    ],
+    "notes": "The analytical expression and all material constants are public and taken from the paper's Table I. The experimental validation against measured capacitance is not included because the raw measurement data are not publicly available."
+  },
+  "steps": [
+    {
+      "id": "calc_epsilon",
+      "output_file": "epsilon_vs_field.csv",
+      "weight": 1.0,
+      "kind": "recompute",
+      "field": "epsilon_3",
+      "grid_field": "E_kV_per_cm",
+      "tolerance_relative": 1e-10,
+      "grid_values": [
+        -4.0,
+        -3.5,
+        -3.0,
+        -2.5,
+        -2.0,
+        -1.5,
+        -1.0,
+        -0.5,
+        0.0,
+        0.5,
+        1.0,
+        1.5,
+        2.0,
+        2.5,
+        3.0,
+        3.5,
+        4.0
+      ],
+      "parameters": {
+        "epsilon0": 8.85e-12,
+        "Q13": -0.0431,
+        "d31": -2.74e-10,
+        "s11E": 8.33e-12,
+        "epsilon3_0": 5554
+      }
+    }
+  ]
+}

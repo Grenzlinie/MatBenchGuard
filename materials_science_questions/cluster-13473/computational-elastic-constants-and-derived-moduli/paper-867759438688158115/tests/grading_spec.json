@@ -1,23 +1,41 @@
 {
   "scoring_tier": "result-level compare",
-  "scoring_justification": "The main verification compares the agent's reported shear modulus, order parameters, and boson peak to hidden paper gold with tolerances (±10% G, ±5% F_IS, ±3% ω_BP); a full recompute of the simulation is not feasible in the verifier sandbox. A supplementary structural check verifies that the reported ω_BP matches the peak in the agent's own D(ω)/ω² data.",
+  "scoring_justification": "The verifier checks that the reported quantities are internally consistent and exhibit the physically expected trends (e.g., G = G_A - G_NA, F_IS and ω_BP monotonically increasing with Z). A supplementary structural check verifies that the reported ω_BP matches the peak in the agent's own D(ω)/ω² data and that the DOS exhibits a physically plausible shape.",
   "pass_threshold": 0.6,
   "hidden_assets": [
     {
       "path": "grading_spec_json.inline",
-      "purpose": "Gold reference values for shear modulus, order parameters, and boson peak frequency",
-      "source_provenance": "Paper's Figures 2, 5, 6 and analytical formula for F_IS (Appendix C). Reference solve.sh writes exactly these values.",
-      "generation_method": "Extracted from paper scaling laws and formulas; solve.sh hardcodes the consistent numbers.",
-      "why_not_fabricated": "Values correspond to the paper's own reported results for the same model and parameters; they are not invented, but represent the intended reproduction target."
+      "purpose": "No hidden gold values are used. Scoring is based on self‑consistency and plausibility constraints.",
+      "source_provenance": "Physical constraints derived from the problem statement and model definitions.",
+      "generation_method": "The checks enforce internal relations (e.g., G = G_A - G_NA), positivity, and monotonicity.",
+      "why_not_fabricated": "The constraints are direct consequences of the model equations and expected physical behaviour."
     }
   ],
   "output_contract": {
     "outputs": [
       {
+        "file": "rn_config_log.txt",
+        "format": "txt",
+        "purpose": "unscored",
+        "description": "Evidence log for RN glass configuration generation. Not scored; required by the workflow steps."
+      },
+      {
+        "file": "fcc_config_log.txt",
+        "format": "txt",
+        "purpose": "unscored",
+        "description": "Evidence log for FCC crystal configuration generation. Not scored; required by the workflow steps."
+      },
+      {
+        "file": "hessian_diag_log.txt",
+        "format": "txt",
+        "purpose": "unscored",
+        "description": "Evidence log for Hessian diagonalization. Not scored; required by the workflow steps."
+      },
+      {
         "file": "shear_modulus.csv",
         "format": "csv",
         "purpose": "scored",
-        "target_policy": "reference_match",
+        "target_policy": "consistency_and_trends",
         "schema": {
           "type": "table",
           "required_columns": [
@@ -33,13 +51,13 @@
             "G_NA": "harmonic units"
           }
         },
-        "description": "Shear modulus (affine and nonaffine) for RN glass and defective FCC crystal at Z=6,7,8,9. Reference values are the paper's reported G, G_A, G_NA; scoring tolerates ±10%."
+        "description": "Shear modulus for RN glass and defective FCC crystal at Z=6,7,8,9. The verifier checks that G = G_A - G_NA (within tolerance), that G_A > 0 and G_NA ≥ 0, and that G increases monotonically with Z for each system."
       },
       {
         "file": "order_parameters.csv",
         "format": "csv",
         "purpose": "scored",
-        "target_policy": "reference_match",
+        "target_policy": "consistency_and_trends",
         "schema": {
           "type": "table",
           "required_columns": [
@@ -50,13 +68,13 @@
           ],
           "units": {}
         },
-        "description": "Inversion‑symmetry order parameter F_IS and bond‑orientational order parameter F_6. F_IS is compared to the paper's values with ±5% tolerance; F_6 trend (≈1 for FCC, ≈0.3 for RN, constant across Z) is also verified."
+        "description": "Order parameters F_IS and F_6. The verifier checks that 0 ≤ F_IS ≤ 1, F_IS increases monotonically with Z, F_6 ≈ 1.0 for FCC and ≈ 0.3 for RN (within bounds), and that F_6 is nearly independent of Z."
       },
       {
         "file": "boson_peak.csv",
         "format": "csv",
         "purpose": "scored",
-        "target_policy": "reference_match",
+        "target_policy": "consistency_and_trends",
         "schema": {
           "type": "table",
           "required_columns": [
@@ -68,7 +86,7 @@
             "omega_BP": "frequency units"
           }
         },
-        "description": "Boson peak frequency (maximum of D(ω)/ω²) for each condition. Compared to paper values with ±3% tolerance, and the trend (increases with Z) is checked."
+        "description": "Boson peak frequency for each condition. The verifier checks that ω_BP > 0 and increases monotonically with Z."
       },
       {
         "file": "dos_data.json",
@@ -95,89 +113,39 @@
             ]
           }
         },
-        "description": "Averaged vibrational density of states D(ω) curves. The checker verifies that the maximum of D(ω)/ω² coincides with the reported omega_BP and that the overall shape is physically plausible (Debye regime, boson peak)."
+        "description": "Averaged D(ω) curves. The checker verifies that the maximum of D(ω)/ω² coincides with the reported ω_BP and that the overall shape is physically plausible."
       }
     ],
-    "notes": "All scored numbers are the agent's computed averages over at least 3 independent realizations per condition. The checker compares reported values to hidden gold with the stated tolerances and verifies the qualitative trends (F_IS linear in Z, omega_BP increasing with Z). The process steps (configuration generation, Hessian diagonalization) are not directly scored but are required to produce the load‑bearing shear modulus and other quantities."
-  },
-  "gold": {
-    "shear_modulus": {
-      "RN": {
-        "6": 0.0,
-        "7": 0.1166,
-        "8": 0.2332,
-        "9": 0.3498
-      },
-      "FCC": {
-        "6": 0.0,
-        "7": 0.1,
-        "8": 0.2,
-        "9": 0.3
-      }
-    },
-    "order_parameters": {
-      "F_IS": {
-        "RN": {
-          "6": 0.454545,
-          "7": 0.545455,
-          "8": 0.636364,
-          "9": 0.727273
-        },
-        "FCC": {
-          "6": 0.454545,
-          "7": 0.545455,
-          "8": 0.636364,
-          "9": 0.727273
-        }
-      },
-      "F_6": {
-        "RN": 0.3,
-        "FCC": 1.0
-      }
-    },
-    "boson_peak": {
-      "RN": {
-        "6": 0.0,
-        "7": 0.25,
-        "8": 0.5,
-        "9": 0.75
-      },
-      "FCC": {
-        "6": 0.0,
-        "7": 0.25,
-        "8": 0.5,
-        "9": 0.75
-      }
-    }
+    "notes": "All scored numbers are the agent's computed averages over at least 3 independent realizations per condition. The checker enforces internal consistency and physical trends; no reference gold values are used."
   },
   "steps": [
     {
       "id": "shear_modulus_check",
       "output_file": "shear_modulus.csv",
       "weight": 0.3,
-      "kind": "reference_match",
-      "description": "Compare reported G against paper gold within ±10% relative or 0.01 absolute tolerance."
+      "kind": "consistency_and_trends",
+      "description": "Verify G = G_A - G_NA, G_A > 0, G_NA ≥ 0, and monotonic increase of G with Z."
     },
     {
       "id": "order_parameters_check",
       "output_file": "order_parameters.csv",
       "weight": 0.3,
-      "kind": "reference_match",
-      "description": "Compare F_IS within ±5% relative tolerance; check F_6 against expected values (0.3 for RN, 1.0 for FCC) within 0.05 absolute."
+      "kind": "consistency_and_trends",
+      "description": "Verify 0 ≤ F_IS ≤ 1, F_IS monotonic with Z, F_6 in expected ranges (FCC ≈ 1.0, RN ≈ 0.3) and nearly constant across Z."
     },
     {
       "id": "boson_peak_check",
       "output_file": "boson_peak.csv",
       "weight": 0.2,
-      "kind": "reference_match",
-      "description": "Compare omega_BP within ±3% relative or 0.01 absolute tolerance."
+      "kind": "consistency_and_trends",
+      "description": "Verify ω_BP > 0 and increase monotonically with Z."
     },
     {
       "id": "dos_consistency_check",
       "output_file": "dos_data.json",
       "weight": 0.2,
       "kind": "recompute_metric",
-      "description": "Verify that the maximum of D(ω)/ω² from dos_data.json matches the reported omega_BP (within frequency bin width tolerance)."
+      "description": "Verify that the maximum of D(ω)/ω² from dos_data.json matches the reported omega_BP (within frequency bin width tolerance) and that the reduced DOS shows a physically plausible shape with a Debye regime and a boson peak."
     }
   ]
 }

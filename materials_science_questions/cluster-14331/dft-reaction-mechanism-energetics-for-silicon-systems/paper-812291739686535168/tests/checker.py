@@ -101,7 +101,11 @@ def prepare(outputs_dir, spec):
 def score_0(artifact, step, ctx):
         gold = ctx['gold']
         tol = step['tolerances']
-        fields = ["k2_at_723K", "k8_at_723K", "E2_inf", "E8_inf", "delta_Hf_EtSiH", "group_additivity_C_H2_C_Si"]
+        # Dynamically obtain the list of fields to check from the gold dictionary,
+        # ensuring that only fields present in tolerances are evaluated.
+        fields = [f for f in gold if f in tol]
+        if not fields:
+            return 0.0
         passed = 0
         for f in fields:
             if f not in artifact:
@@ -113,11 +117,11 @@ def score_0(artifact, step, ctx):
             g = gold[f]
             if f in ["k2_at_723K", "k8_at_723K"]:
                 rel_err = abs(val - g) / g if g != 0 else abs(val - g)
-                if rel_err <= tol[f]["relative"]:
+                if rel_err <= tol[f].get("relative", float("inf")):
                     passed += 1
             else:
                 abs_err = abs(val - g)
-                if abs_err <= tol[f]["absolute"]:
+                if abs_err <= tol[f].get("absolute", float("inf")):
                     passed += 1
         return passed / len(fields)
 

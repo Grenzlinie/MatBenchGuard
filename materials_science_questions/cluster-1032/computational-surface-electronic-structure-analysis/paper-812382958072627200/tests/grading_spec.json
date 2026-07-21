@@ -1,0 +1,229 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Headline quantities require full DFT slab calculations infeasible to recompute in the verifier sandbox; result-level comparison against paper-reported gold with tolerances is the highest feasible tier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "work_function.txt": "exact_match",
+    "dos_shifts.csv": "reference_match",
+    "occupied_surface_states.csv": "reference_match",
+    "unoccupied_surface_states.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for work function, DOS shifts, and surface state energies",
+      "source_provenance": "Paper: work function 3.38 eV from Table 1; DOS shift bounds from text (I,II ≤0.2 eV; III = 0.98 eV in text, expanded to [0.78,1.18]); occupied surface state energies from Table 2; unoccupied from Table 3.",
+      "generation_method": "direct transcription from paper tables and text",
+      "why_not_fabricated": "These are the exact paper-reported values for the same quantities under the same conditions."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "work_function.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "unit": "eV",
+          "description": "A single floating-point number representing the work function of the Ca(001) five-layer film."
+        },
+        "description": "Work function of the Ca(001) five-layer film."
+      },
+      {
+        "file": "dos_shifts.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "maxima",
+            "shift_eV"
+          ],
+          "columns": {
+            "maxima": "string",
+            "shift_eV": "float"
+          }
+        },
+        "description": "Shifts of the three main DOS maxima from bulk Ca to the Ca(001) film."
+      },
+      {
+        "file": "occupied_surface_states.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "feature",
+            "q",
+            "energy"
+          ],
+          "columns": {
+            "feature": "string",
+            "q": "float",
+            "energy": "float"
+          }
+        },
+        "description": "Energies of occupied surface states (a1–a5)."
+      },
+      {
+        "file": "unoccupied_surface_states.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "feature",
+            "q",
+            "energy"
+          ],
+          "columns": {
+            "feature": "string",
+            "q": "float",
+            "energy": "float"
+          }
+        },
+        "description": "Energies of unoccupied surface states (b1–b4)."
+      }
+    ],
+    "notes": "The task omits the Cu(001) film calculations of the original paper and focuses solely on the Ca(001) five-layer film. All required input parameters (lattice constant, pseudopotential type, exchange-correlation functional) are publicly available. The solving agent must implement the complete DFT workflow; no pre-computed results are provided."
+  },
+  "steps": [
+    {
+      "id": "work_function_check",
+      "output_file": "work_function.txt",
+      "weight": 0.15,
+      "kind": "numeric",
+      "target": 3.38,
+      "tolerance_abs": 0.15
+    },
+    {
+      "id": "dos_shifts_check",
+      "output_file": "dos_shifts.csv",
+      "weight": 0.15,
+      "kind": "structural",
+      "rules": {
+        "maxima_I_max_shift": 0.2,
+        "maxima_II_max_shift": 0.2,
+        "maxima_III_range": [
+          0.78,
+          1.18
+        ]
+      }
+    },
+    {
+      "id": "occupied_surface_states_check",
+      "output_file": "occupied_surface_states.csv",
+      "weight": 0.35,
+      "kind": "reference_match",
+      "gold": [
+        {
+          "feature": "a1",
+          "q": 0.01,
+          "energy": 0.0
+        },
+        {
+          "feature": "a1",
+          "q": 0.03,
+          "energy": 0.0
+        },
+        {
+          "feature": "a2",
+          "q": 0.01,
+          "energy": -0.48
+        },
+        {
+          "feature": "a2",
+          "q": 0.03,
+          "energy": -0.46
+        },
+        {
+          "feature": "a3",
+          "q": 0.01,
+          "energy": -0.89
+        },
+        {
+          "feature": "a3",
+          "q": 0.03,
+          "energy": -0.81
+        },
+        {
+          "feature": "a4",
+          "q": 0.01,
+          "energy": -1.29
+        },
+        {
+          "feature": "a4",
+          "q": 0.03,
+          "energy": -1.31
+        },
+        {
+          "feature": "a5",
+          "q": 0.01,
+          "energy": -2.46
+        },
+        {
+          "feature": "a5",
+          "q": 0.03,
+          "energy": -2.44
+        }
+      ],
+      "tolerance_abs": 0.1,
+      "min_match_ratio": 0.8
+    },
+    {
+      "id": "unoccupied_surface_states_check",
+      "output_file": "unoccupied_surface_states.csv",
+      "weight": 0.35,
+      "kind": "reference_match",
+      "gold": [
+        {
+          "feature": "b1",
+          "q": 0.01,
+          "energy": 0.43
+        },
+        {
+          "feature": "b1",
+          "q": 0.03,
+          "energy": 0.51
+        },
+        {
+          "feature": "b2",
+          "q": 0.01,
+          "energy": 0.92
+        },
+        {
+          "feature": "b2",
+          "q": 0.03,
+          "energy": 0.91
+        },
+        {
+          "feature": "b3",
+          "q": 0.01,
+          "energy": 1.88
+        },
+        {
+          "feature": "b3",
+          "q": 0.03,
+          "energy": 1.87
+        },
+        {
+          "feature": "b4",
+          "q": 0.01,
+          "energy": 2.16
+        },
+        {
+          "feature": "b4",
+          "q": 0.03,
+          "energy": 2.14
+        }
+      ],
+      "tolerance_abs": 0.1,
+      "min_match_ratio": 0.8
+    }
+  ]
+}

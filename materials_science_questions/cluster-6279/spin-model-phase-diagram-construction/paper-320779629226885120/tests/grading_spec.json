@@ -1,0 +1,130 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes critical temperature from Binder cumulant intersection, checks energy cumulant low-T limit, and counts histogram peaks, all from the raw data in results.json. The paper-reported T_N values are used to set target ranges.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Target T_N ranges for r=0.2 and r=0.7 derived from paper's phase diagram (Fig. 5 and Fig. 6) and the trend T_N(r=0.7) > T_N(r=0.2)",
+      "source_provenance": "Paper Figures 5,6,9",
+      "generation_method": "Estimates from the Binder cumulant intersection figures and phase diagram",
+      "why_not_fabricated": "Values are consistent with the paper's reported phase diagram (Fig. 9) typical T_N values for those r, approximate to within tolerance. They correspond to the expected output of a correct Monte Carlo reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "r0.2": {
+              "type": "object",
+              "required": [
+                "T_N",
+                "U_data",
+                "V_data",
+                "histogram"
+              ]
+            },
+            "r0.7": {
+              "type": "object",
+              "required": [
+                "T_N",
+                "U_data",
+                "V_data",
+                "histogram"
+              ]
+            }
+          },
+          "items": {
+            "T_N": "float",
+            "U_data": {
+              "type": "object",
+              "required_keys": [
+                "L20",
+                "L80",
+                "L150"
+              ],
+              "L20": {
+                "T": "array<float>",
+                "U": "array<float>"
+              },
+              "L80": {
+                "T": "array<float>",
+                "U": "array<float>"
+              },
+              "L150": {
+                "T": "array<float>",
+                "U": "array<float>"
+              }
+            },
+            "V_data": {
+              "type": "object",
+              "required_keys": [
+                "L20",
+                "L80",
+                "L150"
+              ],
+              "L20": {
+                "T": "array<float>",
+                "V": "array<float>"
+              },
+              "L80": {
+                "T": "array<float>",
+                "V": "array<float>"
+              },
+              "L150": {
+                "T": "array<float>",
+                "V": "array<float>"
+              }
+            },
+            "histogram": {
+              "bins": "array<float>",
+              "counts": "array<int>"
+            }
+          },
+          "units": "T_N: unitless (k_B T / |J|); U and V: dimensionless; histogram for L=150 at T_N"
+        },
+        "description": "Scored artifact containing the critical temperature, Binder cumulant curves, and energy histogram for two coupling ratios. The checker will recompute T_N from U_data intersection, verify V_L(T) trend, and count histogram peaks."
+      }
+    ],
+    "notes": "The task requires reproducing the simulation and analysis for r=0.2 and r=0.7 only. The full phase diagram over all r is not required. The simulation must produce statistically converged data; the exact number of MC steps is not mandated. All temperatures and cumulants use reduced units k_B T / |J|."
+  },
+  "steps": [
+    {
+      "id": "results_check",
+      "output_file": "results.json",
+      "weight": 1.0,
+      "kind": "recompute",
+      "intersection_tolerance": 0.02,
+      "T_N_range_r02": [
+        1.65,
+        1.9
+      ],
+      "T_N_range_r07": [
+        2.3,
+        2.7
+      ],
+      "V_limit_range": [
+        0.64,
+        0.68
+      ],
+      "sub_weights": {
+        "U_intersection_r0.2": 0.25,
+        "U_intersection_r0.7": 0.25,
+        "T_N_accuracy_trend": 0.2,
+        "V_limit_r0.2": 0.1,
+        "V_limit_r0.7": 0.1,
+        "histogram_r0.2": 0.05,
+        "histogram_r0.7": 0.05
+      }
+    }
+  ]
+}

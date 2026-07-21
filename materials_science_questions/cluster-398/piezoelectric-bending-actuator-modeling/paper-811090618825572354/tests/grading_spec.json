@@ -1,0 +1,202 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The load-bearing tip_displacement.csv is used to recompute pull-in voltage (T1). Additional pull-in cases are validated by direct comparison with paper-reported values and structural trend verification.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "tip_displacement.csv": "reference_match",
+    "pull_in_voltage.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference pull-in voltages for tip-displacement curves and pull-in-voltage table, plus structural trend rules",
+      "source_provenance": "Paper text (explicit values 49.70, 39.56) and digitised from Figures 2, 3, 7, 9",
+      "generation_method": "Extracted from paper; digitised approximate values for cases where only a plot exists, with generous tolerances",
+      "why_not_fabricated": "Values are the paper's own published results; the tight tolerance on the explicit 39.56 guards the core claim."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "tip_displacement.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "case",
+            "V_bar",
+            "W_tip"
+          ],
+          "case_values": [
+            "classic_Vp_neg1",
+            "classic_Vp_0",
+            "classic_Vp_1",
+            "present_Vp_neg1",
+            "present_Vp_0",
+            "present_Vp_1"
+          ]
+        },
+        "description": "Table of nondimensional tip displacement points for each model and V_p. The case column must be one of the listed values."
+      },
+      {
+        "file": "pull_in_voltage.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "case",
+            "V_pl"
+          ],
+          "case_values": [
+            "classic_Vp_neg1.5",
+            "classic_Vp_neg1.0",
+            "classic_Vp_neg0.5",
+            "classic_Vp_0",
+            "classic_Vp_0.5",
+            "classic_Vp_1.0",
+            "classic_Vp_1.5",
+            "present_Vp_neg1.5",
+            "present_Vp_neg1.0",
+            "present_Vp_neg0.5",
+            "present_Vp_0",
+            "present_Vp_0.5",
+            "present_Vp_1.0",
+            "present_Vp_1.5",
+            "present_D0.2_Vp_neg1.5",
+            "present_D0.2_Vp_neg1.0",
+            "present_D0.2_Vp_neg0.5",
+            "present_D0.2_Vp_0",
+            "present_D0.2_Vp_0.5",
+            "present_D0.2_Vp_1.0",
+            "present_D0.2_Vp_1.5",
+            "present_nonlinear_d1",
+            "present_nonlinear_d2",
+            "present_nonlinear_d3",
+            "present_nonlinear_d4",
+            "classic_nonlinear_d1",
+            "classic_nonlinear_d2",
+            "classic_nonlinear_d3",
+            "classic_nonlinear_d4",
+            "present_nonlinear_default",
+            "present_linear_default"
+          ]
+        },
+        "description": "Table of nondimensional pull-in voltages for all specified parameter combinations. The case column must be one of the listed values."
+      }
+    ],
+    "notes": "All inputs are public constants from Table 1. DQM implementation is the agent's responsibility. The verifier matches submitted values to hidden gold numbers and trends; exact case strings are required."
+  },
+  "steps": [
+    {
+      "id": "tip_displacement_check",
+      "output_file": "tip_displacement.csv",
+      "weight": 0.5,
+      "kind": "recompute_pullin_from_tip",
+      "config": {
+        "cases": [
+          {
+            "name": "present_Vp_neg1",
+            "ref_pullin": 43.5,
+            "tol": 0.1
+          },
+          {
+            "name": "present_Vp_0",
+            "ref_pullin": 49.7,
+            "tol": 0.05
+          },
+          {
+            "name": "present_Vp_pos1",
+            "ref_pullin": 54.5,
+            "tol": 0.1
+          },
+          {
+            "name": "classic_Vp_neg1",
+            "ref_pullin": 41.0,
+            "tol": 0.1
+          },
+          {
+            "name": "classic_Vp_0",
+            "ref_pullin": 47.5,
+            "tol": 0.1
+          },
+          {
+            "name": "classic_Vp_pos1",
+            "ref_pullin": 52.0,
+            "tol": 0.1
+          }
+        ],
+        "w_threshold": 0.95
+      }
+    },
+    {
+      "id": "pull_in_voltage_check",
+      "output_file": "pull_in_voltage.csv",
+      "weight": 0.5,
+      "kind": "compare_and_trend",
+      "config": {
+        "exact_cases": [
+          {
+            "pattern": "present_Vp_neg1.5",
+            "ref": 39.56,
+            "tol": 0.01
+          },
+          {
+            "pattern": "present_Vp_0",
+            "ref": 49.7,
+            "tol": 0.02
+          },
+          {
+            "pattern": "present_nonlinear_d4",
+            "ref": 521.24,
+            "tol": 0.1
+          }
+        ],
+        "trend_groups": [
+          {
+            "description": "Pull-in voltage decreases as piezoelectric voltage becomes more negative",
+            "case_patterns": [
+              "present_Vp_neg1.5",
+              "present_Vp_neg1.0",
+              "present_Vp_neg0.5",
+              "present_Vp_0",
+              "present_Vp_0.5",
+              "present_Vp_1.0",
+              "present_Vp_1.5"
+            ],
+            "expected_order": "increasing"
+          },
+          {
+            "description": "Damage (D=0.2) reduces pull-in voltage relative to undamaged model",
+            "case_patterns": [
+              "present_model_D0",
+              "present_model_D0.2"
+            ],
+            "expected_order": "larger_equal"
+          },
+          {
+            "description": "Pull-in voltage increases with initial gap",
+            "case_patterns": [
+              "present_nonlinear_d1",
+              "present_nonlinear_d2",
+              "present_nonlinear_d3",
+              "present_nonlinear_d4"
+            ],
+            "expected_order": "increasing"
+          },
+          {
+            "description": "Geometric nonlinearity increases pull-in voltage for large gaps",
+            "case_patterns": [
+              "present_nonlinear_d4",
+              "present_linear_d4"
+            ],
+            "expected_order": "larger_equal"
+          }
+        ]
+      }
+    }
+  ]
+}

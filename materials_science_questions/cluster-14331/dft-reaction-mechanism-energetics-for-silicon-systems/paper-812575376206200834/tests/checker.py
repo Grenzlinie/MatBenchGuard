@@ -102,8 +102,45 @@ def prepare(outputs_dir, spec):
 def score_0(artifact, step, ctx):
         if not isinstance(artifact, list) or len(artifact) != 20:
             return 0.0
-        gold_barriers = step.get('gold_barriers', {})
-        gold_rates = step.get('gold_rate_constants', {})
+
+        # Hard-coded gold values; hidden from the agent’s instruction materials.
+        gold_barriers = {
+            "P1": 84.38,
+            "P2": 37.92,
+            "P3": 100.69,
+            "P4": 45.41
+        }
+        gold_rates = {
+            "P1": {
+                "298.15": 8.3e-50,
+                "1000": 4.43e-06,
+                "1500": 15.7,
+                "2000": 24900.0,
+                "2500": 2180000.0
+            },
+            "P2": {
+                "298.15": 9.7e-16,
+                "1000": 107000.0,
+                "1500": 92900000.0,
+                "2000": 2980000000.0,
+                "2500": 25200000000.0
+            },
+            "P3": {
+                "298.15": 9.1e-62,
+                "1000": 2.02e-09,
+                "1500": 0.0659,
+                "2000": 410.0,
+                "2500": 81500.0
+            },
+            "P4": {
+                "298.15": 3.12e-21,
+                "1000": 2460.0,
+                "1500": 7520000.0,
+                "2000": 453000000.0,
+                "2500": 5570000000.0
+            }
+        }
+
         barrier_tol = step.get('barrier_tolerance_kcalmol', 2.0)
         log_rate_tol = step.get('log_rate_tolerance', 0.5)
     
@@ -149,7 +186,7 @@ def score_0(artifact, step, ctx):
         barrier_score = sum(barrier_scores) / len(barrier_scores) if barrier_scores else 0.0
     
         # Rate constant sub-score
-        temp_order = [298, 1000, 1500, 2000, 2500]
+        temp_order = [298.15, 1000, 1500, 2000, 2500]
         rate_check_pass = 0
         rate_check_total = 0
         for p in ('P1', 'P2', 'P3', 'P4'):

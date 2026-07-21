@@ -1,0 +1,159 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Exact simulation results depend on underspecified implementation details (void fraction, move set, etc.), so recompute from raw is infeasible. Robust structural features (peaks, trends, monotonicity) are verified against criteria derived from the paper's reported trends.",
+  "pass_threshold": 0.0,
+  "target_policies": {
+    "spatial_distribution.csv": "structural_audit",
+    "size_distribution.csv": "structural_audit",
+    "order_parameters.csv": "structural_audit",
+    "melting_curve.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Structural rules and thresholds derived from paper's qualitative trends (Figs. 2-5). No external hidden data.",
+      "source_provenance": "Paper figures and textual descriptions: Fig.2 (spatial double-peak, flat plateau for B=0), Fig.3 (size distribution shift), Fig.4(b) (near-zero P), Fig.5 (melting point increase on dilution for B>0, flat for B=0).",
+      "generation_method": "Thresholds selected to capture the described structural hallmarks while being tolerant to implementation differences.",
+      "why_not_fabricated": "The rules are not arbitrary: they directly correspond to the paper's measured structural phenomena, chosen to distinguish a real reproduction from a random submission."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "spatial_distribution.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "B_ratio",
+            "distance",
+            "count"
+          ],
+          "units": {
+            "B_ratio": "dimensionless",
+            "distance": "lattice unit",
+            "count": "integer"
+          }
+        },
+        "description": "Histogram of Z-coordinate (distance from interface) of the center of mass of the largest crystalline clusters for each B/Ec. The checker verifies structural consistency against reference patterns."
+      },
+      {
+        "file": "size_distribution.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "B_ratio",
+            "size",
+            "count"
+          ],
+          "units": {
+            "B_ratio": "dimensionless",
+            "size": "number of parallel bonds",
+            "count": "integer"
+          }
+        },
+        "description": "Histogram of the size (number of parallel bonds) of the largest crystalline clusters for each B/Ec. The checker verifies structural consistency against reference patterns."
+      },
+      {
+        "file": "order_parameters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "B_ratio",
+            "order_parameter"
+          ],
+          "units": {
+            "B_ratio": "dimensionless",
+            "order_parameter": "dimensionless, range [-0.5, 1]"
+          }
+        },
+        "description": "Orientational order parameter P for the largest crystalline clusters in the interfacial zone vs B/Ec. The checker verifies structural consistency against reference patterns."
+      },
+      {
+        "file": "melting_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "B_ratio",
+            "volume_fraction_C",
+            "melting_temperature"
+          ],
+          "units": {
+            "B_ratio": "dimensionless",
+            "volume_fraction_C": "volume fraction between 0 and 1",
+            "melting_temperature": "reduced temperature kT/Ec"
+          }
+        },
+        "description": "Equilibrium melting temperature of 16-mer crystals vs volume fraction of component C for different B/Ec. The checker verifies structural consistency against reference patterns."
+      }
+    ],
+    "notes": "All scored outputs are verified via structural audit against hidden reference criteria derived from the paper."
+  },
+  "steps": [
+    {
+      "id": "spatial_distribution",
+      "output_file": "spatial_distribution.csv",
+      "weight": 0.35,
+      "kind": "structural_audit",
+      "target_policy": "structural_audit",
+      "params": {
+        "flatness_ratio_threshold": 4.0,
+        "peak_distance_ranges": [
+          [
+            10,
+            20
+          ],
+          [
+            40,
+            50
+          ]
+        ],
+        "trough_depth_factor": 0.8,
+        "central_region": [
+          15,
+          45
+        ]
+      }
+    },
+    {
+      "id": "size_distribution",
+      "output_file": "size_distribution.csv",
+      "weight": 0.35,
+      "kind": "structural_audit",
+      "target_policy": "structural_audit",
+      "params": {}
+    },
+    {
+      "id": "order_parameters",
+      "output_file": "order_parameters.csv",
+      "weight": 0.15,
+      "kind": "structural_audit",
+      "target_policy": "structural_audit",
+      "params": {
+        "abs_order_threshold": 0.15
+      }
+    },
+    {
+      "id": "melting_curve",
+      "output_file": "melting_curve.csv",
+      "weight": 0.15,
+      "kind": "structural_audit",
+      "target_policy": "structural_audit",
+      "params": {
+        "flat_range_tolerance": 0.02,
+        "monotonic_tolerance": 1e-06
+      }
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker can recompute the key quantities (peak ZT, peak filler fraction, ratio between scenarios) directly from the raw CSV tables.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_zt_vs_filler.csv": "reference_match",
+    "step_02_zt_noshift.csv": "reference_match",
+    "step_03_summary.txt": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold reference: peak ZT value (2.64e-4), peak filler (5.0 vol%), tolerance for peak ZT (2.64e-5), tolerance for filler (0.5 vol%), and max ratio threshold for no-shift scenario (0.6).",
+      "source_provenance": "Paper abstract: 'ZT ≈ 2.6×10⁻⁴' and Section III D: 'ZT ... with a value of 2.64×10⁻⁴' at 5 vol.% filler; the percolation‑shift mechanism is the paper's central claim.",
+      "generation_method": "Exact value extracted from the published paper. Tolerances set to 10 % of the peak ZT and ±0.5 vol% for the filler fraction, which is wider than the discretisation step, to absorb reasonable solver variations. The ratio threshold 0.6 is chosen to clearly separate the two threshold scenarios (the no‑shift ZT is expected to be much lower; the paper demonstrates no distinct peak).",
+      "why_not_fabricated": "Values come from the peer‑reviewed paper and are explicitly reported; they are not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_zt_vs_filler.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "filler_vol_percent",
+            "sigma_e",
+            "kappa_e",
+            "kappa_S_e",
+            "Seebeck_e",
+            "ZT"
+          ],
+          "units": {
+            "filler_vol_percent": "% (by volume)",
+            "sigma_e": "S/m",
+            "kappa_e": "W/m/K",
+            "kappa_S_e": "W/m/μV",
+            "Seebeck_e": "μV/K",
+            "ZT": "dimensionless"
+          }
+        },
+        "description": "Table of ZT and intermediate effective transport properties as a function of filler content for the shifted-threshold scenario. The hidden checker will extract the peak ZT, verify it falls at 5 ± 0.5 vol.% and is within tolerance of the paper-reported 2.64×10⁻⁴, and confirm the curve exhibits a clear maximum."
+      },
+      {
+        "file": "step_02_zt_noshift.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "filler_vol_percent",
+            "sigma_e",
+            "kappa_e",
+            "kappa_S_e",
+            "Seebeck_e",
+            "ZT"
+          ],
+          "units": {
+            "filler_vol_percent": "% (by volume)",
+            "sigma_e": "S/m",
+            "kappa_e": "W/m/K",
+            "kappa_S_e": "W/m/μV",
+            "Seebeck_e": "μV/K",
+            "ZT": "dimensionless"
+          }
+        },
+        "description": "Table of ZT and intermediate effective transport properties as a function of filler content for the coincident-threshold scenario. The hidden checker will verify that no peak comparable to the shifted case appears (ZT should be monotonic or exhibit a much lower maximum)."
+      },
+      {
+        "file": "step_03_summary.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text"
+        },
+        "description": "Plain-text summary of the peak ZT values and their locations extracted from the two simulation scenarios. The hidden checker will verify consistency with the corresponding CSV files (i.e., the reported peak values and filler percentages match the data in step_01_zt_vs_filler.csv and step_02_zt_noshift.csv)."
+      }
+    ],
+    "notes": "All three output files are scored; the main load-bearing artifact is step_01_zt_vs_filler.csv. The fitted GEMT parameters are taken as given from the paper (publicly reported) and are not produced by an upstream step. The scoring tolerances and specific reference values are hidden and are based on the paper’s reported peak ZT (2.64×10⁻⁴ at 5 vol.%) and the expected qualitative difference between the two threshold scenarios."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_zt_vs_filler.csv",
+      "kind": "recompute_peak",
+      "weight": 0.6,
+      "gold_peak_zt": 0.000264,
+      "gold_peak_filler": 5.0,
+      "tolerance_zt": 2.64e-05,
+      "tolerance_filler": 0.5
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_zt_noshift.csv",
+      "kind": "verify_no_peak",
+      "weight": 0.3,
+      "max_ratio_threshold": 0.6
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_summary.txt",
+      "kind": "check_summary_consistency",
+      "weight": 0.1,
+      "tolerance_zt": 1e-08,
+      "tolerance_filler": 0.01
+    }
+  ]
+}

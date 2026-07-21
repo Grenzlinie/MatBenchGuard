@@ -93,7 +93,12 @@ def load_artifact(path):
 
 
 def prepare(outputs_dir, spec):
-    gold = spec['gold']
+    # Load gold from an external hidden file to avoid leaking reference values.
+    gold_path = "/tests/private_gold.json"
+    if not os.path.exists(gold_path):
+        raise RuntimeError("Missing private gold file required for scoring.")
+    with open(gold_path) as f:
+        gold = json.load(f)
     energy_step = next(s for s in spec['steps'] if s['id']=='energy_accuracy')
     tolerance = energy_step.get('tolerance', 2.0)
     return {'gold': gold, 'tolerance': tolerance}

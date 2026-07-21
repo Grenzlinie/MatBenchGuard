@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_data_prep",
+    "title": "Data preprocessing and augmentation",
+    "role": "process",
+    "action": "Preprocess the raw dataset images and force maps: apply a 10% cosine-tapered (Tukey) window mask to force maps; extract cell regions via thresholding and morphological operations; apply random spatial augmentations (horizontal/vertical flips, rotations, random crops to 256×256) and salt noise; then log-transform the images with ln(max(1, x)). Generate training and validation batches.",
+    "output_file": "",
+    "evidence": "preprocessing_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prepare augmented training and validation data. Not scored, but necessary for model training and downstream evaluation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_train",
+    "title": "Model training",
+    "role": "process",
+    "action": "Implement the modified Tiramisu dense U-Net architecture with two output heads (linear activation for log-force mean, softplus² for log-variance). Train using the KL divergence loss, Adam optimizer with L2 weight decay 1e-4, gradient clipping (max L2 norm 1.0), dropout rate 20% kept active during training and inference, batch size 8, for 200 epochs (50 steps per epoch). Use the training set and monitor on the validation set. Save the trained model weights.",
+    "output_file": "",
+    "evidence": "model_checkpoint.pt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Train the neural network to predict log-force mean and variance from fluorescence images. The trained model is required for the scored evaluation step.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_eval",
+    "title": "Evaluation and MAE calculation",
+    "role": "scored",
+    "action": "Load the trained model and apply it to the test cell images (181 frames) using a single forward pass (T=1, no Monte Carlo dropout sampling). Compute per-pixel predicted force using the formula exp(μ + σ²/2), where μ and σ² are the two output channels from the network (log-force mean and variance). For each frame, compute the mean absolute error (MAE) between the predicted force map and the ground-truth force map (with Tukey mask applied). Output a JSON file containing the per-frame MAE list and the overall mean MAE across all frames.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Compute the main quantitative metric: per-frame and overall MAE of force predictions on the held-out test cell. The load-bearing design ensures the model training step must have been genuinely executed.",
+    "output_schema": "{ \"per_frame_mae\": [float, ...] (length 181, one per test-cell frame), \"overall_mean_mae\": float }"
+  }
+]

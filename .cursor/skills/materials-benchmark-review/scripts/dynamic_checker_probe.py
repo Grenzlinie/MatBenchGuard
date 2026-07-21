@@ -29,6 +29,11 @@ from prepare_audit_output import (
     locate_root,
     sha256_file,
 )
+from artifact_schema import (
+    CHECKER_TESTS_SCHEMA_VERSION,
+    DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION,
+    QUALITY_PROBE_RESULTS_SCHEMA_VERSION,
+)
 import sandbox_runtime
 
 
@@ -85,20 +90,21 @@ NEGATIVE_PROBE_CASES = frozenset(
         "minimal_gold_shape",
         "duplicate_gold_rows",
         "nonfinite_values",
-        "sparse_known_valid",
     }
 )
-FIXTURE_MANIFEST_NAME = "fixture_manifest.json"
-FIXTURE_MANIFEST_SCHEMA = "materials-known-valid-fixture/1.0"
-REPAIR_FIXTURE_LINEAGE_SCHEMA = "materials-repair-fixture-lineage/1.0"
-FORBIDDEN_FIXTURE_PARTS = {
-    "solution",
-    "tests",
-    "paper",
-    "benchmark_audit",
-    "benchmark_audit_history",
-    ".benchmark_audit_tmp",
-}
+DETERMINISTIC_CORE_CASES = frozenset(
+    {
+        "missing_outputs",
+        "empty_valid_shape",
+        "malformed_outputs",
+        "random_baseline",
+        "minimal_gold_shape",
+        "duplicate_gold_rows",
+        "nonfinite_values",
+        "positive_oracle",
+        "all_wrong",
+    }
+)
 TASK_FAMILY_CASES = {
     "materials_constant_or_all_zero": "constant_or_all_zero",
     "materials_all_positive": "all_positive_or_negative",
@@ -341,346 +347,157 @@ def write_malformed_outputs(
     return created
 
 
-def reject_package_fixture(root: Path, source_dir: Path) -> Path:
-    source_dir = source_dir.expanduser().resolve()
-    root = root.resolve()
-    if source_dir == root or source_dir.is_relative_to(root):
-        raise ValueError(
-            "known-valid fixture must be external to every Harbor package role"
-        )
-    if any(part in FORBIDDEN_FIXTURE_PARTS for part in source_dir.parts):
-        raise ValueError(
-            "known-valid fixture must be external to package and audit roles"
-        )
-    for ancestor in (source_dir, *source_dir.parents):
-        if (
-            (ancestor / "instruction.md").is_file()
-            and (ancestor / "tests").is_dir()
-        ):
-            raise ValueError(
-                "known-valid fixture cannot be nested under another Harbor package"
-            )
-    if not source_dir.is_dir():
-        raise ValueError(f"known-valid output is not a directory: {source_dir}")
-    return source_dir
-
-
-def fixture_hashes(
-    fixture: Path, specification: dict[str, Any]
-) -> dict[str, str]:
-    hashes: dict[str, str] = {}
-    outputs = (
-        (specification.get("output_contract", {}) or {}).get("outputs", []) or []
-    )
-    for output in outputs:
-        filename = basename(output.get("file"))
-        path = fixture / filename
-        if (
-            not filename
-            or path.parent != fixture
-            or not path.is_file()
-            or path.is_symlink()
-        ):
-            raise ValueError(
-                "known-valid fixture requires a regular contracted file: "
-                f"{filename}"
-            )
-        hashes[filename] = sha256_file(path)
-    return hashes
-
-
-def validate_known_valid_fixture(
-    root: Path,
-    source_dir: Path,
+def declared_scoring_components(
     specification: dict[str, Any],
-) -> dict[str, Any]:
-    """Require an external public fixture bound to current quality sources."""
-    fixture = reject_package_fixture(root, source_dir)
-    manifest_path = fixture / FIXTURE_MANIFEST_NAME
-    if not manifest_path.is_file() or manifest_path.is_symlink():
-        raise ValueError(
-            f"known-valid fixture manifest is missing: {FIXTURE_MANIFEST_NAME}"
-        )
-    manifest = read_json(manifest_path)
-    if not isinstance(manifest, dict):
-        raise ValueError("known-valid fixture manifest must be an object")
-    current_source_hashes = {
-        role: sha256_file(root / role)
-        for role in sorted(QUALITY_EVIDENCE_ROLES)
-        if (root / role).is_file()
-    }
-    current_fixture_hashes = fixture_hashes(fixture, specification)
-    lineage = manifest.get("repair_reaudit_lineage")
-    lineage_provenance: dict[str, Any] | None = None
-    if lineage is not None:
-        if not isinstance(lineage, dict):
-            raise ValueError("known-valid repair fixture lineage is invalid")
-        parent_name = lineage.get("parent_manifest_file")
-        parent_path = fixture / str(parent_name)
-        if (
-            lineage.get("schema_version") != REPAIR_FIXTURE_LINEAGE_SCHEMA
-            or parent_name != "fixture_manifest.parent.json"
-            or parent_path.parent != fixture
-            or not parent_path.is_file()
-            or parent_path.is_symlink()
-            or lineage.get("parent_manifest_hash") != sha256_file(parent_path)
-            or lineage.get("fixture_bytes_preserved") is not True
-            or lineage.get("oracle_used") is not False
-            or not isinstance(lineage.get("source_audit_id"), str)
-            or not lineage["source_audit_id"]
-        ):
-            raise ValueError("known-valid repair fixture lineage is invalid")
-        parent = read_json(parent_path)
-        parent_source_hashes = (
-            parent.get("source_role_hashes")
-            if isinstance(parent, dict)
-            else None
-        )
-        changed_roles = (
-            sorted(
-                role
-                for role in set(parent_source_hashes)
-                | set(current_source_hashes)
-                if parent_source_hashes.get(role)
-                != current_source_hashes.get(role)
-            )
-            if isinstance(parent_source_hashes, dict)
-            else None
-        )
-        if (
-            not isinstance(parent, dict)
-            or parent.get("schema_version") != FIXTURE_MANIFEST_SCHEMA
-            or parent.get("source_kind") != "INDEPENDENT_PUBLIC_FIXTURE"
-            or parent.get("public") is not True
-            or parent.get("oracle_used") is not False
-            or parent.get("fixture_hashes") != current_fixture_hashes
-            or lineage.get("parent_fixture_hashes")
-            != current_fixture_hashes
-            or lineage.get("changed_source_roles") != changed_roles
-            or not changed_roles
-        ):
-            raise ValueError("known-valid repair fixture lineage is invalid")
-        lineage_provenance = {
-            "schema_version": REPAIR_FIXTURE_LINEAGE_SCHEMA,
-            "parent_manifest_hash": lineage["parent_manifest_hash"],
-            "source_audit_id": lineage["source_audit_id"],
-            "changed_source_roles": changed_roles,
-            "fixture_bytes_preserved": True,
-            "oracle_used": False,
-        }
-    if (
-        manifest.get("schema_version") != FIXTURE_MANIFEST_SCHEMA
-        or manifest.get("source_kind") != "INDEPENDENT_PUBLIC_FIXTURE"
-        or manifest.get("public") is not True
-        or manifest.get("oracle_used") is not False
-        or manifest.get("source_role_hashes") != current_source_hashes
-        or manifest.get("fixture_hashes") != current_fixture_hashes
-    ):
-        raise ValueError(
-            "known-valid fixture manifest is not source-bound and immutable"
-        )
-    return {
-        "source_kind": "INDEPENDENT_PUBLIC_FIXTURE",
-        "public": True,
-        "oracle_used": False,
-        "fixture_hashes": current_fixture_hashes,
-        "source_role_hashes": current_source_hashes,
-        "fixture_manifest_hash": sha256_file(manifest_path),
-        "repair_reaudit_lineage": lineage_provenance,
-    }
-
-
-def copy_known_valid_outputs(
-    root: Path,
-    source_dir: Path,
-    output_dir: Path,
-    specification: dict[str, Any],
-) -> list[str]:
-    source_dir = reject_package_fixture(root, source_dir)
-    created: list[str] = []
-    outputs = (
-        (specification.get("output_contract", {}) or {}).get("outputs", []) or []
-    )
-    for output in outputs:
-        filename = basename(output.get("file"))
-        if not filename:
-            continue
-        source = (source_dir / filename).resolve()
-        if source.parent != source_dir or not source.is_file():
-            raise FileNotFoundError(
-                f"known-valid output is missing contracted file: {filename}"
-            )
-        destination = output_dir / filename
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, destination)
-        created.append(filename)
-    return created
-
-
-def component_isolation_plan(
-    specification: dict[str, Any],
-    source_dir: Path | None,
-    checker_text: str,
-) -> tuple[list[dict[str, str]], str | None]:
-    """Build only source-bound isolation cases; never synthesize valid values."""
-    if source_dir is None:
-        return [], "no independent source-bound fixture is available"
-    try:
-        tree = ast.parse(checker_text)
-    except SyntaxError as exc:
-        return [], f"checker source cannot be parsed: {exc}"
-    functions = {
-        node.name
-        for node in ast.walk(tree)
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-    }
-    scorer_bindings: dict[str, str] = {}
-    for node in tree.body:
-        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
-            continue
-        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-        if not any(
-            isinstance(target, ast.Name) and target.id == "_SCORERS"
-            for target in targets
-        ) or not isinstance(node.value, ast.Dict):
-            continue
-        current_bindings: dict[str, str] = {}
-        for key, value in zip(node.value.keys, node.value.values):
-            if (
-                isinstance(key, ast.Constant)
-                and isinstance(key.value, str)
-                and isinstance(value, ast.Name)
-            ):
-                current_bindings[key.value] = value.id
-        scorer_bindings = current_bindings
-    contract_files = {
+) -> list[dict[str, Any]]:
+    """Return unique positive-weight components from explicit grading steps."""
+    outputs = {
         basename(item.get("file"))
         for item in (
             (specification.get("output_contract", {}) or {}).get("outputs", [])
             or []
         )
-        if basename(item.get("file"))
+        if isinstance(item, dict) and basename(item.get("file"))
     }
-    candidates: list[dict[str, str]] = []
+    components: list[dict[str, Any]] = []
     seen_files: set[str] = set()
     for step in grading_steps(specification):
+        if not isinstance(step, dict):
+            continue
         filename = basename(step.get("output_file"))
-        step_id = str(step.get("id") or filename)
         weight = finite_number(step.get("weight"))
         if (
             not filename
+            or filename not in outputs
             or filename in seen_files
-            or filename not in contract_files
             or weight is None
             or weight <= 0
-            or step_id not in scorer_bindings
-            or scorer_bindings[step_id] not in functions
         ):
             continue
         seen_files.add(filename)
-        candidates.append(
+        components.append(
             {
-                "step_id": step_id,
+                "component_id": str(step.get("id") or filename),
                 "file": filename,
-                "scorer_function": scorer_bindings[step_id],
+                "declared_weight": weight,
             }
         )
-    if len(candidates) < 2:
-        return [], (
-            "fewer than two distinct positive-weight contracted components "
-            "have verified checker source bindings"
-        )
-    missing = [
-        item["file"]
-        for item in candidates
-        if not (source_dir / item["file"]).is_file()
-    ]
-    if missing:
-        return [], "positive fixture lacks component files: " + ", ".join(missing)
-    return candidates, None
+    return components
 
 
-def component_isolation_coverage(
-    plan: list[dict[str, str]],
-    not_run_reason: str | None,
-    results: list[dict[str, Any]],
+def _mutate_json_value(value: Any, *, all_wrong: bool = False) -> tuple[Any, bool]:
+    if isinstance(value, bool):
+        return value, False
+    if isinstance(value, (int, float)) and math.isfinite(float(value)):
+        number = float(value)
+        return number + (1.0 if all_wrong else 0.25) * max(abs(number), 1.0), True
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            mutated, changed = _mutate_json_value(item, all_wrong=all_wrong)
+            if changed:
+                value = list(value)
+                value[index] = mutated
+                return value, True
+        return value, False
+    if isinstance(value, dict):
+        for key in sorted(value):
+            mutated, changed = _mutate_json_value(value[key], all_wrong=all_wrong)
+            if changed:
+                value = dict(value)
+                value[key] = mutated
+                return value, True
+        return value, False
+    return value, False
+
+
+def mutate_declared_component(
+    output_dir: Path,
+    component: dict[str, Any],
+    *,
+    all_wrong: bool = False,
 ) -> dict[str, Any]:
-    provenance: dict[str, Any] = {
-        "source_kind": "INDEPENDENT_PUBLIC_FIXTURE" if plan else "NONE",
-        "oracle_used": False,
-        "source_bindings_verified": bool(plan),
-        "runtime_bindings_verified": False,
-        "cases_planned": len(plan),
-        "cases_executed": 0,
+    """Deterministically make one declared component wrong in an Oracle copy."""
+    filename = str(component["file"])
+    path = output_dir / filename
+    output_format = path.suffix.lower().lstrip(".")
+    detail: dict[str, Any] = {
+        "component_id": component["component_id"],
+        "file": filename,
+        "operation": "schema_derived_wrong_component",
+        "all_wrong": all_wrong,
     }
-    if not plan:
-        return {
-            "status": "NOT_RUN",
-            "reason": not_run_reason
-            or "component isolation could not be planned safely",
-            "provenance": provenance,
-        }
-    isolation_results = [
-        result
-        for result in results
-        if result["case"].startswith("component_isolation__")
-    ]
-    provenance["cases_executed"] = len(isolation_results)
-    runtime_bound = component_runtime_bindings_verified(plan, results)
-    cases_usable = (
-        len(isolation_results) == len(plan)
-        and all(
-            usable_probe_result(result)
-            for result in isolation_results
-        )
-    )
-    provenance["runtime_bindings_verified"] = bool(
-        runtime_bound and cases_usable
-    )
-    if provenance["runtime_bindings_verified"]:
-        return {
-            "status": "ASSESSED",
-            "reason": None,
-            "provenance": provenance,
-        }
-    return {
-        "status": "NOT_ASSESSABLE",
-        "reason": (
-            "component-isolation runtime scorer bindings or case rewards "
-            "could not be verified"
-        ),
-        "provenance": provenance,
-    }
-
-
-def component_runtime_bindings_verified(
-    plan: list[dict[str, str]], results: list[dict[str, Any]]
-) -> bool:
-    public_fixture = next(
-        (
-            result
-            for result in results
-            if result["case"] == "known_valid_public"
-        ),
-        None,
-    )
-    breakdown = (
-        public_fixture.get("breakdown")
-        if isinstance(public_fixture, dict)
-        else None
-    )
-    return bool(
-        isinstance(public_fixture, dict)
-        and usable_probe_result(public_fixture)
-        and isinstance(breakdown, dict)
-        and all(
-            isinstance(breakdown.get(component["step_id"]), dict)
-            and finite_number(
-                breakdown[component["step_id"]].get("score")
+    if output_format == "json":
+        value = read_json(path)
+        mutated, changed = _mutate_json_value(value, all_wrong=all_wrong)
+        if changed:
+            path.write_text(
+                json.dumps(mutated, ensure_ascii=False),
+                encoding="utf-8",
             )
-            is not None
-            for component in plan
-        )
+        else:
+            path.write_text('"wrong-component"\n', encoding="utf-8")
+        detail["mutation"] = "first_numeric_json_value" if changed else "invalid_json_scalar"
+        return detail
+    if output_format in {"csv", "tsv"}:
+        delimiter = "\t" if output_format == "tsv" else ","
+        with path.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle, delimiter=delimiter)
+            fieldnames = list(reader.fieldnames or [])
+            rows = list(reader)
+        column = response_column(fieldnames, rows)
+        changed = 0
+        if column is not None:
+            for row in rows:
+                number = finite_number(row.get(column))
+                if number is None:
+                    continue
+                multiplier = 1.0 if all_wrong else 0.25
+                row[column] = f"{number + multiplier * max(abs(number), 1.0):.12g}"
+                changed += 1
+        with path.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(
+                handle, fieldnames=fieldnames, delimiter=delimiter
+            )
+            writer.writeheader()
+            writer.writerows(rows)
+        detail["mutation"] = "numeric_response_column"
+        detail["response_column"] = column
+        detail["changed_values"] = changed
+        return detail
+    path.write_text("wrong-component\n", encoding="utf-8")
+    detail["mutation"] = "scalar_text_replacement"
+    return detail
+
+
+def schema_derived_probe_plan(
+    specification: dict[str, Any],
+    oracle_output: Path | None,
+) -> tuple[list[dict[str, Any]], str | None]:
+    """Plan full/partial/all-wrong cases from the declared schema and steps."""
+    components = declared_scoring_components(specification)
+    if oracle_output is None:
+        return [], "the isolated Oracle did not produce a full contracted output"
+    if not components:
+        return [], "no independently declared positive-weight component is available"
+    return (
+        [
+            {
+                "case": "all_wrong",
+                "mode": "all_wrong",
+                "components": components,
+                "probe_origin": "SCHEMA_DERIVED_DETERMINISTIC",
+            },
+            *[
+                {
+                    "case": f"partial__{re.sub(r'[^A-Za-z0-9_.-]+', '_', component['component_id'])}",
+                    "mode": "partial",
+                    "components": [component],
+                    "probe_origin": "SCHEMA_DERIVED_DETERMINISTIC",
+                }
+                for component in components
+            ],
+        ],
+        None,
     )
 
 
@@ -709,29 +526,14 @@ def probe_assessment_flags(
         for result in results
         if result["case"] in NEGATIVE_PROBE_CASES
     ]
-    discrimination_cases = (
-        "known_valid_public",
-        "quality_gradient_small_error",
-        "quality_gradient_large_error",
-    )
-    equivalence_cases = (
-        "known_valid_public",
-        "metamorphic_equivalent_representation",
-    )
     return {
         "positive": any(
             usable_probe_result(by_case[case]) for case in positive_cases
         ),
         "negative": bool(negative_cases)
         and all(usable_probe_result(result) for result in negative_cases),
-        "discrimination": all(
-            case in by_case and usable_probe_result(by_case[case])
-            for case in discrimination_cases
-        ),
-        "equivalence": all(
-            case in by_case and usable_probe_result(by_case[case])
-            for case in equivalence_cases
-        ),
+        "discrimination": False,
+        "equivalence": False,
     }
 
 
@@ -878,31 +680,6 @@ def task_family_applicability(
     return applicability
 
 
-def retain_one_known_valid_row(
-    output_dir: Path, specification: dict[str, Any]
-) -> None:
-    """Turn a public valid table into a sparse but value-correct submission."""
-    outputs = (
-        (specification.get("output_contract", {}) or {}).get("outputs", []) or []
-    )
-    for output in outputs:
-        output_format = str(output.get("format", "")).lower()
-        if output_format not in {"csv", "tsv"}:
-            continue
-        path = output_dir / basename(output.get("file"))
-        delimiter = "\t" if output_format == "tsv" else ","
-        with path.open(newline="", encoding="utf-8") as handle:
-            rows = list(csv.DictReader(handle, delimiter=delimiter))
-        if not rows:
-            continue
-        with path.open("w", newline="", encoding="utf-8") as handle:
-            writer = csv.DictWriter(
-                handle, fieldnames=list(rows[-1]), delimiter=delimiter
-            )
-            writer.writeheader()
-            writer.writerow(rows[-1])
-
-
 def finite_number(value: Any) -> float | None:
     try:
         number = float(value)
@@ -940,110 +717,6 @@ def response_column(
     return (responses or numeric)[-1]
 
 
-def perturb_json(value: Any, fraction: float) -> Any:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, (int, float)) and math.isfinite(float(value)):
-        number = float(value)
-        return number + fraction * max(abs(number), 1.0)
-    if isinstance(value, list):
-        return [perturb_json(item, fraction) for item in value]
-    if isinstance(value, dict):
-        return {
-            key: perturb_json(item, fraction)
-            for key, item in value.items()
-        }
-    return value
-
-
-def transform_known_valid_outputs(
-    output_dir: Path,
-    specification: dict[str, Any],
-    mode: str,
-) -> list[dict[str, Any]]:
-    transformations: list[dict[str, Any]] = []
-    outputs = (
-        (specification.get("output_contract", {}) or {}).get("outputs", []) or []
-    )
-    for output in outputs:
-        filename = basename(output.get("file"))
-        if not filename:
-            continue
-        path = output_dir / filename
-        output_format = str(output.get("format", "")).lower()
-        if output_format in {"csv", "tsv"}:
-            delimiter = "\t" if output_format == "tsv" else ","
-            with path.open(newline="", encoding="utf-8") as handle:
-                reader = csv.DictReader(handle, delimiter=delimiter)
-                fieldnames = list(reader.fieldnames or [])
-                rows = list(reader)
-            detail: dict[str, Any] = {
-                "file": filename,
-                "format": output_format,
-            }
-            if mode == "metamorphic":
-                rows.reverse()
-                fieldnames.reverse()
-                detail["operation"] = "reverse_rows_and_columns"
-            else:
-                column = response_column(fieldnames, rows)
-                fraction = 0.05 if mode == "quality_small" else 0.5
-                changed = 0
-                if column is not None:
-                    for row in rows:
-                        number = finite_number(row.get(column))
-                        if number is None:
-                            continue
-                        row[column] = f"{number + fraction * max(abs(number), 1.0):.12g}"
-                        changed += 1
-                detail.update(
-                    {
-                        "operation": "perturb_numeric_materials_response",
-                        "response_column": column,
-                        "fraction": fraction,
-                        "changed_values": changed,
-                    }
-                )
-            with path.open("w", newline="", encoding="utf-8") as handle:
-                writer = csv.DictWriter(
-                    handle, fieldnames=fieldnames, delimiter=delimiter
-                )
-                writer.writeheader()
-                writer.writerows(rows)
-            transformations.append(detail)
-        elif output_format == "json":
-            value = read_json(path)
-            if mode == "metamorphic":
-                operation = "canonical_key_order_and_indentation"
-                transformed = value
-            else:
-                fraction = 0.05 if mode == "quality_small" else 0.5
-                operation = "perturb_numeric_materials_response"
-                transformed = perturb_json(value, fraction)
-            path.write_text(
-                json.dumps(
-                    transformed,
-                    indent=4 if mode == "metamorphic" else None,
-                    sort_keys=mode == "metamorphic",
-                    ensure_ascii=False,
-                ),
-                encoding="utf-8",
-            )
-            transformations.append(
-                {
-                    "file": filename,
-                    "format": output_format,
-                    "operation": operation,
-                    **(
-                        {}
-                        if mode == "metamorphic"
-                        else {"fraction": fraction}
-                    ),
-                }
-            )
-    return transformations
-
-
 def copy_public_package(root: Path, destination: Path) -> None:
     """Copy only instruction/tests into the isolated checker runtime."""
     destination.mkdir(parents=True, exist_ok=True)
@@ -1052,6 +725,33 @@ def copy_public_package(root: Path, destination: Path) -> None:
         shutil.copy2(instruction, destination / "instruction.md")
     if (root / "tests").is_dir():
         shutil.copytree(root / "tests", destination / "tests")
+
+
+def copy_oracle_outputs(
+    source_dir: Path,
+    output_dir: Path,
+    specification: dict[str, Any],
+) -> list[str]:
+    """Copy only the isolated Oracle's contracted outputs into a probe case."""
+    created: list[str] = []
+    outputs = (
+        (specification.get("output_contract", {}) or {}).get("outputs", []) or []
+    )
+    source_dir = source_dir.resolve()
+    for output in outputs:
+        filename = basename(output.get("file"))
+        if not filename:
+            continue
+        source = source_dir / filename
+        if source.parent != source_dir or not source.is_file():
+            raise FileNotFoundError(
+                f"isolated Oracle output is missing contracted file: {filename}"
+            )
+        destination = output_dir / filename
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+        created.append(filename)
+    return created
 
 
 def patch_harbor_paths(
@@ -1383,18 +1083,29 @@ def prepare_solution_oracle(
     )
 
 
+def probe_lane(case_name: str) -> str:
+    """Return the owning lane for an executed probe case."""
+    if case_name in DETERMINISTIC_CORE_CASES or case_name.startswith("partial__"):
+        return "deterministic_core"
+    return "quality_results"
+
+
 def run_checker_case(
     root: Path,
     checker_text: str,
     specification: dict[str, Any],
     case_name: str,
     mode: str,
-    known_valid_output: Path | None,
-    isolated_component: dict[str, str] | None = None,
-    fixture_source_kind: str | None = None,
+    oracle_output: Path | None,
+    probe_workspace: Path,
+    component: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    with tempfile.TemporaryDirectory(prefix=f"materials_checker_{case_name}_") as tmp:
-        base = Path(tmp)
+    safe_case_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", case_name)
+    base = probe_workspace / safe_case_name
+    if base.exists():
+        shutil.rmtree(base)
+    base.mkdir(parents=True, exist_ok=True)
+    try:
         package_dir = base / "package"
         tests_dir = base / "tests"
         outputs_dir = base / "app" / "outputs"
@@ -1411,36 +1122,35 @@ def run_checker_case(
 
         created: list[str] = []
         transformations: list[dict[str, Any]] = []
-        known_valid_modes = {
-            "known_valid",
-            "sparse_known_valid",
-            "quality_small",
-            "quality_large",
-            "metamorphic",
-            "component_isolation",
-        }
-        if mode in known_valid_modes:
-            if known_valid_output is None:
-                raise ValueError("known-valid case requires an output directory")
-            created = copy_known_valid_outputs(
-                root, known_valid_output, outputs_dir, specification
-            )
-            if mode == "sparse_known_valid":
-                retain_one_known_valid_row(outputs_dir, specification)
-            elif mode in {"quality_small", "quality_large", "metamorphic"}:
-                transformations = transform_known_valid_outputs(
-                    outputs_dir, specification, mode
-                )
-            elif mode == "component_isolation":
-                if isolated_component is None:
-                    raise ValueError("component isolation requires a component")
-                retained = isolated_component["file"]
-                for filename in created:
-                    if filename != retained:
-                        (outputs_dir / filename).unlink(missing_ok=True)
-                created = [filename for filename in created if filename == retained]
+        if mode == "positive_oracle":
+            if oracle_output is None:
+                raise ValueError(f"{mode} probe requires an isolated Oracle output")
+            created = copy_oracle_outputs(oracle_output, outputs_dir, specification)
         elif mode == "malformed":
             created = write_malformed_outputs(outputs_dir, specification)
+        elif mode in {"partial", "all_wrong"}:
+            if oracle_output is None or (mode == "partial" and component is None):
+                raise ValueError(
+                    f"{mode} schema probe requires an isolated Oracle output"
+                )
+            created = copy_oracle_outputs(
+                oracle_output,
+                outputs_dir,
+                specification,
+            )
+            components = (
+                [component]
+                if mode == "partial" and component is not None
+                else declared_scoring_components(specification)
+            )
+            transformations = [
+                mutate_declared_component(
+                    outputs_dir,
+                    component,
+                    all_wrong=mode == "all_wrong",
+                )
+                for component in components
+            ]
         elif mode != "missing":
             created = write_synthetic_outputs(
                 outputs_dir, specification, mode
@@ -1480,8 +1190,8 @@ def run_checker_case(
                 "runtime_package_contains_solution": (
                     package_dir / "solution"
                 ).exists(),
-                "isolated_component": isolated_component,
-                "fixture_source_kind": fixture_source_kind,
+                "component": component,
+                "lane": probe_lane(case_name),
             }
         verifier_path.write_text(
             patch_harbor_paths(
@@ -1548,11 +1258,18 @@ def run_checker_case(
             "runtime_package_contains_solution": (
                 package_dir / "solution"
             ).exists(),
-            "isolated_component": isolated_component,
-            "fixture_source_kind": fixture_source_kind,
+            "component": component,
+            "lane": probe_lane(case_name),
+            "probe_origin": (
+                "SCHEMA_DERIVED_DETERMINISTIC"
+                if probe_lane(case_name) == "deterministic_core"
+                else "SCHEMA_SHAPED_SYNTHETIC_ATTACK"
+            ),
             "runtime_outputs_dir": str(outputs_dir),
             "runtime_entrypoint": "tests/test.sh",
         }
+    finally:
+        pass
 
 
 def finding(
@@ -1562,12 +1279,19 @@ def finding(
     test_type: str,
     evidence: dict[str, Any],
 ) -> dict[str, Any]:
+    lane = (
+        "deterministic_core"
+        if test_type in DETERMINISTIC_CORE_CASES
+        or test_type.startswith("partial__")
+        else "quality_results"
+    )
     return {
         "severity": severity,
         "code": code,
         "message": message,
         "test_type": test_type,
         "evidence": evidence,
+        "lane": lane,
     }
 
 
@@ -1680,24 +1404,6 @@ def evaluate_results(
     negative_class_usable = bool(negative_results) and all(
         usable_probe_result(result) for result in negative_results
     )
-    isolation_results = [
-        result
-        for result in results
-        if result["case"].startswith("component_isolation__")
-    ]
-    evaluated_isolation_plan = [
-        result["isolated_component"]
-        for result in isolation_results
-        if isinstance(result.get("isolated_component"), dict)
-    ]
-    isolation_class_usable = (
-        bool(isolation_results)
-        and len(evaluated_isolation_plan) == len(isolation_results)
-        and all(usable_probe_result(result) for result in isolation_results)
-        and component_runtime_bindings_verified(
-            evaluated_isolation_plan, results
-        )
-    )
     for result in results:
         case = result["case"]
         if result.get("runtime_not_assessable") is True:
@@ -1716,6 +1422,7 @@ def evaluate_results(
                 )
             )
         if result["crashed"]:
+            core_runtime = probe_lane(case) == "deterministic_core"
             crash_evidence = (
                 {
                     "status": "CRASH",
@@ -1731,10 +1438,16 @@ def evaluate_results(
                     "root_cause": runtime_root,
                 }
             )
+            if core_runtime:
+                crash_evidence["deterministic_core"] = True
             findings.append(
                 finding(
                     "HIGH",
-                    "CHECKER_CRASH",
+                    (
+                        "CORE_RUNTIME_CHECKER_CRASH"
+                        if core_runtime
+                        else "CHECKER_CRASH"
+                    ),
                     f"checker crashed for {case}",
                     case,
                     crash_evidence,
@@ -1767,10 +1480,17 @@ def evaluate_results(
                     "root_cause": runtime_root,
                 }
             )
+            core_runtime = probe_lane(case) == "deterministic_core"
+            if core_runtime:
+                unusable_evidence["deterministic_core"] = True
             findings.append(
                 finding(
                     "HIGH",
-                    "CHECKER_RESULT_UNUSABLE",
+                    (
+                        "CORE_RUNTIME_RESULT_UNUSABLE"
+                        if core_runtime
+                        else "CHECKER_RESULT_UNUSABLE"
+                    ),
                     "checker did not emit a usable reward/breakdown result "
                     f"for {case}",
                     case,
@@ -1779,6 +1499,20 @@ def evaluate_results(
             )
             continue
         assert isinstance(reward, float)
+        if case == "malformed_outputs" and reward >= pass_threshold:
+            findings.append(
+                finding(
+                    "HIGH",
+                    "CORE_RUNTIME_MALFORMED_INPUT_PASSES",
+                    "schema-derived malformed input receives a passing reward",
+                    case,
+                    {
+                        "reward": reward,
+                        "pass_threshold": pass_threshold,
+                        "deterministic_core": True,
+                    },
+                )
+            )
         if (
             (
                 (case in NEGATIVE_PROBE_CASES and negative_class_usable)
@@ -1798,98 +1532,50 @@ def evaluate_results(
                     },
                 )
             )
-        if case == "known_valid_public" and reward < pass_threshold:
-            findings.append(
-                finding(
-                    "HIGH",
-                    "KNOWN_VALID_OUTPUT_REJECTED",
-                    "independently justified public output does not pass",
-                    case,
-                    {
-                        "reward": reward,
-                        "pass_threshold": pass_threshold,
-                    },
-                )
-            )
         if case == "positive_oracle" and reward < pass_threshold:
             findings.append(
                 finding(
                     "HIGH",
-                    "ORACLE_POSITIVE_MOCK_REJECTED",
+                    "CORE_RUNTIME_ORACLE_REJECTED",
                     "isolated solution positive mock does not pass the checker",
                     case,
-                    {"status": "REJECTED"},
-                )
-            )
-        if (
-            case.startswith("component_isolation__")
-            and isolation_class_usable
-            and reward >= pass_threshold
-        ):
-            component = result.get("isolated_component") or {}
-            findings.append(
-                finding(
-                    "HIGH",
-                    "SINGLE_COMPONENT_CAN_PASS",
-                    "a source-bound component-isolation submission reaches "
-                    "the checker pass threshold",
-                    case,
-                    {
-                        "component_id": component.get("step_id"),
-                        "retained_output": component.get("file"),
-                        "reward": reward,
-                        "pass_threshold": pass_threshold,
-                        "fixture_source_kind": result.get(
-                            "fixture_source_kind"
-                        ),
-                        "root_cause": "checker_component_aggregation_contract",
-                    },
+                    {"status": "REJECTED", "deterministic_core": True},
                 )
             )
     def usable_score(case: str) -> float | None:
         result = by_case.get(case)
         return result["reward"] if usable_probe_result(result) else None
 
-    valid = usable_score("known_valid_public")
-    small = usable_score("quality_gradient_small_error")
-    large = usable_score("quality_gradient_large_error")
+    full = usable_score("positive_oracle")
+    partial_scores = [
+        result["reward"]
+        for result in results
+        if result["case"].startswith("partial__")
+        and usable_probe_result(result)
+    ]
+    all_wrong = usable_score("all_wrong")
     if (
-        valid is not None
-        and small is not None
-        and large is not None
-        and (small > valid + 1e-6 or large > small + 1e-6)
-    ):
-        findings.append(
-            finding(
-                "HIGH",
-                "SCIENTIFIC_QUALITY_GRADIENT_VIOLATION",
-                "checker reward is not monotonic as scientific numeric error increases",
-                "materials_quality_gradient",
-                {
-                    "known_valid_reward": valid,
-                    "small_error_reward": small,
-                    "large_error_reward": large,
-                    "expected_order": "known_valid >= small_error >= large_error",
-                },
-            )
+        full is not None
+        and partial_scores
+        and all_wrong is not None
+        and not (
+            full > max(partial_scores) + 1e-6
+            and min(partial_scores) > all_wrong + 1e-6
         )
-    equivalent = usable_score("metamorphic_equivalent_representation")
-    if (
-        valid is not None
-        and equivalent is not None
-        and abs(valid - equivalent) > 1e-6
     ):
         findings.append(
             finding(
                 "HIGH",
-                "SCIENTIFIC_INVARIANCE_VIOLATION",
-                "equivalent row/key ordering or serialization changes the checker reward",
-                "metamorphic_equivalent_representation",
+                "CORE_RUNTIME_ORDERING_VIOLATION",
+                "schema-derived full/partial/all-wrong rewards violate the "
+                "declared deterministic ordering",
+                "schema_derived_ordering",
                 {
-                    "known_valid_reward": valid,
-                    "equivalent_representation_reward": equivalent,
-                    "absolute_difference": abs(valid - equivalent),
-                    "allowed_difference": 1e-6,
+                    "full_reward": full,
+                    "partial_rewards": partial_scores,
+                    "all_wrong_reward": all_wrong,
+                    "expected_order": "full > partial > all_wrong",
+                    "deterministic_core": True,
                 },
             )
         )
@@ -1903,7 +1589,7 @@ def sanitized_oracle_evidence(
     usable = usable_probe_result(result)
     return {
         "case": "positive_oracle",
-        "mode": "known_valid",
+        "mode": "positive_oracle",
         "returncode": result.get("returncode"),
         "crashed": bool(result.get("crashed")),
         "runtime_not_assessable": bool(
@@ -1918,7 +1604,7 @@ def sanitized_oracle_evidence(
         "runtime_package_contains_solution": result.get(
             "runtime_package_contains_solution"
         ),
-        "fixture_source_kind": "ORACLE_POSITIVE_MOCK",
+        "probe_origin": "ORACLE_POSITIVE_MOCK",
         "usable_result": usable,
         "positive_mock_accepted": bool(
             usable
@@ -1932,7 +1618,7 @@ def sanitized_oracle_evidence(
 
 
 def dynamic_checker_probe(
-    root: Path, output: Path, known_valid_output: Path | None = None
+    root: Path, output: Path
 ) -> dict[str, Any]:
     checker_text = (root / "tests/checker.py").read_text(
         encoding="utf-8", errors="replace"
@@ -1943,39 +1629,32 @@ def dynamic_checker_probe(
         raise ValueError(
             "pass threshold must be a finite number between zero and one"
         )
-    fixture_provenance = (
-        validate_known_valid_fixture(root, known_valid_output, specification)
-        if known_valid_output is not None
-        else None
-    )
     random.seed(17)
+    probe_workspace = (
+        output.parent
+        / "deterministic_core"
+        / "probe_cases"
+        / output.stem
+    )
+    probe_workspace.mkdir(parents=True, exist_ok=True)
     attack_applicability = task_family_applicability(root, specification)
     oracle_temporary, oracle_output, oracle_evidence = prepare_solution_oracle(
         root, specification
     )
-    cases: list[
-        tuple[
-            str,
-            str,
-            Path | None,
-            dict[str, str] | None,
-            str | None,
-        ]
-    ] = [
-        ("missing_outputs", "missing", None, None, None),
-        ("empty_valid_shape", "empty", None, None, None),
-        ("malformed_outputs", "malformed", None, None, None),
-        ("random_baseline", "random", None, None, None),
-        ("minimal_gold_shape", "minimal", None, None, None),
-        ("duplicate_gold_rows", "duplicate", None, None, None),
-        ("nonfinite_values", "nonfinite", None, None, None),
+    cases: list[tuple[str, str, Path | None, dict[str, Any] | None]] = [
+        ("missing_outputs", "missing", None, None),
+        ("empty_valid_shape", "empty", None, None),
+        ("malformed_outputs", "malformed", None, None),
+        ("random_baseline", "random", None, None),
+        ("minimal_gold_shape", "minimal", None, None),
+        ("duplicate_gold_rows", "duplicate", None, None),
+        ("nonfinite_values", "nonfinite", None, None),
         *(
             (
                 case_name,
                 mode,
                 None,
                 None,
-                "SCHEMA_SHAPED_SYNTHETIC_ATTACK",
             )
             for case_name, mode in TASK_FAMILY_MODES.items()
             if attack_applicability[TASK_FAMILY_CASES[case_name]][
@@ -1987,61 +1666,27 @@ def dynamic_checker_probe(
         cases.append(
             (
                 "positive_oracle",
-                "known_valid",
+                "positive_oracle",
                 oracle_output,
                 None,
-                "ORACLE_POSITIVE_MOCK",
             )
         )
-    if known_valid_output is not None:
+        schema_probe_plan, schema_probe_reason = schema_derived_probe_plan(
+            specification, oracle_output
+        )
         cases.extend(
             (
-                (
-                    "known_valid_public",
-                    "known_valid",
-                    known_valid_output,
-                    None,
-                    "INDEPENDENT_PUBLIC_FIXTURE",
-                ),
-                (
-                    "sparse_known_valid",
-                    "sparse_known_valid",
-                    known_valid_output,
-                    None,
-                    "INDEPENDENT_PUBLIC_FIXTURE",
-                ),
-                (
-                    "quality_gradient_small_error",
-                    "quality_small",
-                    known_valid_output,
-                    None,
-                    "INDEPENDENT_PUBLIC_FIXTURE",
-                ),
-                (
-                    "quality_gradient_large_error",
-                    "quality_large",
-                    known_valid_output,
-                    None,
-                    "INDEPENDENT_PUBLIC_FIXTURE",
-                ),
-                (
-                    "metamorphic_equivalent_representation",
-                    "metamorphic",
-                    known_valid_output,
-                    None,
-                    "INDEPENDENT_PUBLIC_FIXTURE",
-                ),
+                item["case"],
+                item["mode"],
+                oracle_output,
+                item["components"][0] if item["mode"] == "partial" else None,
             )
+            for item in schema_probe_plan
         )
-    isolation_source = known_valid_output
-    isolation_source_kind = (
-        "INDEPENDENT_PUBLIC_FIXTURE"
-        if known_valid_output is not None
-        else None
-    )
-    source_isolation_plan, isolation_not_run_reason = component_isolation_plan(
-        specification, isolation_source, checker_text
-    )
+    else:
+        schema_probe_plan, schema_probe_reason = [], (
+            "the isolated Oracle did not produce a full contracted output"
+        )
     try:
         results = [
             run_checker_case(
@@ -2051,84 +1696,22 @@ def dynamic_checker_probe(
                 case_name,
                 mode,
                 source_output,
+                probe_workspace,
                 isolated_component,
-                source_kind,
             )
             for (
                 case_name,
                 mode,
                 source_output,
                 isolated_component,
-                source_kind,
             ) in cases
         ]
-        isolation_plan: list[dict[str, str]] = []
-        if source_isolation_plan and component_runtime_bindings_verified(
-            source_isolation_plan, results
-        ):
-            isolation_plan = source_isolation_plan
-            for component in isolation_plan:
-                safe_id = re.sub(
-                    r"[^A-Za-z0-9_.-]+", "_", component["step_id"]
-                )
-                results.append(
-                    run_checker_case(
-                        root,
-                        checker_text,
-                        specification,
-                        f"component_isolation__{safe_id}",
-                        "component_isolation",
-                        isolation_source,
-                        component,
-                        isolation_source_kind,
-                    )
-                )
-        elif source_isolation_plan:
-            isolation_not_run_reason = (
-                "independent fixture did not establish every checker runtime "
-                "scorer binding"
-            )
-        if fixture_provenance is not None:
-            for result in results:
-                if (
-                    result.get("fixture_source_kind")
-                    == "INDEPENDENT_PUBLIC_FIXTURE"
-                ):
-                    result["fixture_provenance"] = fixture_provenance
     finally:
         if oracle_temporary is not None:
             oracle_temporary.cleanup()
     findings = evaluate_results(results, pass_threshold)
-    isolation_coverage = component_isolation_coverage(
-        isolation_plan, isolation_not_run_reason, results
-    )
     task_attacks = task_family_attack_coverage(
         results, pass_threshold, attack_applicability
-    )
-    if known_valid_output is None:
-        findings.append(
-            finding(
-                "MEDIUM",
-                "INDEPENDENT_PUBLIC_FIXTURE_UNAVAILABLE",
-                (
-                    "discrimination and equivalence probes were not executed "
-                    "because no independently justified public valid output "
-                    "was supplied"
-                ),
-                "probe_coverage",
-                {
-                    "unassessed_probe_classes": [
-                        "discrimination",
-                        "equivalence",
-                    ],
-                    "oracle_used": False,
-                },
-            )
-        )
-    bound_fixture_hashes = (
-        fixture_provenance["fixture_hashes"]
-        if fixture_provenance is not None
-        else {}
     )
     expected = {
         "missing_outputs": "score below pass threshold without crashing",
@@ -2138,19 +1721,12 @@ def dynamic_checker_probe(
         "minimal_gold_shape": "score below pass threshold",
         "duplicate_gold_rows": "duplicates do not create a passing score",
         "nonfinite_values": "non-finite values score below pass threshold",
-        "known_valid_public": "independently justified output passes",
         "positive_oracle": (
             "isolated solution mock passes without becoming scientific evidence"
         ),
-        "sparse_known_valid": "a sparse subset cannot pass the full task",
-        "quality_gradient_small_error": (
-            "small scientific numeric error scores no higher than known-valid"
-        ),
-        "quality_gradient_large_error": (
-            "larger scientific numeric error scores no higher than small error"
-        ),
-        "metamorphic_equivalent_representation": (
-            "equivalent ordering and serialization preserve the reward"
+        "all_wrong": (
+            "a schema-derived mutation of every declared component scores "
+            "no higher than the full Oracle integration case"
         ),
     }
     expected.update(
@@ -2169,16 +1745,12 @@ def dynamic_checker_probe(
                 "stays below the pass threshold"
             )
             for result in results
-            if result["case"].startswith("component_isolation__")
+            if result["case"].startswith("partial__")
         }
     )
     tests = []
     probe_classes = {
         "positive_oracle": "positive",
-        "known_valid_public": "discrimination",
-        "quality_gradient_small_error": "discrimination",
-        "quality_gradient_large_error": "discrimination",
-        "metamorphic_equivalent_representation": "equivalence",
     }
     results_by_case = {result["case"]: result for result in results}
     assessment_flags = probe_assessment_flags(results)
@@ -2189,9 +1761,7 @@ def dynamic_checker_probe(
     for index, result in enumerate(results, start=1):
         oracle_case = result["case"] == "positive_oracle"
         probe_class = (
-            "component_isolation"
-            if result["case"].startswith("component_isolation__")
-            else "negative"
+            "negative"
             if result["case"] in TASK_FAMILY_CASES
             else probe_classes.get(result["case"], "negative")
         )
@@ -2200,6 +1770,8 @@ def dynamic_checker_probe(
                 "test_id": f"CHECKER-{index:03d}",
                 "test_type": result["case"],
                 "probe_class": probe_class,
+                "lane": result.get("lane", probe_lane(result["case"])),
+                "probe_origin": result.get("probe_origin"),
                 "description": result["case"].replace("_", " "),
                 "expected_behavior": expected[result["case"]],
                 "observed_score": (
@@ -2233,7 +1805,7 @@ def dynamic_checker_probe(
         if result.get("runtime_not_assessable") is True
     ]
     checker_result = {
-        "schema_version": "0.1",
+        "schema_version": CHECKER_TESTS_SCHEMA_VERSION,
         "benchmark_root": str(root),
         "checker_path": "tests/checker.py",
         "runtime": {
@@ -2258,6 +1830,44 @@ def dynamic_checker_probe(
         "pass_threshold": pass_threshold,
         "tests": tests,
         "findings": findings,
+        "deterministic_core": {
+            "schema_version": DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION,
+            "probe_origin": "SCHEMA_DERIVED_DETERMINISTIC",
+            "case_names": [
+                result["case"]
+                for result in results
+                if probe_lane(result["case"]) == "deterministic_core"
+            ],
+            "ordering_assertions": [
+                {
+                    "cases": [
+                        "positive_oracle",
+                        *[
+                            result["case"]
+                            for result in results
+                            if result["case"].startswith("partial__")
+                        ],
+                        "all_wrong",
+                    ],
+                    "assertion": "full >= partial >= all_wrong",
+                    "status": (
+                        "NOT_ASSESSABLE"
+                        if not any(
+                            result["case"].startswith("partial__")
+                            for result in results
+                        )
+                        else "RECORDED"
+                    ),
+                }
+            ],
+            "not_applicable_reason": schema_probe_reason,
+            "agent_authored": False,
+        },
+        "quality_results": {
+            "schema_version": QUALITY_PROBE_RESULTS_SCHEMA_VERSION,
+            "case_names": [],
+            "agent_authored": False,
+        },
         "usable_reward_count": sum(
             usable_probe_result(result) for result in results
         ),
@@ -2310,32 +1920,12 @@ def dynamic_checker_probe(
                 "reason": (
                     None
                     if discrimination_assessed
-                    else "discrimination requires usable known-valid, small-error, and large-error results"
+                    else "discrimination is Agent-quality evidence and has no deterministic fixture API"
                 ),
                 "provenance": {
-                    "source_kind": (
-                        "INDEPENDENT_PUBLIC_FIXTURE"
-                        if discrimination_assessed
-                        else "NONE"
-                    ),
-                    "fixture_hashes": (
-                        bound_fixture_hashes
-                        if discrimination_assessed
-                        else {}
-                    ),
-                    "fixture_manifest_hash": (
-                        fixture_provenance["fixture_manifest_hash"]
-                        if discrimination_assessed
-                        and fixture_provenance is not None
-                        else None
-                    ),
-                    "source_role_hashes": (
-                        fixture_provenance["source_role_hashes"]
-                        if discrimination_assessed
-                        and fixture_provenance is not None
-                        else {}
-                    ),
+                    "source_kind": "NONE",
                     "oracle_used": False,
+                    "external_result_directory_accepted": False,
                 },
             },
             "equivalence": {
@@ -2347,34 +1937,24 @@ def dynamic_checker_probe(
                 "reason": (
                     None
                     if equivalence_assessed
-                    else "equivalence requires usable known-valid and transformed results"
+                    else "equivalence is Agent-quality evidence and has no deterministic fixture API"
                 ),
                 "provenance": {
-                    "source_kind": (
-                        "INDEPENDENT_PUBLIC_FIXTURE"
-                        if equivalence_assessed
-                        else "NONE"
-                    ),
-                    "fixture_hashes": (
-                        bound_fixture_hashes if equivalence_assessed else {}
-                    ),
-                    "fixture_manifest_hash": (
-                        fixture_provenance["fixture_manifest_hash"]
-                        if equivalence_assessed
-                        and fixture_provenance is not None
-                        else None
-                    ),
-                    "source_role_hashes": (
-                        fixture_provenance["source_role_hashes"]
-                        if equivalence_assessed
-                        and fixture_provenance is not None
-                        else {}
-                    ),
+                    "source_kind": "NONE",
                     "oracle_used": False,
+                    "external_result_directory_accepted": False,
                 },
             },
             "component_isolation": {
-                **isolation_coverage,
+                "status": "NOT_APPLICABLE",
+                "reason": "component isolation is quality evidence and has no deterministic fixture API",
+                "provenance": {
+                    "source_kind": "NONE",
+                    "oracle_used": False,
+                    "external_result_directory_accepted": False,
+                    "cases_planned": 0,
+                    "cases_executed": 0,
+                },
             },
         },
         "runtime_provenance": {
@@ -2386,16 +1966,8 @@ def dynamic_checker_probe(
         },
         "limitations": [
             "schema-shaped synthetic outputs do not establish scientific correctness",
-            "scientific gradients and metamorphic probes require an independently justified public valid output",
-            *(
-                [
-                    "component isolation requires an independent source-bound "
-                    f"fixture and verified scorer bindings: "
-                    f"{isolation_coverage['reason']}"
-                ]
-                if isolation_coverage["status"] != "ASSESSED"
-                else []
-            ),
+            "discrimination, equivalence, and component isolation remain Agent-quality assessments",
+            "generated probe cases are stored only in the external audit workspace",
             "checker cases run in the disposable qa-checker Docker sandbox",
             "checker execution has Docker network disabled; long-tail dependencies must be available as wheels during sandbox preparation",
             *(
@@ -2424,17 +1996,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("input")
     parser.add_argument("--output", default="checker_tests.json")
-    parser.add_argument("--known-valid-output")
     arguments = parser.parse_args()
     try:
         result = dynamic_checker_probe(
             locate_root(Path(arguments.input)),
             Path(arguments.output).expanduser().resolve(),
-            (
-                Path(arguments.known_valid_output)
-                if arguments.known_valid_output
-                else None
-            ),
         )
         print(
             json.dumps(

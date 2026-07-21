@@ -1,0 +1,67 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The analytic magnetization values can be recomputed exactly using the Gaussian CDF with the same parameters as the task (mean=0, variance=1, J=1). This is a compute-driven task (no external data); thus T1 recompute is feasible and preferred.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "main_loop.csv": "metric_recompute",
+    "return_loop.csv": "metric_recompute"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "main_loop.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "h",
+            "m"
+          ],
+          "units": {
+            "h": "dimensionless (applied field relative to coupling units)",
+            "m": "dimensionless (magnetization per spin)"
+          }
+        },
+        "description": "Lower main loop magnetization m(h) for applied field h from -5 to 5 (step 0.1)."
+      },
+      {
+        "file": "return_loop.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "h_prime",
+            "m_prime"
+          ],
+          "units": {
+            "h_prime": "dimensionless (reversed field relative to coupling units)",
+            "m_prime": "dimensionless (magnetization per spin)"
+          }
+        },
+        "description": "First return loop magnetization m'(h') for reversed field from h=1 down to -1 (step 0.05)."
+      }
+    ],
+    "notes": "Both CSV files are evaluated by recomputing the analytic magnetization values using the Gaussian CDF (scipy.special.erf) with the same distribution parameters and coupling. The checker compares each numeric value to its recomputed gold within appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_1",
+      "output_file": "main_loop.csv",
+      "kind": "metric_recompute",
+      "weight": 0.4,
+      "description": "Check main loop magnetization CSV: requires columns h,m, sorted increasing h, and each m value matches the recomputed gold within tolerance."
+    },
+    {
+      "id": "step_2",
+      "output_file": "return_loop.csv",
+      "kind": "metric_recompute",
+      "weight": 0.6,
+      "description": "Check return loop magnetization CSV: requires columns h_prime,m_prime, sorted decreasing h_prime, and each m_prime value matches recomputed gold within tolerance."
+    }
+  ],
+  "hidden_assets": []
+}

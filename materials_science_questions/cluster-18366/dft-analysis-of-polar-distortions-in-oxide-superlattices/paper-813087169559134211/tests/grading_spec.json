@@ -1,0 +1,111 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute from raw simulation outputs not feasible because only compiled phase diagram and transition points are uploaded. Structural verification of domain type ordering and reference match of transition points against paper's reported values.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "phase_diagram check points",
+      "source_provenance": "Figure 5(a) and conclusion text of paper",
+      "generation_method": "Extracted from paper: expected domain types at r=0.1 (A), 0.25 (T), 0.43 (H), 0.5 (H), 0.71 (V), 0.9 (V). Tolerance near boundaries allows adjacent type.",
+      "why_not_fabricated": "Based on paper's explicit domain classification and transition boundaries."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "transition point references",
+      "source_provenance": "Paper abstract and conclusion",
+      "generation_method": "Extracted from paper: T→H at r≈0.4, H→V at r≈0.7",
+      "why_not_fabricated": "Directly from paper's reported values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phase_diagram.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r",
+            "domain_type"
+          ]
+        },
+        "description": "Phase diagram mapping thickness ratio r to the dominant domain type (A, T, H, V) from the lowest-energy configuration."
+      },
+      {
+        "file": "transition_points.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "T_to_H": "float",
+            "H_to_V": "float"
+          }
+        },
+        "description": "Thickness ratios at the two principal phase boundaries: T→H and H→V."
+      }
+    ],
+    "notes": "The phase diagram is verified by checking the reported domain type at a set of hidden r values against the expected sequence from the paper. The transition points are compared to the paper's reported values with a small tolerance."
+  },
+  "steps": [
+    {
+      "id": "phase_diagram",
+      "output_file": "phase_diagram.csv",
+      "kind": "custom",
+      "weight": 0.6,
+      "check_points": [
+        {
+          "r": 0.1,
+          "allowed": [
+            "A"
+          ]
+        },
+        {
+          "r": 0.25,
+          "allowed": [
+            "T"
+          ]
+        },
+        {
+          "r": 0.43,
+          "allowed": [
+            "H",
+            "T"
+          ]
+        },
+        {
+          "r": 0.5,
+          "allowed": [
+            "H"
+          ]
+        },
+        {
+          "r": 0.71,
+          "allowed": [
+            "V",
+            "H"
+          ]
+        },
+        {
+          "r": 0.9,
+          "allowed": [
+            "V"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "transition_points",
+      "output_file": "transition_points.json",
+      "kind": "custom",
+      "weight": 0.4,
+      "T_to_H_target": 0.4,
+      "H_to_V_target": 0.7,
+      "tolerance": 0.05
+    }
+  ]
+}

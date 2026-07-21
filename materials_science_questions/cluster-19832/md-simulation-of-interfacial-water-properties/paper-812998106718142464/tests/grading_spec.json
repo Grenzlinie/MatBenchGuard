@@ -1,0 +1,88 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full recompute from MD trajectories infeasible in verifier sandbox; score reported energies against paper's Table 3.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_pvdf_water_interaction_energies.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference per-area interaction energies from Table 3",
+      "source_provenance": "Paper Table 3",
+      "generation_method": "Extracted directly from the paper",
+      "why_not_fabricated": "Values match the reference solve.sh and the paper's reported numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_pvdf_water_interaction_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "surface",
+            "interaction_type",
+            "value",
+            "uncertainty"
+          ],
+          "columns": {
+            "surface": {
+              "type": "string",
+              "values": [
+                "crystal",
+                "amorphous"
+              ]
+            },
+            "interaction_type": {
+              "type": "string",
+              "values": [
+                "LJ",
+                "Coulomb",
+                "total"
+              ]
+            },
+            "value": {
+              "type": "number",
+              "unit": "kJ mol^{-1} nm^{-2}"
+            },
+            "uncertainty": {
+              "type": "number",
+              "unit": "kJ mol^{-1} nm^{-2}"
+            }
+          }
+        },
+        "description": "Per‑area PVDF–water interaction energies (Lennard‑Jones, Coulomb, and total) for the crystalline and amorphous PVDF surfaces. The checker verifies that the amorphous total energy is more negative (more favourable) than the crystal total, and that the individual components are within a tolerance of the hidden reference values from the paper’s Table 3."
+      }
+    ],
+    "notes": "Only the slab interaction energy is reproduced. Droplet contact angle simulations and detailed structural/electrostatic analyses are excluded due to computational cost for a minimal reproduction task. The target trend (amorphous more negative) is scored via threshold_or_better; absolute values are compared to reference with a tolerance window."
+  },
+  "steps": [
+    {
+      "id": "step_01_pvdf_water_interaction_energies",
+      "output_file": "step_01_pvdf_water_interaction_energies.csv",
+      "weight": 1.0,
+      "kind": "custom",
+      "gold": {
+        "crystal": {
+          "LJ": -45,
+          "Coulomb": -28,
+          "total": -73
+        },
+        "amorphous": {
+          "LJ": -47,
+          "Coulomb": -85,
+          "total": -132
+        }
+      },
+      "tolerances_abs": {
+        "LJ": 5,
+        "Coulomb": 10,
+        "total": 10
+      }
+    }
+  ]
+}

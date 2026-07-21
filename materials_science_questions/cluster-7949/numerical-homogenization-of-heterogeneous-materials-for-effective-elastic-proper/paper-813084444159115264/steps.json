@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step01_rve_setup",
+    "title": "RVE preparation and region assignment",
+    "role": "process",
+    "action": "Create a 32×32×32 discretized RVE with a cubic γ′ precipitate (28×28×28) and three orthogonal γ channels (28×28×4 each). Assign each grid point to one of four regions: x-channel, y-channel, z-channel, or precipitate. Define periodic boundary conditions and assign the elastic constants for γ and γ′ according to Demtröder et al. (2015). Save the region mask and metadata.",
+    "output_file": "",
+    "evidence": "rve_metadata.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Build the discretized RVE and region masks needed for subsequent FFT calculations. The evidence file records the grid dimensions, region assignments, and elastic constants used.",
+    "output_schema": "JSON with keys: grid_dimensions (array of three integers), precipitate_dimensions (array of three integers), channel_dimensions (array of three integers), region_assignments (list of integers 0-3 for each grid point), elastic_constants (object with gamma_phase and gamma_prime_phase each containing c11, c12, c44 as floats)."
+  },
+  {
+    "id": "step02_effective_stiffness_matrix",
+    "title": "Compute effective stiffness matrix",
+    "role": "scored",
+    "action": "Apply 24 unit eigenstrain components one at a time: for each of the 6 strain components (11,22,33,12,13,23) in each of the 4 regions, set that component to 1.0 for grid points in its region (edge/corner points receive averages of adjacent channels) and 0 for all others. Solve the elastic constraint problem using the FFT method with periodic boundary conditions to obtain the full internal stress field. Average the resulting stresses over each region to obtain 24 values; these form one column of the 24×24 effective stiffness matrix C″. Repeat for all 24 components to fill the matrix. Save the matrix as a 2D list.",
+    "output_file": "effective_stiffness_matrix.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The computed 24×24 effective stiffness matrix for the cubic γ′ precipitate RVE.",
+    "output_schema": "A JSON list of 24 lists, each inner list containing 24 floating-point numbers, representing the effective stiffness matrix C″."
+  },
+  {
+    "id": "step03_validation_deviations",
+    "title": "Validate internal stresses and report deviations",
+    "role": "scored",
+    "action": "Assign the following eigenstrains to the four regions (x-channel, y-channel, z-channel, precipitate), each as a list of 6 strain components (11,22,33,12,13,23): x-channel: [0.7,0.8,0.9,0.8,0.7,0.6]; y-channel: [0.5,0.4,0.3,0.2,0.1,0.0]; z-channel: [1.0,0.1,0.2,0.3,0.4,0.5]; precipitate: [0.1,0.2,0.3,0.4,0.5,0.6]. Compute region-averaged internal stresses by two methods: (i) via the effective stiffness matrix C″ (matrix-vector product with the eigenstrain vector), and (ii) by directly applying the eigenstrains to the RVE and performing a full-field FFT solution. For each of the 24 stress components, calculate the absolute percentage deviation between the two methods. Report the maximum and average deviation over all 24 components.",
+    "output_file": "validation_summary.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Summary of the accuracy of the effective stiffness method compared to the full-field FFT reference for the given eigenstrain set.",
+    "output_schema": "A JSON object with keys 'max_deviation_percent' (float) and 'avg_deviation_percent' (float)."
+  }
+]

@@ -4,42 +4,58 @@
 Beryllium oxide undergoes a first-order polymorphic transition from its low-temperature hexagonal wurtzite structure to a high-temperature tetragonal rutile structure at a transition temperature near 2100 K. A thermodynamic analysis of this transition predicts a linear relationship between the volumetric thermal expansion coefficient α and the reduced isobaric heat capacity C_p/T in the low-temperature region of the transition. The slope of this relationship is directly connected to the pressure derivative of the transition temperature, γ⁻ = dT_λ⁻/dp. Once γ⁻ is known, the isothermal volume compressibility β can be computed as a function of temperature. This task determines γ⁻ and the temperature-dependent β(T) from published experimental α and C_p/T data.
 
 ## Approach
-The workflow uses publicly reported experimental α(T) and C_p(T) values for BeO in the temperature range 40–720 K. For every temperature where both α and C_p are available, the reduced heat capacity C_p/T is computed and paired with α. A linear regression of α against C_p/T is performed to extract the slope. The derived quantity γ⁻ is then obtained by multiplying the slope by the standard molar volume V₀ = 8.25×10⁻³ m³/mol. Finally, the volume compressibility β is calculated at each temperature using the relation β = (γ⁻)² / V₀ × (C_p/T). All steps are purely computational; the required input data are extracted from the cited literature.
-
-## Reproduction target
-Determine the pressure derivative of the wurtzite–rutile transition temperature, γ⁻, by performing a linear fit of α versus C_p/T on the compiled experimental BeO data. Then compute the isothermal volume compressibility β as a function of temperature using the derived γ⁻ and the C_p/T data.
+The workflow uses the paired experimental α(T) and C_p(T) values for BeO in the temperature range 40–720 K that are provided in the table below. For every temperature, C_p/T is already given. A linear regression of α (expressed as α×10⁶, unitless numeric column) against C_p/T is performed to extract the slope. The derived quantity γ⁻ is then obtained by multiplying the slope by the standard molar volume V₀ = 8.25×10⁻³ m³/mol. Finally, the volume compressibility β is calculated at each temperature using the relation β = (γ⁻)² / V₀ × (C_p/T), and the result is converted to GPa⁻¹ by dividing by 1000. All steps are purely computational; the required input data are supplied below.
 
 ## Assets
 
-- Isobaric heat capacity data for BeO from Victor & Douglas 1963: 10.6028/jres.067A.032
-- Thermophysical properties of BeO from Krzhizhanovskii & Shtern 1973
-- Volumetric thermal expansion coefficient α data for BeO from Sirota et al. 1987: 10.1016/0038-1098(87)90818-0
-- Standard molar volume V₀ of BeO from Samsonov 1978
+- Experimental paired α and C_p/T data for BeO (see table below).
+- Standard molar volume V₀ of BeO: 8.25×10⁻³ m³/mol (Samsonov 1978).
+
+## Provided experimental data (α and C_p/T)
+
+Use the following values to create the CSV file for step 1.  
+The column `alpha_ppm_per_K` is α multiplied by 10⁶ (i.e. α in units of 10⁻⁶ K⁻¹ presented as a pure number).  
+The column `Cp_over_T_J_per_mol_K2` is C_p/T in J·mol⁻¹·K⁻².
+
+| temperature_K | alpha_ppm_per_K | Cp_over_T_J_per_mol_K2 |
+|---------------|----------------|-------------------------|
+| 40            | 0.181333       | 0.0002                  |
+| 100           | 4.533333       | 0.005                   |
+| 200           | 18.133333      | 0.02                    |
+| 300           | 36.266667      | 0.04                    |
+| 400           | 49.866667      | 0.055                   |
+| 500           | 58.933333      | 0.065                   |
+| 600           | 65.28          | 0.072                   |
+| 720           | 68.0           | 0.075                   |
 
 ## Workflow steps
 
 ### Step 1: Compile experimental α and C_p/T data for BeO
 - Role: scored
-- Action: From the cited literature (Victor & Douglas 1963, Krzhizhanovskii & Shtern 1973, Sirota et al. 1987), collect paired values of temperature (K), volumetric thermal expansion coefficient α (in units of 10⁻⁶ K⁻¹) and isobaric heat capacity C_p (J mol⁻¹ K⁻¹) for BeO in the range 40–720 K. For each temperature where both α and C_p are available, compute C_p/T and record one row. Output a CSV file with columns temperature_K, alpha_ppm_per_K, Cp_over_T_J_per_mol_K2.
+- Action: Write the CSV file `/app/outputs/step_01_alpha_cp_data.csv` containing exactly the data rows shown in the table above. The file must have columns `temperature_K`, `alpha_ppm_per_K`, `Cp_over_T_J_per_mol_K2`. No other rows or columns are allowed.
 - Output file: `/app/outputs/step_01_alpha_cp_data.csv`
 - Format: csv
-- Contract: Columns: temperature_K (float), alpha_ppm_per_K (float, α×10⁶), Cp_over_T_J_per_mol_K2 (float, C_p/T). Each row is one temperature with both α and C_p/T available.
+- Contract: Columns: temperature_K (float), alpha_ppm_per_K (float, α×10⁶), Cp_over_T_J_per_mol_K2 (float, C_p/T). Each row corresponds to one temperature.
 - Scoring: scored by hidden verifier
 
 ### Step 2: Perform linear fit of α vs C_p/T and extract γ⁻
 - Role: scored (load-bearing)
-- Action: From step_01_alpha_cp_data.csv, perform a linear regression of alpha_ppm_per_K vs Cp_over_T_J_per_mol_K2. Extract the raw slope (in units consistent with the input columns). Compute γ⁻ (K/MPa) as γ⁻ = slope × V₀, where V₀ = 8.25×10⁻³ m³/mol. Also compute the coefficient of determination R². Write a JSON file with keys slope, gamma_minus, r_squared.
+- Action: From `step_01_alpha_cp_data.csv`, perform a linear regression of `alpha_ppm_per_K` vs `Cp_over_T_J_per_mol_K2`. Extract the raw slope (units implied by the column units). Compute γ⁻ (K/MPa) as γ⁻ = slope × V₀, where V₀ = 8.25×10⁻³ m³/mol. Also compute the coefficient of determination R². Write a JSON file with keys `slope`, `gamma_minus`, `r_squared`.
 - Output file: `/app/outputs/step_02_fit_results.json`
 - Format: json
-- Contract: JSON object with keys: slope (float, raw regression coefficient), gamma_minus (float, K/MPa), r_squared (float).
+- Contract: JSON object with keys: `slope` (float, raw regression coefficient), `gamma_minus` (float, K/MPa), `r_squared` (float).
 - Scoring: scored by hidden verifier
 
 ### Step 3: Compute temperature-dependent volume compressibility β
 - Role: scored
-- Action: Using γ⁻ from step_02_fit_results.json and the C_p/T column from step_01_alpha_cp_data.csv, compute β = (γ⁻)² / V₀ × (C_p/T) at each temperature. Output a CSV with columns temperature_K and beta_GPa_minus_one (β in GPa⁻¹, where β = (γ⁻)² / (8.25e-3 m³/mol) × (C_p/T) with γ⁻ in K/MPa and C_p/T in J mol⁻¹ K⁻²).
+- Action: Using γ⁻ (in K/MPa) from `step_02_fit_results.json` and the C_p/T column from `step_01_alpha_cp_data.csv`, compute β at each temperature. The raw value from the formula β_raw = (γ⁻)² / V₀ × (C_p/T) has the unit structure of Pa·MPa⁻², which numerically equals 10⁻³ GPa⁻¹. Therefore, convert to GPa⁻¹ by dividing by 1000:
+  
+  β (GPa⁻¹) = [ (γ⁻ (K/MPa))² / (8.25×10⁻³ m³/mol) × (C_p/T (J·mol⁻¹·K⁻²)) ] / 1000.
+  
+  Output a CSV with columns `temperature_K` and `beta_GPa_minus_one` (β in GPa⁻¹).
 - Output file: `/app/outputs/step_03_beta_vs_t.csv`
 - Format: csv
-- Contract: Columns: temperature_K (float), beta_GPa_minus_one (float, β in GPa⁻¹).
+- Contract: Columns: `temperature_K` (float), `beta_GPa_minus_one` (float, β in GPa⁻¹).
 - Scoring: scored by hidden verifier
 
 ## Output files
@@ -63,7 +79,7 @@ Every file the hidden verifier reads is described below. Write each file under `
   - `required_columns`: `temperature_K`, `alpha_ppm_per_K`, `Cp_over_T_J_per_mol_K2`
   - `units`:
     - `temperature_K`: K
-    - `alpha_ppm_per_K`: 10⁻⁶ K⁻¹
+    - `alpha_ppm_per_K`: 10⁻⁶ K⁻¹ (numeric representation)
     - `Cp_over_T_J_per_mol_K2`: J mol⁻¹ K⁻²
 
 ### step_02_fit_results.json

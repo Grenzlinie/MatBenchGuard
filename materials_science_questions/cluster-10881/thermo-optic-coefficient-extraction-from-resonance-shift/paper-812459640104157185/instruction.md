@@ -29,7 +29,7 @@ Produce two artifacts. First, a CSV file containing the predicted threshold curr
 
 ### Step 1: Fit mirror-loss model parameters (process)
 - Role: process
-- Action: Using the experimental J_th data provided in the Assets table, implement the mirror-loss model (J_th = (α_W + α_M) / (g Γ) with α_M = -ln(P1) / [2 (√(A π) (1 - P2))], area A = π R² / (1+2ε)). Fit the parameters P1, P2 separately for the ε=0 and ε=0.10 regimes by minimizing the squared error between the model and the measured J_th values. Use the material constants: α_W = 19 cm⁻¹, Γ = 0.27, g = 10 cm⁻¹/(kA/cm²). You may perform the fit using non-linear least squares (e.g., scipy.optimize.curve_fit) or an equivalent method. Keep the fitted parameters for the next step.
+- Action: Using the experimental J_th data provided in the Assets table, implement the mirror-loss model (J_th = (α_W + α_M) / (g Γ) with α_M = -ln(P1) / [2 (√(A π) (1 - P2))], area A = π R² / (1+2ε)). Fit the parameters P1, P2 separately for the ε=0 and ε=0.10 regimes by minimizing the squared error between the model and the measured J_th values. Use the material constants: α_W = 16 cm⁻¹, Γ = 0.27, g = 16 cm⁻¹/(kA/cm²). You may perform the fit using non-linear least squares (e.g., via a Gauss-Newton method implemented with numpy or other tools you have access to) or any equivalent approach. Keep the fitted parameters for the next step.
 - Evidence: none (this step is not directly scored; its output is used in Step 2)
 
 ### Step 2: Compute threshold current densities (scored, load-bearing)
@@ -42,7 +42,7 @@ Produce two artifacts. First, a CSV file containing the predicted threshold curr
 
 ### Step 3: Compute mode spacing (scored)
 - Role: scored
-- Action: For a resonator with R = 70 µm and ε = 0.16, calculate the bow-tie mode spacing Δν = 1 / (L n_eff) using n_eff = 3.15 and the contact angle Φ = 50°. The path length L = 4 r(Φ) + 4 r(Φ) cos(Φ), where r(Φ) = R / sqrt(1+2ε) * sqrt(1+2ε cos(2Φ)). Save the result as a single number (in cm⁻¹) to a text file.
+- Action: For a resonator with R = 70 µm and ε = 0.16, calculate the bow-tie mode spacing Δν = 1 / (L n_eff) using n_eff = 3.15 and the contact angle Φ = 50°. The path length L = 4 r(Φ) / cos(Φ), where r(Φ) = R / sqrt(1+2ε) * sqrt(1+2ε cos(2Φ)). Convert R to centimeters before use (70 µm = 0.007 cm). Save the result as a single number (in cm⁻¹) to a text file.
 - Output file: `/app/outputs/mode_spacing.txt`
 - Format: txt
 - Contract: A single numeric value representing the mode spacing in cm⁻¹. No additional text.

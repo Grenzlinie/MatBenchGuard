@@ -1,0 +1,159 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The target values are specific numeric outputs from solving a system of self-consistency equations. Recomputing them in the verifier would require re-running the full numerical solver, which is not feasible within the checker sandbox. We compare the agent's reported quantities to the paper's hidden reference values with tolerances.",
+  "pass_threshold": 0.8,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for fig1_maxima.json and triple_points.json",
+      "source_provenance": "Extracted from the paper: Fig.1 and associated text for maxima (M, ω, ω_m for κ̃=60 and 130); Fig.2 caption and text for triple points (ω_m values and transition orders).",
+      "generation_method": "Directly transcribed from the paper's reported numeric values.",
+      "why_not_fabricated": "These are the experimentally/theoretically determined values from the paper, which serve as the standard reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "fig1_maxima.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "kappa_tilde",
+              "M",
+              "omega",
+              "omega_m"
+            ],
+            "properties": {
+              "kappa_tilde": {
+                "type": "integer"
+              },
+              "M": {
+                "type": "number"
+              },
+              "omega": {
+                "type": "number"
+              },
+              "omega_m": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "description": "Maximum magnetization and corresponding coupling parameters for given phenomenological coupling constants κ̃=60 and 130."
+      },
+      {
+        "file": "triple_points.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "omega",
+              "triple_omega_m",
+              "transition_order_I_to_ordered",
+              "transition_order_FMN_AFMN"
+            ],
+            "properties": {
+              "omega": {
+                "type": "number"
+              },
+              "triple_omega_m": {
+                "type": "number"
+              },
+              "transition_order_I_to_ordered": {
+                "type": "string",
+                "enum": [
+                  "first",
+                  "second"
+                ]
+              },
+              "transition_order_FMN_AFMN": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "second",
+                  null
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "description": "Triple point coordinates and transition orders for phase diagrams at given ω values."
+      }
+    ],
+    "notes": "The checker will compare the agent's reported values to hidden reference values with absolute tolerance 0.001 for triple_omega_m and 0.01 for M, ω, ω_m. Transition order strings must match exactly. The field transition_order_FMN_AFMN is \"second\" if an FMN-AFMN boundary exists at the triple point, otherwise null (e.g., when the ordered phase is not AFMN)."
+  },
+  "steps": [
+    {
+      "id": "fig1_maxima",
+      "output_file": "fig1_maxima.json",
+      "weight": 0.5,
+      "kind": "json_field",
+      "target_policy": "reference_match",
+      "gold_data": [
+        {
+          "kappa_tilde": 60,
+          "M": 0.6681,
+          "omega": 0.1129,
+          "omega_m": 0.9855
+        },
+        {
+          "kappa_tilde": 130,
+          "M": 0.8207,
+          "omega": 0.4705,
+          "omega_m": 1.0727
+        }
+      ],
+      "tolerances": {
+        "M": 0.01,
+        "omega": 0.01,
+        "omega_m": 0.01
+      }
+    },
+    {
+      "id": "triple_points",
+      "output_file": "triple_points.json",
+      "weight": 0.5,
+      "kind": "json_field",
+      "target_policy": "reference_match",
+      "gold_data": [
+        {
+          "omega": 0.0,
+          "triple_omega_m": 0.9429,
+          "transition_order_I_to_ordered": "first",
+          "transition_order_FMN_AFMN": null
+        },
+        {
+          "omega": 0.4,
+          "triple_omega_m": 0.704,
+          "transition_order_I_to_ordered": "first",
+          "transition_order_FMN_AFMN": "second"
+        },
+        {
+          "omega": 1.2,
+          "triple_omega_m": 0.4703,
+          "transition_order_I_to_ordered": "first",
+          "transition_order_FMN_AFMN": "second"
+        }
+      ],
+      "tolerances": {
+        "triple_omega_m": 0.001
+      },
+      "string_fields_exact": [
+        "transition_order_I_to_ordered",
+        "transition_order_FMN_AFMN"
+      ]
+    }
+  ]
+}

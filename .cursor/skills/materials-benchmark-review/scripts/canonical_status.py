@@ -16,6 +16,7 @@ from typing import Any
 from deterministic_contract import (
     DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES,
     LEGACY_REPAIR_PLAN_SCHEMA_VERSION,
+    DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION,
 )
 
 
@@ -34,8 +35,6 @@ REPAIR_STATUSES = frozenset(
         # Review-time lifecycle state.  It routes a package to Repair but is
         # not a terminal outcome and never publishes a package.
         "DETERMINISTIC_REPAIR_REQUIRED",
-        # ``PUBLISHED`` is retained only for the legacy certification archive.
-        # The Repair skill now emits the batch five-state lifecycle below.
         "PUBLISHED",
         "REPAIRED",
         "PARTIALLY_REPAIRED",
@@ -44,8 +43,7 @@ REPAIR_STATUSES = frozenset(
         "ABANDONED",
     }
 )
-# A repair that atomically publishes the fixed package.  ``REPAIRED`` is the
-# batch-model success state; ``PUBLISHED`` is the legacy single-finding value.
+# A repair that atomically publishes the fixed package.
 SUCCESS_REPAIR_STATUSES = frozenset({"PUBLISHED", "REPAIRED"})
 REPAIR_BUNDLE_FILES = (
     "repair_plan.json",
@@ -209,8 +207,11 @@ def validate_repair_bundle_semantics(
         | set(DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES)
     ):
         raise ValueError("repair_plan.json schema_version is invalid")
-    # ``REPAIRED`` is the batch-model success state; ``PUBLISHED`` is the legacy
-    # single-finding success value.  Both atomically publish the fixed package.
+    if (
+        plan.get("schema_version") == DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION
+        and not isinstance(plan.get("findings"), list)
+    ):
+        raise ValueError("deterministic repair plan must be a complete batch")
     published = fields["repair_status"] in SUCCESS_REPAIR_STATUSES
     batch_findings = plan.get("findings")
     is_batch = isinstance(batch_findings, list) and bool(batch_findings)
@@ -527,8 +528,7 @@ def validate_repair_bundle_semantics(
         )
     for item in identity_values:
         # Batch bundles bind identity on audit_id + package_identity because a
-        # single batch resolves many findings; per-item finding_id is only bound
-        # for the legacy single-finding bundle.
+        # single batch resolves many findings.
         if (
             item.get("audit_id") != audit_id
             or item.get("package_identity") != package_identity

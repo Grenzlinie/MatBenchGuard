@@ -93,13 +93,22 @@ def load_artifact(path):
 
 
 def prepare(outputs_dir, spec):
-    gold_data = {}
-    for step in spec['steps']:
-        if step['id'] == 'step_02_energies':
-            gold_data['energies'] = step.get('gold_energies_MeV')
-        elif step['id'] == 'step_03_observables':
-            gold_data['observables'] = step.get('gold_observables')
-    return gold_data
+    gold_energies = {
+        "2+": 0.5585,
+        "2'+": 1.23,
+        "2''+": 1.86,
+        "0'+": 0.92,
+        "0''+": 2.14,
+        "4+": 1.09,
+        "4'+": 1.91
+    }
+    gold_observables = {
+        "B(E2,2'→0)/B(E2,2→0)": {"gold": 0.016, "tolerance": 0.1},
+        "B(E2,2'→2)/B(E2,2→0)": {"gold": 0.96, "tolerance": 0.1},
+        "B(E2,0'→2)/B(E2,2→0)": {"gold": 1.13, "tolerance": 0.1},
+        "Q22/Q20": {"gold": 0.63, "tolerance": 0.2}
+    }
+    return {"energies": gold_energies, "observables": gold_observables}
 
 
 # === block: score_0 (check id='step_02_energies') ===

@@ -1,0 +1,91 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The rotational barrier is recomputed from the raw energy vs angle data (T1 recompute). Equilibrium distance compared to paper-reported 2.91 Å with tolerance. Self-reported barrier is cross-checked against recomputed barrier for consistency.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "equilibrium_distance.txt": "exact_match",
+    "energy_vs_angle.csv": "metric_recompute",
+    "rotational_barrier.txt": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference equilibrium distance (2.91 Å) and rotational barrier threshold (100 meV)",
+      "source_provenance": "Paper reports optimal adsorption distance 2.91 Å from DFT and states the rotational barrier is very small/negligible; the 0.1 eV threshold is derived from the paper's claim of free rotation and weak physisorption.",
+      "generation_method": "Extracted from paper text and task specification",
+      "why_not_fabricated": "Values are directly from the paper's reported DFT results and the agreed verification threshold in the approved plan."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "equilibrium_distance.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "units": {
+            "value": "Å"
+          }
+        },
+        "description": "Optimized equilibrium distance (H₂ center-of-mass to coronene plane) from DFT geometry optimization."
+      },
+      {
+        "file": "energy_vs_angle.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "angle_deg",
+            "energy_eV"
+          ]
+        },
+        "description": "Raw potential energy scan over rotation angle. The verifier recomputes the rotational barrier from this data."
+      },
+      {
+        "file": "rotational_barrier.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "units": {
+            "value": "meV"
+          }
+        },
+        "description": "Agent-computed rotational barrier. Verified for consistency with the barrier recomputed from energy_vs_angle.csv."
+      }
+    ],
+    "notes": "The task reproduces the DFT calculation of the H₂ rotational barrier on a graphite model (coronene). The barrier must be very small (≤0.1 eV) to support the paper's conclusion of weak physisorption. The verifier recomputes the barrier from the CSV and checks the reported distance."
+  },
+  "steps": [
+    {
+      "id": "optimize_geometry",
+      "output_file": "equilibrium_distance.txt",
+      "kind": "numeric",
+      "target": 2.91,
+      "tolerance": 0.5,
+      "weight": 0.2
+    },
+    {
+      "id": "rotation_scan",
+      "output_file": "energy_vs_angle.csv",
+      "kind": "recompute_metric",
+      "metric": "rotational_barrier",
+      "threshold_mev": 100,
+      "decay_scale_mev": 200,
+      "weight": 0.6
+    },
+    {
+      "id": "compute_barrier",
+      "output_file": "rotational_barrier.txt",
+      "kind": "consistency_check",
+      "tolerance_mev": 1.0,
+      "decay_scale_mev": 5.0,
+      "weight": 0.2
+    }
+  ]
+}

@@ -1,0 +1,301 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Scoring is structural because the paper's results are stochastic cluster size distributions and magnetization curves from Monte Carlo simulations, which vary across runs. Exact numerical recompute is infeasible; instead we verify physically expected relative trends (ordering, monotonicity) that are robust across implementations.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "cluster_distributions.json": "structural_audit",
+    "magnetization_curves.json": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "cluster_distributions.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "demag_types",
+            "interaction_strengths",
+            "frequencies",
+            "virgin_curve_fields"
+          ],
+          "properties": {
+            "demag_types": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "demag_type",
+                  "distribution"
+                ],
+                "properties": {
+                  "demag_type": {
+                    "type": "string"
+                  },
+                  "distribution": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "cluster_order",
+                        "count"
+                      ],
+                      "properties": {
+                        "cluster_order": {
+                          "type": "integer"
+                        },
+                        "count": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "interaction_strengths": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "d",
+                  "distribution"
+                ],
+                "properties": {
+                  "d": {
+                    "type": "number"
+                  },
+                  "distribution": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "cluster_order",
+                        "count"
+                      ],
+                      "properties": {
+                        "cluster_order": {
+                          "type": "integer"
+                        },
+                        "count": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "frequencies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "frequency",
+                  "distribution"
+                ],
+                "properties": {
+                  "frequency": {
+                    "type": "number"
+                  },
+                  "distribution": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "cluster_order",
+                        "count"
+                      ],
+                      "properties": {
+                        "cluster_order": {
+                          "type": "integer"
+                        },
+                        "count": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "virgin_curve_fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "applied_field_h",
+                  "distribution"
+                ],
+                "properties": {
+                  "applied_field_h": {
+                    "type": "number"
+                  },
+                  "distribution": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "cluster_order",
+                        "count"
+                      ],
+                      "properties": {
+                        "cluster_order": {
+                          "type": "integer"
+                        },
+                        "count": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Cluster order distributions for all simulated conditions. The checker will verify that the cluster order distributions exhibit physically expected relative trends."
+      },
+      {
+        "file": "magnetization_curves.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "first_magnetization_curve_demag",
+            "first_magnetization_curve_interaction"
+          ],
+          "properties": {
+            "first_magnetization_curve_demag": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "demag_type",
+                  "field_h",
+                  "magnetization"
+                ],
+                "properties": {
+                  "demag_type": {
+                    "type": "string"
+                  },
+                  "field_h": {
+                    "type": "number"
+                  },
+                  "magnetization": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "first_magnetization_curve_interaction": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "d",
+                  "field_h",
+                  "magnetization"
+                ],
+                "properties": {
+                  "d": {
+                    "type": "number"
+                  },
+                  "field_h": {
+                    "type": "number"
+                  },
+                  "magnetization": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "First magnetization curves recorded after different demagnetization protocols and for different interaction strengths. The checker will verify that the magnetization curves exhibit physically expected relative trends."
+      }
+    ],
+    "notes": "All magnetic field values are normalized by H_K0, and magnetizations are normalized by M_S. The exactly identity of the paper is not disclosed; the checker verifies structural trends and relative ordering, not exact numerical matches."
+  },
+  "steps": [
+    {
+      "id": "cluster_distributions",
+      "output_file": "cluster_distributions.json",
+      "weight": 0.7,
+      "checks": [
+        {
+          "name": "demag_ac_dc_smaller",
+          "weight": 0.25,
+          "metric": "mean_cluster_order",
+          "types_less": [
+            "AC",
+            "DC"
+          ],
+          "types_greater": [
+            "thermal",
+            "natural"
+          ]
+        },
+        {
+          "name": "interaction_monotonic",
+          "weight": 0.25,
+          "metric": "mean_cluster_order",
+          "d_values": [
+            1.0,
+            1.1,
+            1.2,
+            1.3,
+            1.4
+          ]
+        },
+        {
+          "name": "frequency_decreasing",
+          "weight": 0.25,
+          "metric": "mean_cluster_order",
+          "frequencies": [
+            0.07,
+            0.14,
+            0.21
+          ]
+        },
+        {
+          "name": "virgin_curve_increasing",
+          "weight": 0.25,
+          "metric": "mean_cluster_order",
+          "field_values": [
+            0.0,
+            0.2,
+            0.4,
+            0.6,
+            0.8,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "magnetization_curves",
+      "output_file": "magnetization_curves.json",
+      "weight": 0.3,
+      "checks": [
+        {
+          "name": "initial_susceptibility_ordering",
+          "weight": 0.5,
+          "field_h_range": [
+            0.05,
+            0.15
+          ]
+        },
+        {
+          "name": "curve_monotonicity",
+          "weight": 0.5
+        }
+      ]
+    }
+  ]
+}

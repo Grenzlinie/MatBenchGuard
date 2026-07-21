@@ -1,0 +1,56 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Recomputing epsilon and corrugation from raw simulation curves is infeasible because the reference oracle does not produce the required CSV files; result-level comparison against paper-reported gold is the strongest feasible tier.",
+  "pass_threshold": 1.0,
+  "target_policies": {
+    "potentials.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported gold values for epsilon and corrugation energy with tolerances.",
+      "source_provenance": "Paper (The Journal of Physical Chemistry A, doi:10.1021/jp076122w) reports 'intermolecular potential of 0.10 ± 0.03 eV' and 'corrugation energy of 0.3 ± 0.1 eV'.",
+      "generation_method": "Extracted directly from the paper's abstract and conclusion.",
+      "why_not_fabricated": "These are the paper's own headline quantities and are used as the hidden gold reference."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "potentials.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "epsilon_eV": "float",
+            "corrugation_eV": "float"
+          }
+        },
+        "description": "To-be-reproduced lateral intermolecular potential ε (in eV) and corrugation energy E_c (in eV) for dodecane on Au(111)."
+      }
+    ],
+    "notes": "The two energies are expected in eV. The checker compares them to hidden gold values within tolerances to account for stochastic run-to-run spread."
+  },
+  "steps": [
+    {
+      "id": "score_potentials",
+      "output_file": "potentials.json",
+      "kind": "numeric_compare",
+      "weight": 1.0,
+      "target_policy": "exact_match",
+      "description": "Check that epsilon_eV and corrugation_eV are within tolerance of paper-reported values.",
+      "fields": {
+        "epsilon_eV": {
+          "gold": 0.1,
+          "tolerance": 0.03
+        },
+        "corrugation_eV": {
+          "gold": 0.3,
+          "tolerance": 0.1
+        }
+      }
+    }
+  ]
+}

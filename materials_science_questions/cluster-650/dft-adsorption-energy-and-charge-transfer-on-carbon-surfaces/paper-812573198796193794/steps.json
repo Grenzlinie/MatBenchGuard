@@ -1,0 +1,93 @@
+[
+  {
+    "id": "build_clean_slab",
+    "title": "Build and optimize clean GaAs(100)-β2(2×4) slab",
+    "role": "process",
+    "action": "Construct the GaAs(100)-β2(2×4) surface slab model containing 28 As atoms, 21 Ga atoms, and 1 Zn dopant, with bottom As dangling bonds passivated by pseudo-hydrogen atoms (charge 0.75 e). Unit cell dimensions: 7.99 Å × 15.99 Å × 22.89 Å with a 15 Å vacuum layer. Perform DFT geometry optimization using the PBE functional, TS van der Waals correction, a 6×3×1 k-point mesh, 400 eV plane-wave cutoff, and BFGS algorithm until forces are below 0.03 eV/Å and energy tolerance 1e-5 eV/atom.",
+    "output_file": "",
+    "evidence": "clean_slab_optim.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Produces the optimized clean surface reference required for all subsequent adsorption energy, charge, and dipole calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "calc_isolated",
+    "title": "Calculate isolated Cs atom and NF3 molecule",
+    "role": "process",
+    "action": "Compute the total energy and electron density (charge density) of an isolated Cs atom and an isolated NF3 molecule in a large vacuum cell, using the same DFT settings (functional, cutoff, k-points, pseudopotentials) as the slab.",
+    "output_file": "",
+    "evidence": "isolated_species.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Provides reference energies and densities needed for adsorption energy and charge density difference analyses.",
+    "output_schema": ""
+  },
+  {
+    "id": "coadsorption_optimizations",
+    "title": "Optimize Cs-NF3 co-adsorption models across all sites and vertical orders",
+    "role": "process",
+    "action": "For all five selected adsorption sites (H', T3, T3', T4, T4') and both vertical orderings (Cs-up: Cs above NF3; NF3-up: NF3 above Cs), build the co-adsorption configuration on the optimized slab and perform full DFT geometry optimization with the same settings. This yields 10 relaxed structures, their total energies, and charge densities.",
+    "output_file": "",
+    "evidence": "coadsorption_optimizations.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Produces the relaxed geometries and electronic structures that supply all subsequent scored quantities.",
+    "output_schema": ""
+  },
+  {
+    "id": "adsorption_workfunction",
+    "title": "Compute adsorption energies and work functions",
+    "role": "scored",
+    "action": "From the total energies of the clean slab, isolated Cs/NF3, and each co-adsorbed system, calculate the adsorption energy as E_ads = E_{GaAs:Cs/NF3} - E_{GaAs} - E_{Cs} - E_{NF3}. For each relaxed system, extract the vacuum level from the electrostatic potential and the Fermi level to obtain the work function Φ; compute the change ΔΦ relative to the clean surface. Output a CSV with columns: site, orientation, adsorption_energy_eV, work_function_eV, work_function_change_eV.",
+    "output_file": "adsorption_workfunction.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored table of adsorption energetics and work function change for the 10 co-adsorption configurations.",
+    "output_schema": "CSV with columns: site (str), orientation (str), adsorption_energy_eV (float), work_function_eV (float), work_function_change_eV (float). 10 rows (5 sites × 2 orientations)."
+  },
+  {
+    "id": "mulliken_charges",
+    "title": "Perform Mulliken charge analysis",
+    "role": "scored",
+    "action": "For each optimized co-adsorption model, compute Mulliken atomic charges (or the equivalent population analysis available in your DFT code). Average the charges for the specified groups: first-bilayer As, first-bilayer Ga, second-bilayer As, second-bilayer Ga, the Cs atom, and the NF3 molecule. Output a CSV with columns: site, orientation, As_first_bilayer, Ga_first_bilayer, As_second_bilayer, Ga_second_bilayer, Cs, NF3.",
+    "output_file": "mulliken_charges.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored charge distribution analysis for each model, quantifying charge transfer between adsorbates and substrate.",
+    "output_schema": "CSV with columns: site (str), orientation (str), As_first_bilayer (float), Ga_first_bilayer (float), As_second_bilayer (float), Ga_second_bilayer (float), Cs (float), NF3 (float). 10 rows."
+  },
+  {
+    "id": "dipole_descriptors",
+    "title": "Calculate dipole length, charge magnitude, and surface dipole moment",
+    "role": "scored",
+    "action": "Construct the electron density difference: Δρ(r) = ρ_{Cs} + ρ_{NF3} + ρ_{GaAs} - ρ_{Cs/NF3/GaAs}. Use this to compute total positive and negative charge magnitudes (Q+, Q−) by summing over grid points. Determine the average dipole length d_z using z-coordinate weighted by Δρ (with z=0 at the midpoint of the clean surface). The surface dipole moment is P_z = |Q±| × d_z. Apply the method in Hogan et al. (Eqs. 3–6 of the paper). Output a CSV with columns: site, orientation, dz_Ang, Q_abs_e, Pz_eAng.",
+    "output_file": "dipole_descriptors.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored quantitative dipole formation analysis that links charge redistribution to work function changes.",
+    "output_schema": "CSV with columns: site (str), orientation (str), dz_Ang (float), Q_abs_e (float), Pz_eAng (float). 10 rows."
+  },
+  {
+    "id": "geometric_structure",
+    "title": "Extract geometric parameters",
+    "role": "scored",
+    "action": "From the optimized geometries, measure the following distances: thickness of the first bilayer (D1), thickness of the second bilayer (D2), interlayer spacing between first and second bilayer (D12), and the distance between Cs and NF3 (using the average position of the NF3 atoms). Output a CSV with columns: site, orientation, D1_Ang, D2_Ang, D12_Ang, D_Cs_NF3_Ang.",
+    "output_file": "geometric_structure.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored structural verification of adsorption-induced relaxation across the 10 models.",
+    "output_schema": "CSV with columns: site (str), orientation (str), D1_Ang (float), D2_Ang (float), D12_Ang (float), D_Cs_NF3_Ang (float). 10 rows."
+  }
+]

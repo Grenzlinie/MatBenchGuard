@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_electric_fourier",
+    "title": "Electric load Fourier expansion",
+    "role": "process",
+    "action": "Extend the electric field E3 outside the contact region according to the specified extension function (with geometry parameters l=0.01 m, t=0.001 m, and a chosen extension period L=4l; the scaling factor V cancels) and compute the Fourier cosine series coefficients φ_n for odd n up to N=7.",
+    "output_file": "",
+    "evidence": "electric_fourier_coefficients.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Generated Fourier coefficients φ_n for the extended electric field distribution.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_halfspace_coefficients",
+    "title": "Half-space modal displacement coefficients",
+    "role": "process",
+    "action": "For each odd mode n=1,3,5,7, compute the elastodynamic half-space solution for unit normal and shear surface loads at the specified frequency 78 kHz. Evaluate the Fourier integrals using contour integration (Rayleigh-pole residues and branch-cut integrals) for the contact region and obtain the displacement modal coefficients p_jn, q_jn, y_jn, z_jn.",
+    "output_file": "",
+    "evidence": "halfspace_coefficients.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Modal displacement coefficient matrices for the half-space response.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_modal_amplitudes",
+    "title": "Solve for modal amplitudes A_n, B_n",
+    "role": "scored",
+    "action": "Form the 2N×2N linear system from the electric coefficients and half-space coefficients, enforce the contact conditions, solve for unknown modal amplitudes A_n and B_n for n=1,3,5,7. Output the results as JSON.",
+    "output_file": "step_01_modal_coefficients.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Modal amplitude constants A_n and B_n for the PZT-5/steel case at 78 kHz. The values are the amplitudes of the normal (A_n) and shear (B_n) loading distributions in the contact area.",
+    "output_schema": "{\"A\": [float], \"B\": [float]} each array length 4 for n=1,3,5,7."
+  },
+  {
+    "id": "step_04_verification",
+    "title": "Compute verification metrics",
+    "role": "scored",
+    "action": "Using the solved modal amplitudes and half-space solutions, compute normalized stresses and displacements in the contact area and on the surface. Evaluate the stress ratio |σ11|/|σ33| at (x1=0, x3=0); check shear dominance by comparing max(|B_n|) and max(|A_n|); sweep angular frequency around 78 kHz to locate the peak of |u3| on the surface at x1=2l; find the depth x3 where the surface wave displacement amplitude at x1=2l drops to 1/e of its surface value. Report these four metrics.",
+    "output_file": "step_02_verification.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Aggregated verification quantities: stress ratio, boolean shear dominance, peak frequency in kHz, and 1/e attenuation depth in mm.",
+    "output_schema": "{\"stress_ratio_contact\": float, \"shear_dominant\": bool, \"peak_frequency_khz\": float, \"attenuation_depth_mm\": float}"
+  }
+]

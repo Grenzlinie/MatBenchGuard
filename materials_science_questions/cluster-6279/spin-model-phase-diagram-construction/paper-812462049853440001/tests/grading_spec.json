@@ -1,0 +1,76 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full T1 recompute infeasible: agent writes only final computed critical parameters to results.json with no intermediate raw trace (no per-beta F(w) evaluations, no root tables). The verifier sandbox cannot re-run the numerical root-finding over parameter sweeps needed to recompute these values independently. T0 result-level compare against paper-reported reference values with tolerances per D4.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference critical parameter values from the paper",
+      "source_provenance": "Paper text and figures: Eq.(15a) gives β_c JK = 4 for γ=0; paper text/Fig.2 reports β₁ JK = 3.5330 and β₂ JK = 3.6475 for γ=0.0003, K=7000; paper text states γ_c ≈ 0.0002 for K=7000.",
+      "generation_method": "Extracted verbatim from paper's published numerical results.",
+      "why_not_fabricated": "These are the paper's actual published values, verified against the reference solve.sh which reproduces them exactly."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "gamma0_beta_c": "number",
+            "gamma0003_beta1": "number",
+            "gamma0003_beta2": "number",
+            "gamma_c": "number"
+          }
+        },
+        "description": "Computed critical parameters characterizing the superconducting phase transition in the q-deformed strong-coupling model."
+      }
+    ],
+    "notes": "The values are specific to the maximum-term approximation of the grand partition function with K=7000 and the specified deformation parameters. All outputs are deterministic from the model equations."
+  },
+  "steps": [
+    {
+      "id": "check_gamma0_beta_c",
+      "output_file": "results.json",
+      "kind": "json_field",
+      "field": "gamma0_beta_c",
+      "weight": 0.25,
+      "target": 4.0,
+      "tolerance": 0.001
+    },
+    {
+      "id": "check_gamma0003_beta1",
+      "output_file": "results.json",
+      "kind": "json_field",
+      "field": "gamma0003_beta1",
+      "weight": 0.25,
+      "target": 3.533,
+      "tolerance": 0.001
+    },
+    {
+      "id": "check_gamma0003_beta2",
+      "output_file": "results.json",
+      "kind": "json_field",
+      "field": "gamma0003_beta2",
+      "weight": 0.25,
+      "target": 3.6475,
+      "tolerance": 0.001
+    },
+    {
+      "id": "check_gamma_c",
+      "output_file": "results.json",
+      "kind": "json_field",
+      "field": "gamma_c",
+      "weight": 0.25,
+      "target": 0.0002,
+      "tolerance": 1e-05
+    }
+  ]
+}

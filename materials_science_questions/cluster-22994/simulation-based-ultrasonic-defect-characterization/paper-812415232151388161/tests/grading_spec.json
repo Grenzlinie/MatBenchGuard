@@ -1,0 +1,64 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Agent-chosen physical parameters prevent exact formula recompute; verifies threshold and worst-case ratio from artifact consistency and paper-reported magnitudes.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "coefficient_of_velocity",
+            "coefficient_of_dimension",
+            "delta_N_N_max",
+            "ratio_v_to_v0"
+          ],
+          "units": {
+            "coefficient_of_velocity": "dimensionless",
+            "coefficient_of_dimension": "dimensionless",
+            "delta_N_N_max": "dimensionless",
+            "ratio_v_to_v0": "dimensionless"
+          }
+        },
+        "description": "Grid of computed (ΔN/N)max and ratio values for a range of velocity and dimension coefficients (d≤1). The checker will recompute each row using the same analytic formulas and fixed underlying parameters, comparing within a tolerance."
+      },
+      {
+        "file": "threshold_and_worstcase.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Two lines: threshold = <float>, worst_case_reduction = <float>. The checker will parse these values and compare against the expected threshold and reduction within a tolerance."
+        },
+        "description": "Text file containing the empirically determined velocity coefficient threshold and the worst‑case reduction ratio derived from the grid data."
+      }
+    ],
+    "notes": "The task reproduces the kinetic factor analysis from the paper. The cylindrical aperture formula has been corrected to include the logarithmic term and restricted to d≤1, avoiding the singularity at d=1. The rectangular groove formula remains as given."
+  },
+  "steps": [
+    {
+      "id": "step_csv",
+      "output_file": "computed_results.csv",
+      "weight": 0.8,
+      "kind": "structural_audit",
+      "description": "Verify that the CSV grid exhibits the paper's threshold behaviour: delta_N_N_max is essentially flat for coefficient_of_velocity >= 4, and that the worst-case ratio_v_to_v0 at velocity=4 is minimal at coefficient_of_dimension=1 and equal to approximately 0.85."
+    },
+    {
+      "id": "step_txt",
+      "output_file": "threshold_and_worstcase.txt",
+      "weight": 0.2,
+      "kind": "exact_match",
+      "target_threshold": 4.0,
+      "threshold_tolerance_abs": 0.1,
+      "target_worst_case_reduction": 0.85,
+      "reduction_tolerance_abs": 0.02,
+      "description": "Check that the extracted threshold and worst-case reduction match the paper's reported values within tolerance."
+    }
+  ]
+}

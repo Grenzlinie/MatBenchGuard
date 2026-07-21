@@ -16,10 +16,16 @@ No external datasets, models, or specialised packages are required. The calculat
 
 ### Step 1: Diffusion distance calculation
 - Role: scored (load-bearing)
-- Action: Compute the average diffusion distance X of Cr atoms in solid Al at 400°C for 200 h using the relation X² = 2Dτ, where D = 4.3×10⁻¹⁷ cm² s⁻¹ and τ = 200 h. Convert X to μm. Compare X to the reported interparticle spacing L = 0.3 μm and record whether X < L. Write a JSON file with the computed X (in μm) and the boolean result.
+- Action: Compute the average diffusion distance X of Cr atoms in solid Al at 400°C for 200 h using the relation X² = 2Dτ, where D = 4.3×10⁻¹⁷ cm² s⁻¹ and τ = 200 h. Convert X to μm. Compare X to the reported interparticle spacing L = 0.3 μm and record whether X < L. Write a JSON file with the computed X (in μm) and the boolean result.
 - Output file: `/app/outputs/diffusion_distance.json`
 - Format: json
-- Contract: {"X_μm": "float (computed diffusion distance in microns)", "less_than_L": "boolean (true if X_μm < 0.3)"}
+- Contract: The JSON object must contain exactly two keys:
+  - `"X_μm"`: a number (float) giving the computed diffusion distance in micrometers.
+  - `"less_than_L"`: a boolean, `true` if `X_μm < 0.3`, `false` otherwise.
+- Expected shape (example, actual numbers depend on the computation):
+  ```json
+  {"X_μm": 0.0, "less_than_L": false}
+  ```
 - Scoring: scored by hidden verifier
 
 ## Output files
@@ -35,16 +41,16 @@ Every file the hidden verifier reads is described below. Write each file under `
 - format: json
 - purpose: scored
 - target_policy: exact_match
-- description: Average Cr diffusion distance X at 400°C for 200h and its comparison to the interparticle spacing L=0.3 µm. Contains fields: X_µm (float, in µm) and less_than_L (bool).
+- description: Average Cr diffusion distance X at 400°C for 200h and its comparison to the interparticle spacing L=0.3 µm. Contains fields: `X_μm` (float, in µm) and `less_than_L` (bool).
 - schema:
   - `type`: object
   - `required`:
-    - `X_μm`: float
-    - `less_than_L`: bool
-  - `items`: None
-  - `required_columns`: None
+    - `X_μm`: number
+    - `less_than_L`: boolean
+  - `items`: null
+  - `required_columns`: null
   - `units`:
-    - `X_μm`: µm
+    - `X_μm`: um
 
 ## Self-check before finishing (optional, not scored)
 
@@ -62,17 +68,18 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
       "target_policy": "exact_match",
       "schema": {
         "type": "object",
-        "required": {
-          "X_μm": "float",
-          "less_than_L": "bool"
+        "required": ["X_μm", "less_than_L"],
+        "properties": {
+          "X_μm": {"type": "number"},
+          "less_than_L": {"type": "boolean"}
         },
         "items": null,
         "required_columns": null,
         "units": {
-          "X_μm": "µm"
+          "X_μm": "um"
         }
       },
-      "description": "Average Cr diffusion distance X at 400°C for 200h and its comparison to the interparticle spacing L=0.3 µm. Contains fields: X_µm (float, in µm) and less_than_L (bool)."
+      "description": "Average Cr diffusion distance X at 400°C for 200h and its comparison to the interparticle spacing L=0.3 µm. Contains fields: X_μm (float, in µm) and less_than_L (bool)."
     }
   ],
   "notes": ""

@@ -1,0 +1,67 @@
+[
+  {
+    "id": "lattice_deep_quench_simulation",
+    "title": "Lattice simulation (deep quench)",
+    "role": "process",
+    "action": "Implement the coupled kinetic equations for local magnetization m_n(ρ,t) on a simple cubic lattice film with D+1=30 layers and periodic lateral dimensions L=128. Use parameters J=1, J_s=1, H_1=1, H=0, k_BT=4. Initialize m_n(ρ,0) uniformly random in [-1,1] with zero total magnetization. Evolve with time step δt=0.1, storing the full magnetization field at times t=50, 500, 2000, 10000.",
+    "output_file": "",
+    "evidence": "magnetization_fields_deep.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required intermediate simulation that produces the raw magnetization fields for deep quench.",
+    "output_schema": ""
+  },
+  {
+    "id": "lattice_near_critical_simulation",
+    "title": "Lattice simulation (near-critical)",
+    "role": "process",
+    "action": "Run the same lattice solver with temperature k_BT=5.875 (near-critical). Save the magnetization field at t=50, 500, 10000.",
+    "output_file": "",
+    "evidence": "magnetization_fields_near.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required intermediate simulation for near-critical conditions used in the comparison.",
+    "output_schema": ""
+  },
+  {
+    "id": "tdgl_simulation",
+    "title": "TDGL simulation (near-critical)",
+    "role": "process",
+    "action": "Implement the time-dependent Ginzburg-Landau equation with the derived surface boundary conditions on a grid representing the same film geometry (D=29 layers, L=128). Use the near-critical temperature (k_BT=5.875). Initialize with random fluctuations and evolve to t=10000, storing the order parameter field at t=50, 500, 10000.",
+    "output_file": "",
+    "evidence": "tdgl_fields.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required intermediate simulation of the continuum theory needed for the comparison step.",
+    "output_schema": ""
+  },
+  {
+    "id": "deep_quench_profiles",
+    "title": "Deep quench averaged profiles",
+    "role": "scored",
+    "action": "From the raw magnetization fields produced in the deep-quench lattice simulation, compute laterally (over ρ) and ensemble (over 5 independent runs) averaged order parameter Ψ_av(n) for each layer n at times t=50,500,2000,10000. Save as CSV.",
+    "output_file": "deep_quench_profiles.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Laterally averaged order parameter profiles from the lattice model at deep quench (T/J=4).",
+    "output_schema": "CSV with columns: time (int), layer_index (int from 1 to 30), psi_av (float). One row per layer per time."
+  },
+  {
+    "id": "comparison_profiles",
+    "title": "Lattice vs TDGL comparison profiles",
+    "role": "scored",
+    "action": "From the raw fields of the near-critical lattice simulation and the TDGL simulation, compute laterally averaged order parameter profiles Ψ_av(n) for each method separately at times t=50,500,10000. Combine into one CSV with a 'method' column.",
+    "output_file": "comparison_profiles.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Comparison of laterally averaged order parameter profiles from the lattice model and the TDGL theory at near-critical conditions (T/J=5.875).",
+    "output_schema": "CSV with columns: time (int), layer_index (int from 1 to 30), method (string, either 'lattice' or 'tdgl'), psi_av (float). One row per method per layer per time."
+  }
+]

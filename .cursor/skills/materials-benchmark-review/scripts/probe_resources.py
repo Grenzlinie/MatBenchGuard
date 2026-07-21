@@ -24,6 +24,7 @@ from typing import Any
 sys.dont_write_bytecode = True
 
 from prepare_audit_output import REQUIRED_ROLES, iter_public_files
+from artifact_schema import RESOURCE_CHECKS_SCHEMA_VERSION
 
 
 USER_AGENT = "materials-benchmark-review/0.1"
@@ -1413,7 +1414,7 @@ def probe_resources(
         for item in reports
     )
     result = {
-        "schema_version": "0.1",
+        "schema_version": RESOURCE_CHECKS_SCHEMA_VERSION,
         "status": (
             "FAIL"
             if any(item["severity"] == "FATAL" for item in findings)

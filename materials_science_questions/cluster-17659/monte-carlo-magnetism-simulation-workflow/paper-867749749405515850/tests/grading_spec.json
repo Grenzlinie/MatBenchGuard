@@ -1,0 +1,150 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Ideal-gas exact mu computed via recursion, interacting-gas HF mu from self-consistent equation, main claim verified by structural ordering and slope fit against mean-field prediction, balanced mixture compared to paper-digitized gold with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "validation_ideal_gas.csv": "reference_match",
+    "validation_interacting_gas.csv": "reference_match",
+    "chemical_potentials.csv": "metric_recompute",
+    "balanced_mixture.csv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "validation_ideal_gas.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "N",
+            "mu_PIMC",
+            "mu_exact"
+          ],
+          "units": {
+            "N": "integer",
+            "mu_PIMC": "k_B T",
+            "mu_exact": "k_B T"
+          }
+        },
+        "description": "Ideal-gas validation: the checker recomputes mu_exact and verifies mu_PIMC matches within tolerance."
+      },
+      {
+        "file": "validation_interacting_gas.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_over_Tc0",
+            "mu_PIMC",
+            "mu_expected_HF"
+          ],
+          "units": {
+            "T_over_Tc0": "dimensionless",
+            "mu_PIMC": "k_B T_c^0",
+            "mu_expected_HF": "k_B T_c^0"
+          }
+        },
+        "description": "Interacting-gas validation: the checker compares mu_PIMC to the Hartree-Fock expectation."
+      },
+      {
+        "file": "chemical_potentials.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "polarization",
+            "mu1",
+            "mu2",
+            "free_energy_per_particle"
+          ],
+          "units": {
+            "polarization": "dimensionless",
+            "mu1": "k_B T_c^0",
+            "mu2": "k_B T_c^0",
+            "free_energy_per_particle": "k_B T_c^0"
+          }
+        },
+        "description": "Mixture polarization scan. The checker verifies mu1 > mu2 for all p>0, fits free_energy_per_particle vs p^2 to extract the magnetic susceptibility chi, and compares chi to the zero-temperature mean-field value 2/(g-g12) within 20% tolerance."
+      },
+      {
+        "file": "balanced_mixture.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_over_Tc0",
+            "chemical_potential",
+            "interspecies_contact_C12"
+          ],
+          "units": {
+            "T_over_Tc0": "dimensionless",
+            "chemical_potential": "k_B T_c^0",
+            "interspecies_contact_C12": "dimensionless"
+          }
+        },
+        "description": "Balanced mixture: the checker compares the chemical potential and interspecies contact to hidden reference values derived from the paper's Figures 5 and 6."
+      }
+    ],
+    "notes": "All outputs are produced by PIMC simulations. The checker will recompute metrics or compare to hidden references; the public instruction does not contain gold values or tolerances."
+  },
+  "steps": [
+    {
+      "id": "validate_ideal_gas",
+      "output_file": "validation_ideal_gas.csv",
+      "kind": "recompute_metric",
+      "weight": 0.05,
+      "tolerance_abs": 0.05
+    },
+    {
+      "id": "validate_interacting_gas",
+      "output_file": "validation_interacting_gas.csv",
+      "kind": "recompute_metric",
+      "weight": 0.05,
+      "tolerance_abs": 0.1
+    },
+    {
+      "id": "mixture_polarization_scan",
+      "output_file": "chemical_potentials.csv",
+      "kind": "recompute_metric",
+      "weight": 0.7,
+      "slope_tolerance_rel": 0.2
+    },
+    {
+      "id": "balanced_mixture_temperatures",
+      "output_file": "balanced_mixture.csv",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "tolerance_mu_abs": 0.05,
+      "tolerance_C12_rel": 0.2
+    }
+  ],
+  "hidden_balances": {
+    "mu_gold": {
+      "0.5": 0.08,
+      "0.8": 0.13,
+      "1.0": 0.12
+    },
+    "C12_gold": {
+      "0.5": 0.58,
+      "0.8": 0.52,
+      "1.0": 0.6
+    }
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference chemical potential and contact parameter values for balanced mixture",
+      "source_provenance": "Digitized from paper's Figures 5 and 6, approximate values",
+      "generation_method": "Estimated by reading off approximate values from the paper's published figures.",
+      "why_not_fabricated": "These values approximate the paper's PIMC results reported in the figures, providing a ground truth consistent with the original publication."
+    }
+  ]
+}

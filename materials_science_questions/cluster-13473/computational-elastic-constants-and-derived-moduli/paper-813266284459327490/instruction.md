@@ -9,51 +9,49 @@ The central idea is to construct two‑sheet GO paper models at five different s
 ## Reproduction target
 Produce the following three CSV artifacts for GO paper models with sheet lengths approximately 1.1, 2.2, 3.3, 4.4, and 5.4 nm, in dry and wet (16 wt% water) states:
 
-1.  `youngs_modulus_vs_length.csv` – the Young’s modulus (GPa) for each length and moisture condition, obtained from the energy–strain curvature E = (1/V) d²U/dε².
+1.  `youngs_modulus_vs_length.csv` – the Young’s modulus (GPa) for each length and moisture condition, obtained from the energy–strain curvature.
 2.  `deformation_components.csv` – the percentage of total deformation contributed by intersheet shear and by GO‑sheet elongation for each length.
 3.  `interaction_energies.csv` – the face‑to‑face and edge‑to‑edge non‑bonded interaction energies as a function of GO length.
-
-The target is to compute these quantities and their dependence on sheet length; the hidden verifier will check the resulting trends and relative magnitudes against physical expectations derived from the simulation protocol.
 
 ## Assets
 
 - LAMMPS Molecular Dynamics Simulator: https://lammps.sandia.gov
-- ReaxFF force field parameters for C/H/O systems: 10.1021/ct200328m
+- ReaxFF force field parameters for C/H/O systems (publicly available, e.g., the original hydrocarbon parameterization by van Duin et al.)
 
 ## Workflow steps
 
 ### Step 1: Build two‑sheet GO paper models
 - Role: process
 - Action: Construct atomistic models for five GO sheet lengths (approximately 1.1, 2.2, 3.3, 4.4, 5.4 nm) with functional groups according to the Lerf–Klinowski model: three epoxy and one hydroxyl group per 12 basal carbon atoms on both sides, five carboxyl groups per edge, C/O ratios in range 2.17–2.68. Include periodic boundaries in y and z, a 100 Å vacuum slab in x, and 16 wt% intercalated water for wet models. Generate both dry and wet initial configurations.
-- Evidence: `/app/outputs/model_build.log`
+- Evidence: (no output file required; models are built in memory or as LAMMPS data files)
 
 ### Step 2: Run MD simulations and collect energy–strain data
 - Role: process
 - Action: Using LAMMPS with ReaxFF force field, perform energy minimization and NVT dynamics (1 fs timestep, 1 K, 9.5 Å cutoff) for each model at a series of applied axial strains (fix right‑edge atoms, displace left‑edge atoms). Record potential energy at each strain and save trajectory snapshots for deformation and interaction analyses.
-- Evidence: `/app/outputs/energy_strain.csv`
+- Evidence: (no output file required; energy–strain data are processed in memory)
 
 ### Step 3: Extract Young's modulus from energy–strain fits
 - Role: scored (load-bearing)
-- Action: Fit potential energy vs strain data for each model using E = (1/V) d²U/dε²; compile Young's moduli as a function of GO length for dry and wet conditions.
+- Action: Fit potential energy vs strain data for each model using \(E = \frac{1}{V} \frac{d^2U}{d\epsilon^2}\), where \(V\) is the volume of the simulation box at zero strain (the total initial volume of the periodic cell, computed from the box dimensions \(L_x \times L_y \times L_z\) in the unstrained state). Compile Young's moduli as a function of GO length for dry and wet conditions.
 - Output file: `/app/outputs/youngs_modulus_vs_length.csv`
 - Format: csv
-- Contract: columns: GO_length_nm, modulus_dry_GPa, modulus_wet_GPa; one row per model length
+- Contract: columns: `GO_length_nm`, `modulus_dry_GPa`, `modulus_wet_GPa`; one row per model length
 - Scoring: scored by hidden verifier
 
 ### Step 4: Decompose tensile deformation into intersheet and GO‑sheet contributions
 - Role: scored (load-bearing)
-- Action: Analyse MD trajectories to separate total tensile deformation into intrinsic GO‑sheet elongation and intersheet relative displacement; report percentage contribution of each component for each GO length.
+- Action: Analyse MD trajectories to separate total tensile deformation into intrinsic GO‑sheet elongation and intersheet relative displacement; report percentage contribution of each component for each GO length. The two percentages must sum to 100 (within a tolerance of ±0.5).
 - Output file: `/app/outputs/deformation_components.csv`
 - Format: csv
-- Contract: columns: GO_length_nm, intersheet_deformation_percent, sheet_deformation_percent
+- Contract: columns: `GO_length_nm`, `intersheet_deformation_percent`, `sheet_deformation_percent`; ensure `intersheet_deformation_percent + sheet_deformation_percent ≈ 100.0` for each row
 - Scoring: scored by hidden verifier
 
 ### Step 5: Calculate face‑to‑face and edge‑to‑edge interaction energies
 - Role: scored (load-bearing)
-- Action: From equilibrated configurations, compute non‑bonded interaction energies between adjacent GO sheets in the same horizontal plane (edge‑to‑edge) and different planes (face‑to‑face) as a function of GO length.
+- Action: From equilibrated configurations, compute non‑bonded interaction energies between adjacent GO sheets in the same horizontal plane (edge‑to‑edge) and in different planes (face‑to‑face) as a function of GO length. Energies are reported in kcal/mol, consistent with the typical ReaxFF output.
 - Output file: `/app/outputs/interaction_energies.csv`
 - Format: csv
-- Contract: columns: GO_length_nm, face_to_face_energy, edge_to_edge_energy
+- Contract: columns: `GO_length_nm`, `face_to_face_energy`, `edge_to_edge_energy`
 - Scoring: scored by hidden verifier
 
 ## Output files
@@ -71,7 +69,7 @@ Every file the hidden verifier reads is described below. Write each file under `
 - format: csv
 - purpose: scored
 - target_policy: structural_audit
-- description: Young's modulus for each GO length and moisture state. Verified by checking monotonic increase with length and wet > dry.
+- description: Young's modulus for each GO length and moisture state. Scored by hidden verifier.
 - schema:
   - `type`: table
   - `required_columns`: `GO_length_nm`, `modulus_dry_GPa`, `modulus_wet_GPa`
@@ -81,7 +79,7 @@ Every file the hidden verifier reads is described below. Write each file under `
 - format: csv
 - purpose: scored
 - target_policy: structural_audit
-- description: Deformation breakdown per GO length. Verified by checking intersheet deformation > 90% for all lengths.
+- description: Deformation breakdown per GO length. Scored by hidden verifier.
 - schema:
   - `type`: table
   - `required_columns`: `GO_length_nm`, `intersheet_deformation_percent`, `sheet_deformation_percent`
@@ -91,12 +89,12 @@ Every file the hidden verifier reads is described below. Write each file under `
 - format: csv
 - purpose: scored
 - target_policy: structural_audit
-- description: Face‑to‑face and edge‑to‑edge interaction energies per GO length. Verified by checking face‑to‑face increase with length while edge‑to‑edge remains low and constant.
+- description: Face‑to‑face and edge‑to‑edge interaction energies in kcal/mol per GO length. Scored by hidden verifier.
 - schema:
   - `type`: table
   - `required_columns`: `GO_length_nm`, `face_to_face_energy`, `edge_to_edge_energy`
 
-Notes: All scored outputs are structural; the checker validates qualitative trends (monotonicity, dominance, relative magnitudes) rather than absolute numeric equality with the paper.
+Notes: All scored outputs are structural; the checker validates qualitative consistency rather than absolute numeric equality with the paper.
 
 ## Self-check before finishing (optional, not scored)
 
@@ -120,7 +118,7 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
           "modulus_wet_GPa"
         ]
       },
-      "description": "Young's modulus for each GO length and moisture state. Verified by checking monotonic increase with length and wet > dry."
+      "description": "Young's modulus for each GO length and moisture state. Scored by hidden verifier."
     },
     {
       "file": "deformation_components.csv",
@@ -135,7 +133,7 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
           "sheet_deformation_percent"
         ]
       },
-      "description": "Deformation breakdown per GO length. Verified by checking intersheet deformation > 90% for all lengths."
+      "description": "Deformation breakdown per GO length. Scored by hidden verifier."
     },
     {
       "file": "interaction_energies.csv",
@@ -150,12 +148,12 @@ This checks SHAPE ONLY (files, keys, columns) — it does NOT judge scientific c
           "edge_to_edge_energy"
         ]
       },
-      "description": "Face‑to‑face and edge‑to‑edge interaction energies per GO length. Verified by checking face‑to‑face increase with length while edge‑to‑edge remains low and constant."
+      "description": "Face‑to‑face and edge‑to‑edge interaction energies in kcal/mol per GO length. Scored by hidden verifier."
     }
   ],
-  "notes": "All scored outputs are structural; the checker validates qualitative trends (monotonicity, dominance, relative magnitudes) rather than absolute numeric equality with the paper."
+  "notes": "All scored outputs are structural; the checker validates qualitative consistency rather than absolute numeric equality with the paper."
 }
 ```
 
 ## How you are scored
-A hidden verifier reads your three scored CSV files and compares them against hidden structural checks that reflect the physical trends expected from the simulation setup. For example, it may verify that the Young’s modulus follows a certain qualitative dependence on sheet length, that the intersheet deformation fraction satisfies a dominance condition, and that the interaction energies exhibit consistent relative behaviors. Each scored artifact carries a weight, and the final reward is a weighted sum in the range [0, 1]. Simply reporting numbers is not sufficient; the verifier expects coherent, physically plausible results obtained by actually running the molecular dynamics workflow described in the steps.
+The hidden verifier reads your three scored CSV files and checks their structural consistency against the physical trends expected from the simulation setup. Specific checks are not disclosed; you must rely on the simulation to produce plausible results. Each scored artifact carries a weight, and the final reward is a weighted sum in the range [0, 1]. Simply reporting numbers is not sufficient; the verifier expects coherent, physically plausible results obtained by actually running the molecular dynamics workflow described in the steps.

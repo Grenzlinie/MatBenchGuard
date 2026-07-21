@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_00",
+    "title": "Build doped supercell structures",
+    "role": "process",
+    "action": "Construct the initial (unrelaxed) wurtzite AlN supercells for the three Ti-Ce co-doped configurations: (i) a 32-atom supercell Al14Ti1Ce1N16 with Ti and Ce at nearest-neighbor Al sites (d=2.923 Å), (ii) the same 32-atom cell with next-nearest separation (d=5.697 Å), and (iii) a 64-atom supercell Al30Ti1Ce1N32 with nearest-neighbor separation (d=2.923 Å). Use the experimental lattice constants a=3.11 Å and c=4.98 Å as starting parameters.",
+    "output_file": "",
+    "evidence": "supercell_structures.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Generate atomic coordinates for the three target supercells. The evidence file records the lattice vectors and fractional coordinates of all atoms.",
+    "output_schema": "Array of three objects, each containing 'structure_name' (string), 'lattice_vectors' (3x3 array, Å), 'atomic_numbers' (list of int), 'fractional_coordinates' (Nx3 array)."
+  },
+  {
+    "id": "step_01",
+    "title": "Run DFT structure relaxation and total energy calculations",
+    "role": "process",
+    "action": "For each of the three supercells, perform spin-polarized DFT calculations using GGA-PBE with Hubbard U corrections (U_Ti=4.4 eV, U_Ce=5.4 eV). Run full structural relaxations (ions, cell shape, and volume) for both ferromagnetic (FM) and antiferromagnetic (AFM) spin alignments. Compute the total energies, relaxed lattice constants (a, c), and total magnetic moments for each configuration. Additionally, compute the total energy of the pure (undoped) AlN supercell of the same size (Al16N16 for the 32-atom cell and Al32N32 for the 64-atom cell) and the total energies of elemental bulk Ti and Ce (hcp Ti and γ-Ce) using identical DFT parameters, to obtain the reference energies needed for the formation energy definition.",
+    "output_file": "",
+    "evidence": "dft_raw_outputs/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Execute DFT calculations. The evidence directory contains the log/output files from which total energies, forces, final structures, and magnetic moments can be extracted.",
+    "output_schema": "Directory of raw DFT output files (format dependent on chosen code)."
+  },
+  {
+    "id": "step_02",
+    "title": "Extract and report target quantities",
+    "role": "scored",
+    "action": "From the DFT outputs, extract for each of the three co-doped configurations the formation energy E_f (eV), relaxed lattice parameters a and c (Å), exchange energy ΔE = E_AFM − E_FM (eV), and total magnetic moment M_total (μ_B). The formation energy is defined as E_f = E_total(doped) − E_total(pure AlN supercell of the same size) − μ_Ti − μ_Ce + 2μ_Al, where μ_Ti and μ_Ce are the total energies per atom of Ti and Ce in their bulk reference phases (hcp Ti and γ-Ce), and μ_Al is the total energy per Al atom in bulk fcc Al. Compile these values into a JSON file as specified in the output contract.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing the key numerical results for the three Ti-Ce co-doped AlN systems. The values are derived from the preceding DFT calculations; correct reproduction of the paper's reported quantities (within tolerances) earns credit.",
+    "output_schema": "Array of three objects. Each object has keys: 'structure' (string), 'E_f' (number, eV), 'a' (number, Å), 'c' (number, Å), 'delta_E' (number, eV), 'M_total' (number, μ_B)."
+  }
+]

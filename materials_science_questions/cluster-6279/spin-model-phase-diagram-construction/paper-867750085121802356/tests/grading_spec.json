@@ -1,0 +1,182 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute from raw free-energy artifact not guaranteed; instead cross-check final outputs against paper-reported gold phases and transition temperatures and verify susceptibility trend.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "zero_T_phases.csv": "exact_match",
+    "transition_temperatures.csv": "exact_match",
+    "susceptibility_trend.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold phase labels for a subset of grid points extracted from paper's zero-T phase diagram (Fig 3a)",
+      "source_provenance": "paper Fig 3a",
+      "generation_method": "Manually selected points clearly inside each phase based on paper's description and known Lanczos boundaries",
+      "why_not_fabricated": "Points correspond to unambiguous regions; finite-T transitions for some points confirm ground-state phase as R."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold transition temperatures T_c from paper text (Sec. III)",
+      "source_provenance": "paper text: k_B T/J = 0.39 for (0.6,0.5) and 0.64 for (1.25,2.0)",
+      "generation_method": "Directly quoted from paper",
+      "why_not_fabricated": "Values are explicitly stated in the paper"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "zero_T_phases.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "alpha1",
+            "alpha2",
+            "stable_phase"
+          ]
+        },
+        "description": "Ground-state phase labels (N, R, or F) for a grid of coupling ratios. The checker compares each point against hidden gold extracted from the paper's zero-temperature phase diagram. Exact match is required; partial credit per point."
+      },
+      {
+        "file": "transition_temperatures.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "alpha1",
+            "alpha2",
+            "T_c"
+          ]
+        },
+        "description": "Thermal transition temperatures T_c (in units of k_B T/J) from the R-type to the N-type state for two specific coupling sets. The checker compares the reported values to hidden gold transition temperatures with a predefined tolerance."
+      },
+      {
+        "file": "susceptibility_trend.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "alpha1",
+            "alpha2",
+            "T",
+            "chi"
+          ]
+        },
+        "description": "Uniform spin susceptibility χ at two temperatures for one coupling set. The checker verifies that χ at T=0.6 is greater than χ at T=0.2 (structural inequality), confirming the increasing trend through the thermal transition."
+      }
+    ],
+    "notes": "The scored artifacts collectively reproduce the core computational claims of the paper: the zero-temperature phase diagram, two specific finite-temperature transition points, and the trend of increasing susceptibility at the transition. All numeric gold values remain hidden from the public contract."
+  },
+  "gold": {
+    "zero_T_checkpoints": [
+      {
+        "alpha1": 0.0,
+        "alpha2": 0.0,
+        "expected_phase": "N"
+      },
+      {
+        "alpha1": 0.2,
+        "alpha2": 0.2,
+        "expected_phase": "N"
+      },
+      {
+        "alpha1": 0.5,
+        "alpha2": 0.2,
+        "expected_phase": "N"
+      },
+      {
+        "alpha1": 0.6,
+        "alpha2": 0.5,
+        "expected_phase": "R"
+      },
+      {
+        "alpha1": 1.25,
+        "alpha2": 2.0,
+        "expected_phase": "R"
+      },
+      {
+        "alpha1": 0.2,
+        "alpha2": 1.5,
+        "expected_phase": "F"
+      },
+      {
+        "alpha1": 1.0,
+        "alpha2": 0.2,
+        "expected_phase": "R"
+      },
+      {
+        "alpha1": 1.5,
+        "alpha2": 0.5,
+        "expected_phase": "R"
+      },
+      {
+        "alpha1": 0.3,
+        "alpha2": 1.8,
+        "expected_phase": "F"
+      },
+      {
+        "alpha1": 1.8,
+        "alpha2": 1.8,
+        "expected_phase": "F"
+      },
+      {
+        "alpha1": 0.8,
+        "alpha2": 0.0,
+        "expected_phase": "R"
+      },
+      {
+        "alpha1": 1.5,
+        "alpha2": 1.5,
+        "expected_phase": "F"
+      },
+      {
+        "alpha1": 0.0,
+        "alpha2": 2.0,
+        "expected_phase": "F"
+      },
+      {
+        "alpha1": 2.0,
+        "alpha2": 0.0,
+        "expected_phase": "R"
+      }
+    ],
+    "transition_T_c": {
+      "0.6_0.5": 0.39,
+      "1.25_2.0": 0.64,
+      "tolerance": 0.05
+    }
+  },
+  "steps": [
+    {
+      "id": "step_zero_T_phases",
+      "output_file": "zero_T_phases.csv",
+      "kind": "rubric",
+      "weight": 0.4,
+      "target": {},
+      "tolerance": {}
+    },
+    {
+      "id": "step_transition_temperatures",
+      "output_file": "transition_temperatures.csv",
+      "kind": "rubric",
+      "weight": 0.3,
+      "target": {},
+      "tolerance": {}
+    },
+    {
+      "id": "step_susceptibility_trend",
+      "output_file": "susceptibility_trend.csv",
+      "kind": "rubric",
+      "weight": 0.3,
+      "target": {},
+      "tolerance": {}
+    }
+  ]
+}
