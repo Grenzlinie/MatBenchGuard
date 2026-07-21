@@ -24,8 +24,8 @@ from canonical_status import (  # noqa: E402
     require_canonical_fields,
     validate_repair_bundle_semantics,
 )
-from deterministic_contract import (  # noqa: E402
-    validate_deterministic_contract,
+from agent_contract_wiring import (  # noqa: E402
+    resolve_publication_contract,
 )
 from finalize_audit_output import validate_qa_axes as validate_review_qa_axes
 from prepare_audit_output import (  # noqa: E402
@@ -99,6 +99,28 @@ class CertificationError(ValueError):
     """Raised when persisted evidence cannot support certification."""
 
 
+def validate_report_canonical_fields(
+    report: dict[str, Any],
+    fields: dict[str, str],
+) -> None:
+    """Keep verdict fields separate from publication-route fields."""
+
+    summary = report.get("summary")
+    if not isinstance(summary, dict):
+        raise CertificationError("report summary is absent")
+    if (
+        summary.get("final_verdict") != fields["review_verdict"]
+        or summary.get("disposition") != fields["review_verdict"]
+    ):
+        raise CertificationError("report verdict is not canonical")
+    if (
+        report.get("publishability") != fields["publishability"]
+        or summary.get("publication_route") != fields["publishability"]
+        or summary.get("publishability") != fields["publishability"]
+    ):
+        raise CertificationError("report publication route is not canonical")
+
+
 def reaudit_has_no_hard_gate_for_certification(report: dict[str, Any]) -> bool:
     summary = report.get("summary", {})
     if not isinstance(summary, dict):
@@ -114,16 +136,18 @@ def reaudit_has_no_hard_gate_for_certification(report: dict[str, Any]) -> bool:
 
 def validate_persisted_reaudit_pass(report: dict[str, Any]) -> None:
     summary = report.get("summary")
+    try:
+        fields = require_canonical_fields(report)
+    except (TypeError, ValueError) as exc:
+        raise CertificationError(
+            "published re-audit canonical fields are invalid"
+        ) from exc
+    validate_report_canonical_fields(report, fields)
     if (
         not isinstance(summary, dict)
         or summary.get("scoring_version") != SCORING_VERSION
-        or summary.get("final_verdict") != "PASS"
-        or (
-            report.get("publishability")
-            or summary.get("publication_route")
-            or summary.get("publishability")
-        )
-        != "PUBLISH_CANDIDATE"
+        or fields["review_verdict"] != "PASS"
+        or fields["publishability"] != "PUBLISH_CANDIDATE"
         or summary.get("hard_gate_triggered") is not False
     ):
         raise CertificationError("published re-audit is not an authoritative PASS")
@@ -137,8 +161,10 @@ def validate_persisted_reaudit_pass(report: dict[str, Any]) -> None:
     validate_dimensions(report)
     validate_hard_gates(report)
     try:
-        deterministic = validate_deterministic_contract(
-            report.get("deterministic_contract")
+        deterministic = resolve_publication_contract(
+            report.get("deterministic_contract"),
+            report.get("effective_deterministic_contract"),
+            report.get("agent_contract_assessment"),
         )
     except (TypeError, ValueError) as exc:
         raise CertificationError(
@@ -627,7 +653,7 @@ def validate_repair(
             raise CertificationError(f"repair bundle bytes are stale: {name}")
     if history.get("bundle_digest") != canonical_json_hash(bundle_hashes):
         raise CertificationError("repair bundle digest is stale")
-    if repair_status in {"PUBLISHED", "REPAIRED"}:
+    if repair_status == "REPAIRED":
         reaudit_path = resolve_external(
             repair.get("reaudit_report_path"),
             base=batch,
@@ -697,9 +723,12 @@ def validate_repair(
         if reaudit_fields["publishability"] != review_fields["publishability"]:
             raise CertificationError("repaired PASS publishability differs")
         if repair_status == "REPAIRED":
-            deterministic = reaudit.get("deterministic_contract")
             try:
-                deterministic = validate_deterministic_contract(deterministic)
+                deterministic = resolve_publication_contract(
+                    reaudit.get("deterministic_contract"),
+                    reaudit.get("effective_deterministic_contract"),
+                    reaudit.get("agent_contract_assessment"),
+                )
             except (TypeError, ValueError) as exc:
                 raise CertificationError(
                     "REPAIRED re-audit lacks valid deterministic CLEAN evidence"
@@ -784,10 +813,7 @@ def validate_record(
     disposition_fields = validate_canonical(disposition, context="disposition")
     if fields != report_fields or fields != disposition_fields:
         raise CertificationError("canonical fields differ across artifacts")
-    if report.get("summary", {}).get("final_verdict") != fields["review_verdict"]:
-        raise CertificationError("report verdict is not canonical")
-    if report.get("summary", {}).get("disposition") != fields["publishability"]:
-        raise CertificationError("report publishability is not canonical")
+    validate_report_canonical_fields(report, fields)
     summary = report.get("summary", {})
     if (
         summary.get("scoring_version") != SCORING_VERSION
@@ -828,9 +854,12 @@ def validate_record(
     )
     validate_dimensions(report)
     validate_hard_gates(report)
-    deterministic = report.get("deterministic_contract")
     try:
-        deterministic = validate_deterministic_contract(deterministic)
+        deterministic = resolve_publication_contract(
+            report.get("deterministic_contract"),
+            report.get("effective_deterministic_contract"),
+            report.get("agent_contract_assessment"),
+        )
     except (TypeError, ValueError) as exc:
         raise CertificationError(
             "certified PASS lacks valid deterministic CLEAN evidence"

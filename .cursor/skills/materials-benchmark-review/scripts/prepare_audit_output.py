@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from canonical_status import canonical_fields
+from audit_integrity import validate_finalized_audit_bundle
+from deterministic_contract import validate_deterministic_contract
 from artifact_schema import (
     AGENT_ASSESSMENT_SCHEMA_VERSION,
     AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
@@ -22,6 +24,8 @@ from artifact_schema import (
     AUDIT_BUNDLE_SCHEMA_VERSION,
     AUDIT_MANIFEST_SCHEMA_VERSION,
     AUDIT_REPORT_SCHEMA_VERSION,
+    AGENT_CONTRACT_ASSESSMENT_SCHEMA_VERSION,
+    AGENT_CONTRACT_REQUEST_SCHEMA_VERSION,
     CHECKER_TESTS_SCHEMA_VERSION,
     DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION,
     DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION,
@@ -76,6 +80,8 @@ HASH_NAMES = {
 REVIEW_IMPLEMENTATION_FILES_MANIFEST = (
     "references/review-implementation-files.json"
 )
+AGENT_CONTRACT_REQUEST_RELATIVE_PATH = "agent_contract/request.json"
+AGENT_CONTRACT_PENDING = "AGENT_CONTRACT_PENDING"
 
 
 def skill_root() -> Path:
@@ -121,6 +127,299 @@ def sha256_path(path: Path) -> str:
     return "sha256:" + hashlib.sha256(payload).hexdigest()
 
 
+def new_audit_id(prefix: str = "audit") -> str:
+    return (
+        f"{prefix}-{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}-"
+        + uuid.uuid4().hex[:8]
+    )
+
+
+def canonical_mapping_hash(value: dict[str, Any]) -> str:
+    payload = json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def preparation_artifact_hashes(temp_dir: Path) -> dict[str, dict[str, str | None]]:
+    """Hash the persisted static and probe inputs used by a resume."""
+
+    groups = {
+        "static": ("evidence/static_checks/audit_static.json",),
+        "probes": (
+            "checker_tests.json",
+            "resource_checks.json",
+            "deterministic_core/probe_results.json",
+            "deterministic_core/probe_cases",
+        ),
+    }
+    result: dict[str, dict[str, str | None]] = {}
+    for group, relatives in groups.items():
+        result[group] = {}
+        for relative in relatives:
+            path = temp_dir / relative
+            result[group][relative] = (
+                sha256_path(path) if path.exists() else None
+            )
+    return result
+
+
+def _requested_package_hashes(
+    root: Path, expected: dict[str, str]
+) -> dict[str, str]:
+    """Recompute exactly the package files bound by a pending request."""
+
+    current: dict[str, str] = {}
+    for relative in sorted(expected):
+        path = root / relative
+        if not path.is_file() or path.is_symlink():
+            raise ValueError(
+                f"agent contract request package file is unavailable: {relative}"
+            )
+        current[relative] = sha256_file(path)
+    return current
+
+
+def write_agent_contract_request(
+    root: Path,
+    temp_dir: Path,
+    machine_contract: dict[str, Any],
+) -> dict[str, Any]:
+    """Persist a source- and artifact-bound contract adjudication request."""
+
+    output_root = (
+        temp_dir.parent.parent
+        if temp_dir.parent.name == ".benchmark_audit_tmp"
+        else temp_dir.parent
+    )
+    request_path = output_root / AGENT_CONTRACT_REQUEST_RELATIVE_PATH
+    if request_path.exists() or request_path.is_symlink():
+        raise FileExistsError(
+            f"agent contract request already exists: {request_path}"
+        )
+    manifest = json.loads(
+        (temp_dir / "audit_manifest.json").read_text(encoding="utf-8")
+    )
+    implementation = manifest.get("review_implementation")
+    if not isinstance(implementation, dict):
+        raise ValueError("audit manifest lacks Review implementation hashes")
+    package_hashes = dict(manifest.get("input_hashes", {}))
+    artifact_hashes = preparation_artifact_hashes(temp_dir)
+    quality_artifact = temp_dir / "agent_quality/assessment.json"
+    if not quality_artifact.is_file() or quality_artifact.is_symlink():
+        raise ValueError(
+            "agent contract preparation is missing agent quality assessment"
+        )
+    request: dict[str, Any] = {
+        "schema_version": AGENT_CONTRACT_REQUEST_SCHEMA_VERSION,
+        "status": AGENT_CONTRACT_PENDING,
+        "lane": "deterministic_core",
+        "benchmark_root": str(root.resolve()),
+        "audit_id": manifest.get("audit_id"),
+        "audit_temp_dir": str(temp_dir.resolve()),
+        "review_lane": REVIEW_LANE,
+        "package_hashes": package_hashes,
+        "package_hash": canonical_mapping_hash(package_hashes),
+        "core_contract_digest": manifest.get("core_contract_digest"),
+        "implementation_hash": implementation.get("aggregate_hash"),
+        "implementation_manifest": implementation,
+        "static_hashes": artifact_hashes["static"],
+        "probe_hashes": artifact_hashes["probes"],
+        "probe_hash": canonical_mapping_hash(artifact_hashes["probes"]),
+        "quality_assessment_hash": (
+            sha256_file(quality_artifact)
+            if quality_artifact.is_file()
+            else None
+        ),
+        "machine_contract_digest": machine_contract.get("contract_digest"),
+        "machine_schema_version": machine_contract.get("schema_version"),
+        "machine_registry_version": machine_contract.get("registry_version"),
+        "machine_status": {
+            "checks": {
+                item["check_id"]: item["status"]
+                for item in machine_contract.get("checks", [])
+                if isinstance(item, dict)
+            },
+            "repair_summary_state": machine_contract.get(
+                "repair_summary", {}
+            ).get("state"),
+        },
+        "assessment_schema_version": AGENT_CONTRACT_ASSESSMENT_SCHEMA_VERSION,
+        "assessment_lane": "deterministic_core",
+        "assessment_checks": ["D1", "D2", "D3", "D4", "D5", "D6"],
+        "assessment_digest": None,
+        "request_digest": None,
+    }
+    request["request_digest"] = canonical_mapping_hash(
+        {key: value for key, value in request.items() if key != "request_digest"}
+    )
+    request_path.parent.mkdir(parents=True, exist_ok=True)
+    request_path.write_text(
+        json.dumps(request, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return request
+
+
+def validate_agent_contract_request(
+    root: Path,
+    temp_dir: Path,
+) -> dict[str, Any]:
+    """Fail closed when a persisted Review preparation is stale or altered."""
+
+    output_root = (
+        temp_dir.parent.parent
+        if temp_dir.parent.name == ".benchmark_audit_tmp"
+        else temp_dir.parent
+    )
+    request_path = output_root / AGENT_CONTRACT_REQUEST_RELATIVE_PATH
+    if not request_path.is_file() or request_path.is_symlink():
+        raise FileNotFoundError(
+            f"agent contract request is missing: {request_path}"
+        )
+    request = json.loads(request_path.read_text(encoding="utf-8"))
+    if not isinstance(request, dict):
+        raise ValueError("agent contract request must be an object")
+    if request.get("schema_version") != AGENT_CONTRACT_REQUEST_SCHEMA_VERSION:
+        raise ValueError("agent contract request schema_version is stale")
+    if request.get("status") != AGENT_CONTRACT_PENDING:
+        raise ValueError("agent contract request status is invalid")
+    if (
+        request.get("assessment_schema_version")
+        != AGENT_CONTRACT_ASSESSMENT_SCHEMA_VERSION
+        or request.get("assessment_lane") != "deterministic_core"
+        or request.get("assessment_checks")
+        != ["D1", "D2", "D3", "D4", "D5", "D6"]
+    ):
+        raise ValueError("agent contract request assessment schema is invalid")
+    expected_digest = canonical_mapping_hash(
+        {
+            key: value
+            for key, value in request.items()
+            if key != "request_digest"
+        }
+    )
+    if request.get("request_digest") != expected_digest:
+        raise ValueError("agent contract request digest is stale or tampered")
+    resolved_root = root.expanduser().resolve()
+    expected_output_root = (
+        temp_dir.parent.parent
+        if temp_dir.parent.name == ".benchmark_audit_tmp"
+        else temp_dir.parent
+    )
+    if (
+        temp_dir.parent.name == ".benchmark_audit_tmp"
+        and request.get("audit_temp_dir")
+        != str(temp_dir.expanduser().resolve())
+    ):
+        raise ValueError("agent contract request temp workspace is stale")
+    if temp_dir.parent.name == ".benchmark_audit_tmp" and (
+        temp_dir.parent.parent != expected_output_root
+        or temp_dir.name != request.get("audit_id")
+    ):
+        raise ValueError("agent contract request temp workspace identity is stale")
+    if request.get("benchmark_root") != str(resolved_root):
+        raise ValueError("agent contract request package root is stale")
+    manifest_path = temp_dir / "audit_manifest.json"
+    context_path = temp_dir / "audit_context.json"
+    if not manifest_path.is_file() or not context_path.is_file():
+        raise ValueError("agent contract preparation workspace is incomplete")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    context = json.loads(context_path.read_text(encoding="utf-8"))
+    if request.get("audit_id") != manifest.get("audit_id") or request.get(
+        "audit_id"
+    ) != context.get("audit_id"):
+        raise ValueError("agent contract request audit binding is stale")
+    package_hashes = request.get("package_hashes")
+    if not isinstance(package_hashes, dict) or any(
+        not isinstance(key, str) or not isinstance(value, str)
+        for key, value in package_hashes.items()
+    ):
+        raise ValueError("agent contract request package hashes are invalid")
+    current_package_hashes = _requested_package_hashes(
+        resolved_root, package_hashes
+    )
+    if current_package_hashes != package_hashes or request.get(
+        "package_hash"
+    ) != canonical_mapping_hash(package_hashes):
+        raise ValueError("agent contract request package hash is stale")
+    implementation = collect_review_implementation_hashes()
+    if request.get("implementation_hash") != implementation.get(
+        "aggregate_hash"
+    ) or request.get("implementation_manifest") != implementation:
+        raise ValueError("agent contract request implementation hash is stale")
+    if request.get("core_contract_digest") != core_contract_digest(
+        resolved_root
+    ):
+        raise ValueError("agent contract request core contract digest is stale")
+    artifact_hashes = preparation_artifact_hashes(temp_dir)
+    if request.get("static_hashes") != artifact_hashes["static"]:
+        raise ValueError("agent contract request static artifact hash is stale")
+    if request.get("probe_hashes") != artifact_hashes["probes"] or request.get(
+        "probe_hash"
+    ) != canonical_mapping_hash(artifact_hashes["probes"]):
+        raise ValueError("agent contract request probe hash is stale")
+    quality_artifact = temp_dir / "agent_quality/assessment.json"
+    if not quality_artifact.is_file() or quality_artifact.is_symlink():
+        raise ValueError(
+            "agent contract preparation is missing agent quality assessment"
+        )
+    current_quality_hash = sha256_file(quality_artifact)
+    if request.get("quality_assessment_hash") != current_quality_hash:
+        raise ValueError("agent contract request quality assessment is stale")
+    machine_artifact_path = temp_dir / "deterministic_core/report.json"
+    if not machine_artifact_path.is_file():
+        raise ValueError("agent contract machine artifact is missing")
+    machine_artifact = json.loads(
+        machine_artifact_path.read_text(encoding="utf-8")
+    )
+    machine_contract = machine_artifact.get("contract")
+    if not isinstance(machine_contract, dict):
+        raise ValueError("agent contract machine contract is missing")
+    machine_contract = validate_deterministic_contract(machine_contract)
+    if request.get("machine_contract_digest") != machine_contract.get(
+        "contract_digest"
+    ) or request.get("machine_schema_version") != machine_contract.get(
+        "schema_version"
+    ) or request.get("machine_registry_version") != machine_contract.get(
+        "registry_version"
+    ):
+        raise ValueError("agent contract machine contract digest is stale")
+    machine_status = request.get("machine_status")
+    expected_machine_status = {
+        "checks": {
+            item["check_id"]: item["status"]
+            for item in machine_contract.get("checks", [])
+            if isinstance(item, dict)
+        },
+        "repair_summary_state": machine_contract.get(
+            "repair_summary", {}
+        ).get("state"),
+    }
+    if machine_status != expected_machine_status:
+        raise ValueError("agent contract machine status is stale")
+    return request
+
+
+def archive_agent_contract_request(
+    output_root: Path, audit_id: str
+) -> Path | None:
+    """Retain a completed request without leaving a resumable pending seam."""
+
+    request_path = output_root / AGENT_CONTRACT_REQUEST_RELATIVE_PATH
+    if not request_path.is_file():
+        return None
+    history = request_path.parent / "history"
+    history.mkdir(parents=True, exist_ok=True)
+    destination = history / f"{audit_id}.json"
+    suffix = 1
+    while destination.exists():
+        destination = history / f"{audit_id}-{suffix}.json"
+        suffix += 1
+    request_path.rename(destination)
+    return destination
+
+
 def core_contract_snapshot(root: Path) -> dict[str, Any]:
     paths: list[Path] = []
     instruction = root / "instruction.md"
@@ -160,16 +459,28 @@ def core_contract_digest(root: Path) -> str:
 def bind_external_evidence(
     temp_dir: Path,
     agent_assessment: Path | None,
+    agent_contract_assessment: Path | None = None,
 ) -> dict[str, dict[str, str]]:
     manifest_path = temp_dir / "audit_manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     root = Path(manifest["benchmark_root"]).resolve()
-    assessment_hashes: dict[str, str] = {}
+    assessment_hashes: dict[str, str] = dict(
+        manifest.get("assessment_hashes", {})
+    )
     if agent_assessment is not None:
         resolved = agent_assessment.expanduser().resolve()
         if resolved.is_relative_to(root):
             raise ValueError("agent assessment must remain outside the Harbor 题包")
         assessment_hashes["agent_assessment"] = sha256_path(
+            resolved
+        )
+    if agent_contract_assessment is not None:
+        resolved = agent_contract_assessment.expanduser().resolve()
+        if resolved.is_relative_to(root):
+            raise ValueError(
+                "agent contract assessment must remain outside the Harbor 题包"
+            )
+        assessment_hashes["agent_contract_assessment"] = sha256_path(
             resolved
         )
     manifest["assessment_hashes"] = assessment_hashes
@@ -399,6 +710,10 @@ def audit_attestation_payload(audit_dir: Path) -> dict[str, Any]:
     disposition_path = audit_dir / "disposition.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     report = json.loads(report_path.read_text(encoding="utf-8"))
+    disposition = json.loads(disposition_path.read_text(encoding="utf-8"))
+    validate_finalized_audit_bundle(
+        audit_dir, manifest, report, disposition
+    )
     required_artifacts = {
         "audit_report.json": report_path,
         "deterministic_core/report.json": audit_dir
@@ -460,11 +775,23 @@ def write_audit_attestation(
         raise FileExistsError(
             "audit attestation output is immutable and must not already exist"
         )
-    payload = audit_attestation_payload(
+    finalized_audit = (
         audit_dir.expanduser().resolve()
         if audit_dir is not None
         else benchmark_root / "benchmark_audit"
     )
+    audit_attestation_payload(finalized_audit)
+    manifest_path = finalized_audit / "audit_manifest.json"
+    original_manifest = manifest_path.read_bytes()
+    manifest = json.loads(original_manifest.decode("utf-8"))
+    if manifest.get("immutability_state") == "ATTESTED":
+        raise ValueError("audit bundle is already attested and immutable")
+    manifest["immutability_state"] = "ATTESTED"
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    payload = audit_attestation_payload(finalized_audit)
     encoded = json.dumps(
         payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
@@ -474,17 +801,55 @@ def write_audit_attestation(
         "bundle_digest": "sha256:" + hashlib.sha256(encoded).hexdigest(),
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    created = False
     try:
         with output_path.open("x", encoding="utf-8") as handle:
             handle.write(
                 json.dumps(attestation, indent=2, ensure_ascii=False) + "\n"
             )
+        created = True
+        output_path.chmod(0o444)
+        freeze_audit_bundle(
+            audit_dir.expanduser().resolve()
+            if audit_dir is not None
+            else benchmark_root / "benchmark_audit"
+        )
     except FileExistsError as exc:
         raise FileExistsError(
             "audit attestation output is immutable and must not already exist"
         ) from exc
-    output_path.chmod(0o444)
+    except Exception:
+        try:
+            manifest_path.write_bytes(original_manifest)
+        except OSError:
+            pass
+        if created:
+            try:
+                output_path.chmod(0o644)
+                output_path.unlink()
+            except OSError:
+                pass
+        raise
     return attestation
+
+
+def freeze_audit_bundle(audit_dir: Path) -> None:
+    """Make a finalized source bundle read-only after attestation."""
+
+    resolved = audit_dir.expanduser().resolve()
+    if not resolved.is_dir() or resolved.is_symlink():
+        raise ValueError("cannot freeze a missing or symlinked audit bundle")
+    paths = sorted(
+        (path for path in resolved.rglob("*") if not path.is_symlink()),
+        key=lambda path: len(path.parts),
+        reverse=True,
+    )
+    for path in paths:
+        try:
+            path.chmod(0o444 if path.is_file() else 0o555)
+        except OSError as exc:
+            raise ValueError(f"could not freeze audit bundle: {path}") from exc
+    resolved.chmod(0o555)
 
 
 def validate_paper_boundary(root: Path) -> None:
@@ -537,6 +902,7 @@ def prepare_workspace(
     audit_output_dir: Path | None = None,
     *,
     skip_paper: bool = False,
+    run_id: str | None = None,
 ) -> dict[str, Any]:
     """Prepare a candidate audit under a required external output root."""
     resolved_root = root.expanduser().resolve()
@@ -557,9 +923,14 @@ def prepare_workspace(
         candidate = previous.get("audit_id")
         if isinstance(candidate, str) and candidate:
             parent_audit_id = candidate
-    temp_dir = output_root / ".benchmark_audit_tmp"
-    if temp_dir.exists():
-        shutil.rmtree(temp_dir)
+    audit_id = run_id or new_audit_id()
+    if not audit_id or Path(audit_id).name != audit_id:
+        raise ValueError("audit run ID must be a non-empty leaf name")
+    temp_dir = output_root / ".benchmark_audit_tmp" / audit_id
+    if temp_dir.exists() or temp_dir.is_symlink():
+        raise FileExistsError(
+            f"audit run workspace already exists for {audit_id}: {temp_dir}"
+        )
     for relative in (
         "evidence/static_checks",
         "evidence/resource_checks",
@@ -573,10 +944,6 @@ def prepare_workspace(
         (temp_dir / relative).mkdir(parents=True, exist_ok=True)
 
     started_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    audit_id = (
-        time.strftime("audit-%Y%m%dT%H%M%SZ-", time.gmtime())
-        + uuid.uuid4().hex[:8]
-    )
     values = {
         "AUDIT_ID": audit_id,
         "BENCHMARK_NAME": root.name,
@@ -656,6 +1023,7 @@ def prepare_workspace(
         "benchmark_root": str(root),
         "audit_temp_dir": str(temp_dir),
         "audit_output_root": str(output_root),
+        "audit_temp_parent": str(temp_dir.parent),
         "final_audit_dir": str(output_root / "benchmark_audit"),
         "review_lane": REVIEW_LANE,
         "skip_paper": skip_paper,

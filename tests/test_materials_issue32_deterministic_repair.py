@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -83,6 +84,30 @@ def clean_contract() -> dict[str, Any]:
         },
         package_roles={},
         findings=[],
+    )
+
+
+def required_d6_contract() -> dict[str, Any]:
+    return deterministic_contract.evaluate_deterministic_contract(
+        normalized_instruction_contract={},
+        grading_contract={},
+        checker_analysis={
+            "d6_core_output_scoring": {
+                "status": "FAILED",
+                "schema_version": "materials-d6-core-output-scoring/1.0",
+            }
+        },
+        package_roles={},
+        findings=[
+            {
+                "finding_id": "F6",
+                "title": "CORE_RUNTIME_ORACLE_REJECTED",
+                "status": "OPEN",
+                "repairable": True,
+                "lane": "deterministic_core",
+                "evidence": {"deterministic_core": True},
+            }
+        ],
     )
 
 
@@ -346,29 +371,151 @@ class MaterialsIssue32DeterministicRepairTests(unittest.TestCase):
                 unknown,
             )
 
-    def test_legacy_zero_one_plan_remains_archival_input(self) -> None:
+    def test_active_ingress_rejects_legacy_plan_versions_without_history(self) -> None:
+        for version in ("0.1", "0.2"):
+            with self.subTest(version=version), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary) / "package"
+                root.mkdir()
+                (root / "instruction.md").write_text("task", encoding="utf-8")
+                (root / "tests").mkdir()
+                plan_path = Path(temporary) / "legacy-plan.json"
+                repair_output = Path(temporary) / "repair"
+                plan_path.write_text(
+                    json.dumps(
+                        {
+                            "schema_version": version,
+                            "audit_id": "paper-867767-audit",
+                            "finding_id": "FINDING-001",
+                            "repair_class": "ABANDON",
+                            "justification": "legacy D6 abandonment",
+                            "operations": [],
+                            "regression_tests": [],
+                            "evidence": [],
+                            "repair_output_dir": str(repair_output),
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(
+                    ValueError, "active Repair requires schema_version"
+                ):
+                    run_repair.repair(
+                        root,
+                        plan_path,
+                        Path(temporary) / "missing-attestation.json",
+                    )
+                self.assertFalse(repair_output.exists())
+
+    def test_current_ingress_requires_batch_contract_binding(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "package"
             root.mkdir()
-            plan_path = Path(temporary) / "legacy-plan.json"
+            plan_path = Path(temporary) / "plan.json"
             plan_path.write_text(
                 json.dumps(
                     {
-                        "schema_version": "0.1",
+                        "schema_version": (
+                            deterministic_contract
+                            .DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION
+                        ),
                         "audit_id": "A1",
-                        "finding_id": "F1",
-                        "repair_class": "ABANDON",
-                        "justification": "historical evidence archive",
-                        "operations": [],
-                        "regression_tests": [],
+                        "findings": [
+                            {
+                                "finding_id": "F1",
+                                "deterministic_check": "D4",
+                                "repair_class": "ABANDON",
+                                "justification": "No admissible repair.",
+                                "operations": [],
+                                "regression_tests": [],
+                                "evidence": [],
+                            }
+                        ],
                     }
                 ),
                 encoding="utf-8",
             )
-            plan = run_repair.validate_external_plan(root, plan_path)
+            with self.assertRaisesRegex(ValueError, "source contract binding"):
+                run_repair.validate_external_plan(root, plan_path)
 
-        self.assertFalse(deterministic_contract.is_deterministic_repair_plan(plan))
-        self.assertEqual(plan["schema_version"], "0.1")
+    def test_complete_d6_plan_may_explicitly_abandon(self) -> None:
+        contract = required_d6_contract()
+        plan = deterministic_plan(
+            contract,
+            findings=[
+                {
+                    "finding_id": "F6",
+                    "deterministic_check": "D6",
+                    "finding_code": "CORE_RUNTIME_ORACLE_REJECTED",
+                    "repair_class": "ABANDON",
+                    "justification": "No admissible implementation is available.",
+                    "operations": [],
+                    "regression_tests": [],
+                    "evidence": [],
+                }
+            ],
+        )
+
+        deterministic_contract.validate_deterministic_plan_binding(
+            {"audit_id": "A1", "deterministic_contract": contract},
+            plan,
+        )
+
+    def test_complete_d6_abandon_is_nonsemantic_and_package_immutable(self) -> None:
+        contract = required_d6_contract()
+        plan = deterministic_plan(
+            contract,
+            findings=[
+                {
+                    "finding_id": "F6",
+                    "deterministic_check": "D6",
+                    "finding_code": "CORE_RUNTIME_ORACLE_REJECTED",
+                    "repair_class": "ABANDON",
+                    "justification": "No admissible implementation is available.",
+                    "operations": [],
+                    "regression_tests": [],
+                    "evidence": [],
+                }
+            ],
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            root = workspace / "paper-fixture"
+            (root / "tests").mkdir(parents=True)
+            (root / "instruction.md").write_text("task\n", encoding="utf-8")
+            (root / "tests/checker.py").write_text("pass\n", encoding="utf-8")
+            plan["repair_output_dir"] = str(
+                workspace / "review_outputs/fixture/repair"
+            )
+            before = run_repair.package_hashes(root)
+            report = {
+                "audit_id": "A1",
+                "review_verdict": "CONDITIONAL",
+                "summary": {"final_verdict": "CONDITIONAL"},
+                "findings": [
+                    {
+                        "finding_id": "F6",
+                        "status": "OPEN",
+                        "title": "CORE_RUNTIME_ORACLE_REJECTED",
+                    }
+                ],
+            }
+            with mock.patch.object(
+                run_repair,
+                "validate_fresh_audit_batch",
+                return_value=(report, {}, {"F6": report["findings"][0]}),
+            ):
+                result = run_repair.repair_batch(
+                    root,
+                    plan,
+                    workspace / "unused-attestation.json",
+                    workspace / "plan.json",
+                )
+
+            self.assertEqual(result["status"], "ABANDONED")
+            self.assertEqual(result["attempt_kind"], "CONTROL")
+            self.assertFalse(result["attempt_consumed"])
+            self.assertFalse(result["package_mutated"])
+            self.assertEqual(run_repair.package_hashes(root), before)
 
 
 

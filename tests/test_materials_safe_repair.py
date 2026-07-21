@@ -32,6 +32,17 @@ def external_repair_dir(package: Path) -> Path:
     return package.parent / "review_outputs" / paper_id / "repair"
 
 
+def external_reaudit_dir(package: Path) -> Path:
+    paper_id = package.name.removeprefix("paper-")
+    return (
+        package.parent
+        / "review_outputs"
+        / paper_id
+        / "repair_reaudit"
+        / "benchmark_audit"
+    )
+
+
 REPAIR_RUNNER = (
     REPO_ROOT
     / ".cursor"
@@ -146,6 +157,22 @@ def bind_plan_to_package(package: Path, value: dict[str, Any]) -> None:
     )
     digest = repair_module().core_contract_digest(package)
     value.setdefault("core_contract_digest", digest)
+    contract = report.get("deterministic_contract")
+    if (
+        value.get("schema_version")
+        == deterministic_contract.DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION
+        and isinstance(contract, dict)
+    ):
+        binding = {
+            "schema_version": contract["schema_version"],
+            "registry_version": contract["registry_version"],
+            "contract_digest": contract["contract_digest"],
+            "audit_id": report["audit_id"],
+            "required_finding_ids": contract["repair_summary"][
+                "required_finding_ids"
+            ],
+        }
+        value["deterministic_contract"] = binding
     value.setdefault(
         "source_audit",
         {
@@ -159,6 +186,10 @@ def bind_plan_to_package(package: Path, value: dict[str, Any]) -> None:
             "assessment_hashes": {},
         },
     )
+    if isinstance(contract, dict) and value.get("deterministic_contract"):
+        value["source_audit"]["deterministic_contract"] = value[
+            "deterministic_contract"
+        ]
     for item in value.get("evidence", []):
         source = item.get("source")
         if not isinstance(source, str) or "source_hash" in item:
@@ -169,6 +200,10 @@ def bind_plan_to_package(package: Path, value: dict[str, Any]) -> None:
             local = package / source
         if local.is_file():
             item["source_hash"] = sha256_file(local)
+    if value.get("findings"):
+        value["findings"][0]["evidence"] = json.loads(
+            json.dumps(value.get("evidence", []))
+        )
 
 
 def install_repair_harness(workspace: Path) -> Path:
@@ -176,6 +211,15 @@ def install_repair_harness(workspace: Path) -> Path:
     shutil.copytree(
         REVIEW_SKILL_ROOT,
         harness_root / "materials-benchmark-review",
+    )
+    implementation_manifest = (
+        harness_root
+        / "materials-benchmark-review/references/review-implementation-files.json"
+    )
+    manifest = json.loads(implementation_manifest.read_text(encoding="utf-8"))
+    manifest["files"] = sorted(set(manifest["files"]))
+    implementation_manifest.write_text(
+        json.dumps(manifest), encoding="utf-8"
     )
     harness_runner = (
         harness_root / "materials-benchmark-repair/scripts/run_repair.py"
@@ -267,9 +311,12 @@ def install_repair_harness(workspace: Path) -> Path:
             audit.mkdir(parents=True, exist_ok=True)
             instruction_text = (root / "instruction.md").read_text()
             residual_target = "STILL_LISTS_TARGET" in instruction_text
+            malformed_probe_payload = (
+                "MALFORMED_PROBE_PAYLOAD" in instruction_text
+            )
             findings = (
                 [{"finding_id": "reaudit-residual", "status": "OPEN",
-                  "title": "SOLUTION_ENTRYPOINT_MISSING", "severity": "LOW"}]
+                  "title": "SOLUTION_ORACLE_MISSING", "severity": "LOW"}]
                 if residual_target else []
             )
             deterministic_contract = evaluate_deterministic_contract(
@@ -375,6 +422,16 @@ def install_repair_harness(workspace: Path) -> Path:
             artifact_paths["agent_quality/assessment.json"].write_text(
                 json.dumps(agent_quality)
             )
+            if malformed_probe_payload:
+                relative = (
+                    "deterministic_core/probe_cases/checker_tests/"
+                    "malformed_outputs/app/outputs/metrics.json"
+                )
+                artifact_paths[relative] = audit / relative
+                artifact_paths[relative].parent.mkdir(
+                    parents=True, exist_ok=True
+                )
+                artifact_paths[relative].write_bytes(b'{"metrics": [}')
             for relative in (
                 "corpus_index_entry.json",
                 "checker_tests.json",
@@ -436,15 +493,21 @@ def initial_repair_context(
     *,
     review_lane: str = "dual",
     residual_target: bool = False,
+    malformed_probe_payload: bool = False,
 ) -> tuple[Path, dict[str, Any], str, Path]:
     runner = install_repair_harness(workspace)
     package = workspace / "paper-fixture"
     (package / "tests").mkdir(parents=True)
     (package / "solution").mkdir()
     (package / "paper").mkdir()
+    (package / "solution/producer.py").write_text(
+        "print('fixture producer')\n", encoding="utf-8"
+    )
     instruction = "Compute the evidence-backed quantity.\n"
     if residual_target:
         instruction += "STILL_LISTS_TARGET\n"
+    if malformed_probe_payload:
+        instruction += "MALFORMED_PROBE_PAYLOAD\n"
     (package / "instruction.md").write_text(instruction, encoding="utf-8")
     (package / "tests/checker.py").write_text(
         "raise SystemExit(0)\n", encoding="utf-8"
@@ -471,7 +534,16 @@ def initial_repair_context(
             "tests/test.sh": "ok",
             "oracle_entrypoint": "ok",
         },
-        findings=[],
+        findings=[
+            {
+                "finding_id": FINDING_ID,
+                "title": "SOLUTION_ORACLE_MISSING",
+                "status": "OPEN",
+                "repairable": True,
+                "affected_files": ["solution/solve.sh"],
+                "evidence": {},
+            }
+        ],
     )
     probe_results = {
         "schema_version": DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION,
@@ -498,7 +570,7 @@ def initial_repair_context(
             {
                 "finding_id": FINDING_ID,
                 "status": "OPEN",
-                "title": "SOLUTION_ENTRYPOINT_MISSING",
+                "title": "SOLUTION_ORACLE_MISSING",
                 "severity": "HIGH",
             }
         ],
@@ -601,9 +673,37 @@ def initial_repair_context(
     return package, report, FINDING_ID, runner
 
 
+def current_single_finding_plan(plan: dict[str, Any]) -> dict[str, Any]:
+    finding = json.loads(
+        json.dumps(
+            {
+                key: plan[key]
+                for key in (
+                    "finding_id",
+                    "repair_class",
+                    "justification",
+                    "evidence",
+                    "operations",
+                    "regression_tests",
+                )
+            }
+        )
+    )
+    finding.update(
+        {
+            "deterministic_check": "D5",
+            "finding_code": "SOLUTION_ORACLE_MISSING",
+            "core_science_change": False,
+        }
+    )
+    plan["findings"] = [finding]
+    plan["deterministic_contract"] = {}
+    return plan
+
+
 def safe_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
-    return {
-        "schema_version": "0.1",
+    return current_single_finding_plan({
+        "schema_version": deterministic_contract.DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION,
         "audit_id": audit_id,
         "finding_id": finding_id,
         "repair_class": "AUTO_FIX",
@@ -613,7 +713,7 @@ def safe_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
             {
                 "id": "audit-finding",
                 "source": f"benchmark_audit:{finding_id}",
-                "quote": "SOLUTION_ENTRYPOINT_MISSING",
+                "quote": "SOLUTION_ORACLE_MISSING",
             }
         ],
         "operations": [
@@ -621,7 +721,7 @@ def safe_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
                 "id": "restore-solve",
                 "type": "write_file",
                 "file": "solution/solve.sh",
-                "content": "#!/bin/sh\nexit 0\n",
+                "content": "#!/bin/sh\nexec python3 solution/producer.py\n",
                 "executable": True,
                 "evidence_ids": ["audit-finding"],
             }
@@ -633,7 +733,7 @@ def safe_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
                 "causal_operation_ids": ["restore-solve"],
                 "type": "text_contains",
                 "file": "solution/solve.sh",
-                "expected": "#!/bin/sh\nexit 0\n",
+                "expected": "#!/bin/sh\nexec python3 solution/producer.py\n",
             },
             {
                 "id": "solve-exists",
@@ -651,17 +751,41 @@ def safe_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
                 "expected_returncode": 0,
             },
         ],
-    }
+    })
 
 
 def write_plan(path: Path, value: dict[str, Any]) -> None:
+    if (
+        value.get("schema_version")
+        == deterministic_contract.DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION
+        and isinstance(value.get("findings"), list)
+        and value["findings"]
+    ):
+        # Keep mutation-focused tests readable while ensuring the serialized
+        # executable plan is always a complete current-schema batch.
+        finding = value["findings"][0]
+        for key in (
+            "finding_id",
+            "repair_class",
+            "justification",
+            "core_science_change",
+            "evidence",
+            "operations",
+            "regression_tests",
+        ):
+            if key in value:
+                finding[key] = json.loads(json.dumps(value[key]))
     packages = [
         candidate
         for candidate in path.parent.iterdir()
         if candidate.is_dir()
         and (external_audit_dir(candidate) / "audit_report.json").is_file()
     ]
-    if len(packages) == 1:
+    if (
+        len(packages) == 1
+        and value.get("schema_version")
+        == deterministic_contract.DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION
+    ):
         bind_plan_to_package(packages[0], value)
     write_json(path, value)
 
@@ -801,6 +925,77 @@ class MaterialsSafeRepairTests(unittest.TestCase):
                     {"repair_output_dir": str(package.parent / "wrong")},
                 )
 
+    def test_rebase_refreshes_manifest_after_path_bearing_writes(self) -> None:
+        module = repair_module()
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            candidate = workspace / "candidate"
+            final_root = workspace / "final"
+            audit = workspace / "reaudit/benchmark_audit"
+            audit.mkdir(parents=True)
+            old_report = {
+                "audit_id": "audit-rebase-regression",
+                "benchmark_root": str(candidate),
+                "nested_path": str(candidate / "solution"),
+            }
+            write_json(audit / "audit_report.json", old_report)
+            write_json(
+                audit / "disposition.json",
+                {"benchmark_root": str(candidate)},
+            )
+            manifest = {
+                "audit_id": old_report["audit_id"],
+                "benchmark_root": str(candidate),
+                "source_path": str(candidate / "instruction.md"),
+                "output_hashes": {
+                    "audit_report.json": sha256_file(
+                        audit / "audit_report.json"
+                    ),
+                    "disposition.json": sha256_file(
+                        audit / "disposition.json"
+                    ),
+                },
+                "bundle_hash": "sha256:" + "0" * 64,
+            }
+            write_json(audit / "audit_manifest.json", manifest)
+
+            module.rebase_audit_paths(
+                candidate,
+                final_root,
+                {},
+                audit_output_dir=audit.parent,
+            )
+
+            rebased_report = json.loads(
+                (audit / "audit_report.json").read_text(encoding="utf-8")
+            )
+            rebased_manifest = json.loads(
+                (audit / "audit_manifest.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(rebased_report["benchmark_root"], str(final_root))
+            self.assertEqual(
+                rebased_report["nested_path"],
+                str(final_root / "solution"),
+            )
+            self.assertEqual(
+                rebased_manifest["source_path"],
+                str(final_root / "instruction.md"),
+            )
+            self.assertEqual(
+                rebased_manifest["bundle_hash"],
+                module.canonical_json_hash(
+                    rebased_manifest["output_hashes"]
+                ),
+            )
+            for relative, expected in rebased_manifest[
+                "output_hashes"
+            ].items():
+                self.assertEqual(sha256_file(audit / relative), expected)
+            self.assertNotIn(
+                "audit_manifest.json",
+                rebased_manifest["output_hashes"],
+            )
+
     def test_missing_solution_entrypoint_is_repaired_and_atomically_published(
         self,
     ) -> None:
@@ -831,7 +1026,8 @@ class MaterialsSafeRepairTests(unittest.TestCase):
             self.assertEqual(repair_manifest["repair_state"], "REPAIRED")
             self.assertEqual(repair_manifest["disposition"], "PASS")
             self.assertTrue(repair_manifest["publishable"])
-            self.assertEqual(repair_manifest["finding_id"], finding_id)
+            self.assertTrue(result["package_mutated"])
+            self.assertEqual(repair_manifest["finding_ids"], [finding_id])
             self.assertEqual(
                 [item["before_passed"] for item in repair_manifest["regression_tests"]],
                 [False, False, False],
@@ -854,6 +1050,57 @@ class MaterialsSafeRepairTests(unittest.TestCase):
             self.assertTrue((history / "original").is_dir())
             self.assertTrue((history / "repair_plan.json").is_file())
             self.assertTrue((history / "attempt_manifest.json").is_file())
+            canonical_audit = external_reaudit_dir(package)
+            retained_audit = history / "repair_reaudit/benchmark_audit"
+            self.assertTrue(canonical_audit.is_dir())
+            self.assertTrue(retained_audit.is_dir())
+            for audit in (canonical_audit, retained_audit):
+                audit_manifest = json.loads(
+                    (audit / "audit_manifest.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
+                self.assertEqual(
+                    audit_manifest["bundle_hash"],
+                    repair_module().canonical_json_hash(
+                        audit_manifest["output_hashes"]
+                    ),
+                )
+                for relative, expected in audit_manifest[
+                    "output_hashes"
+                ].items():
+                    self.assertEqual(
+                        sha256_file(audit / relative),
+                        expected,
+                    )
+            self.assertEqual(
+                repair_module().sha256_path(canonical_audit),
+                repair_module().sha256_path(retained_audit),
+            )
+            reaudit_refs = repair_manifest["reaudit_bundle"]
+            self.assertEqual(
+                reaudit_refs["report_hash"],
+                sha256_file(retained_audit / "audit_report.json"),
+            )
+            self.assertEqual(
+                reaudit_refs["manifest_hash"],
+                sha256_file(retained_audit / "audit_manifest.json"),
+            )
+            self.assertEqual(
+                reaudit_refs["bundle_hash"],
+                repair_module().sha256_path(retained_audit),
+            )
+            attempt = json.loads(
+                (history / "attempt_manifest.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertTrue(attempt["package_mutated"])
+            self.assertEqual(attempt["repair_status"], "REPAIRED")
+            self.assertEqual(attempt["review_verdict"], "PASS")
+            self.assertEqual(
+                attempt["publishability"], "PUBLISH_CANDIDATE"
+            )
             repair_module().validate_fixed_bundle(
                 external_repair_dir(package) / "benchmark_repair"
             )
@@ -867,7 +1114,9 @@ class MaterialsSafeRepairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
-                workspace, residual_target=True
+                workspace,
+                residual_target=True,
+                malformed_probe_payload=True,
             )
             plan = workspace / "repair-plan.json"
             write_plan(plan, safe_plan(report["audit_id"], finding_id))
@@ -876,13 +1125,56 @@ class MaterialsSafeRepairTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 3)
             result = json.loads(completed.stdout)
-            self.assertEqual(result["status"], "ROLLED_BACK")
+            self.assertEqual(result["status"], "PARTIALLY_REPAIRED")
             self.assertFalse(result["publishable"])
-            self.assertIn("target finding remains open", result["reason"])
+            self.assertFalse(result["package_mutated"])
+            self.assertIn("re-audit did not reach PASS", result["reason"])
             # Authoritative package preserved unchanged, no publish.
             self.assertFalse((package / "solution/solve.sh").is_file())
             self.assertFalse((package / "benchmark_repair").exists())
             self.assertEqual(package.name, "paper-fixture")
+            history = Path(result["history_dir"])
+            archived = history / "repair_reaudit/benchmark_audit"
+            canonical = external_reaudit_dir(package)
+            self.assertTrue(archived.is_dir())
+            self.assertTrue(canonical.is_dir())
+            attempt = json.loads(
+                (history / "attempt_manifest.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertFalse(attempt["package_mutated"])
+            references = attempt["reaudit_bundle"]
+            self.assertEqual(references["audit_dir"], str(archived))
+            manifest = json.loads(
+                (archived / "audit_manifest.json").read_text(encoding="utf-8")
+            )
+            opaque_relative = (
+                "deterministic_core/probe_cases/checker_tests/"
+                "malformed_outputs/app/outputs/metrics.json"
+            )
+            self.assertEqual(
+                (archived / opaque_relative).read_bytes(),
+                b'{"metrics": [}',
+            )
+            self.assertEqual(
+                manifest["output_hashes"][opaque_relative],
+                sha256_file(archived / opaque_relative),
+            )
+            for relative, expected in manifest["output_hashes"].items():
+                self.assertEqual(
+                    sha256_file(archived / relative),
+                    expected,
+                )
+            self.assertEqual(references["audit_id"], manifest["audit_id"])
+            self.assertEqual(
+                references["bundle_hash"], repair_module().sha256_path(archived)
+            )
+            self.assertIn(
+                "oracle",
+                (history / "evidence.json").read_text(encoding="utf-8").lower(),
+            )
+            repair_module().validate_fixed_bundle(history)
 
     def test_repair_rejects_targets_outside_instruction_tests_and_solution(
         self,
@@ -932,15 +1224,21 @@ class MaterialsSafeRepairTests(unittest.TestCase):
             )
             report["configuration"]["review_lane"] = "experimental"
             write_json(external_audit_dir(package) / "audit_report.json", report)
+            manifest_path = external_audit_dir(package) / "audit_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["output_hashes"]["audit_report.json"] = sha256_file(
+                external_audit_dir(package) / "audit_report.json"
+            )
+            write_json(manifest_path, manifest)
             plan = workspace / "repair-plan.json"
             write_plan(plan, safe_plan(report["audit_id"], finding_id))
 
             completed = run_repair(package, plan, runner)
 
-            self.assertEqual(completed.returncode, 3)
+            self.assertEqual(completed.returncode, 2)
             self.assertIn(
-                "attestation does not bind the authoritative bytes",
-                completed.stdout,
+                "source-audit attestation does not bind the authoritative bytes",
+                completed.stderr,
             )
             self.assertFalse((package / "benchmark_repair").exists())
 

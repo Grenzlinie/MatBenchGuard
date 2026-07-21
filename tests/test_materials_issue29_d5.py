@@ -20,6 +20,7 @@ from d5_package_completeness import (  # noqa: E402
     validate_auto_fix_operation,
 )
 from deterministic_contract import (  # noqa: E402
+    DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION,
     evaluate_deterministic_contract,
     validate_deterministic_contract,
     validate_deterministic_plan_binding,
@@ -110,18 +111,30 @@ class MaterialsIssue29D5Tests(unittest.TestCase):
             "AUTO_FIX",
         )
         validate_deterministic_contract(contract)
+        binding = {
+            "schema_version": contract["schema_version"],
+            "registry_version": contract["registry_version"],
+            "contract_digest": contract["contract_digest"],
+            "audit_id": "A1",
+            "required_finding_ids": contract["repair_summary"][
+                "required_finding_ids"
+            ],
+        }
         validate_deterministic_plan_binding(
-            {"deterministic_contract": contract},
+            {"audit_id": "A1", "deterministic_contract": contract},
             {
-                "deterministic_contract": {
-                    "schema_version": contract["schema_version"],
-                    "registry_version": contract["registry_version"],
-                    "contract_digest": contract["contract_digest"],
+                "schema_version": DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION,
+                "audit_id": "A1",
+                "deterministic_contract": binding,
+                "source_audit": {
+                    "audit_id": "A1",
+                    "deterministic_contract": binding,
                 },
                 "findings": [
                     {
                         "finding_id": "F-D5",
                         "deterministic_check": "D5",
+                        "finding_code": "SOLUTION_ORACLE_MISSING",
                         "repair_class": "ASSISTED_FIX",
                     }
                 ],

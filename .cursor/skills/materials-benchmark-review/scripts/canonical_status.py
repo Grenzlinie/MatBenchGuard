@@ -35,7 +35,6 @@ REPAIR_STATUSES = frozenset(
         # Review-time lifecycle state.  It routes a package to Repair but is
         # not a terminal outcome and never publishes a package.
         "DETERMINISTIC_REPAIR_REQUIRED",
-        "PUBLISHED",
         "REPAIRED",
         "PARTIALLY_REPAIRED",
         "ROLLED_BACK",
@@ -44,7 +43,7 @@ REPAIR_STATUSES = frozenset(
     }
 )
 # A repair that atomically publishes the fixed package.
-SUCCESS_REPAIR_STATUSES = frozenset({"PUBLISHED", "REPAIRED"})
+SUCCESS_REPAIR_STATUSES = frozenset({"REPAIRED"})
 REPAIR_BUNDLE_FILES = (
     "repair_plan.json",
     "changes.json",
@@ -108,7 +107,7 @@ def canonical_fields(
         raise ValueError(
             "DETERMINISTIC_REPAIR_REQUIRED requires NOT_REQUIRED decision"
         )
-    if repair_status in {"PUBLISHED", "REPAIRED"} and repair_decision not in {
+    if repair_status == "REPAIRED" and repair_decision not in {
         "AUTO_FIX",
         "ASSISTED_FIX",
     }:

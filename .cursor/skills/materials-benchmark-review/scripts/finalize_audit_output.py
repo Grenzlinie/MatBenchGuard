@@ -9,6 +9,7 @@ import json
 import re
 import sys
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ from prepare_audit_output import (
     collect_review_implementation_hashes,
     sha256_file,
 )
+from audit_integrity import validate_finalized_audit_bundle
 from canonical_status import canonical_fields
 from deterministic_contract import (
     annotate_findings,
@@ -27,6 +29,11 @@ from deterministic_contract import (
     evaluate_deterministic_contract,
     finding_lane,
     validate_deterministic_contract,
+)
+from agent_contract_wiring import (
+    derive_effective_contract,
+    resolve_publication_contract,
+    validate_effective_contract,
 )
 from d6_core_output_scoring import merge_runtime_evidence
 from artifact_schema import (
@@ -51,6 +58,7 @@ from review_path_policy import (
     management_purpose,
     require_external_output_dir,
 )
+from review_lock import ReviewOutputLock
 
 
 VERDICTS = {"PASS", "CONDITIONAL", "REJECT", "NOT_ASSESSABLE"}
@@ -1084,16 +1092,24 @@ def scoring_verdict(
             "The authoritative score is below 60/100.",
             evidence_gaps,
         )
-    repairable_high = any(
-        item["repairable"] and item["severity"] == "HIGH"
+    unresolved_severe = any(
+        item.get("status", "OPEN") not in {"RESOLVED", "CLOSED", "FIXED"}
+        and (
+            item.get("severity") == "FATAL"
+            or (
+                item.get("severity") == "HIGH"
+                and item.get("repairable") is True
+            )
+        )
         for item in findings
     )
-    if total < 80 or repairable_high:
+    if total < 80 or unresolved_severe:
         return (
             "CONDITIONAL",
             total,
             False,
-            "The authoritative score is 60–79/100 or a repairable HIGH remains.",
+            "The authoritative score is 60–79/100 or an unresolved "
+            "repairable HIGH/FATAL finding remains.",
             evidence_gaps,
         )
     return (
@@ -1299,17 +1315,24 @@ def scoring_verdict_v11(
             "The authoritative C01-C07 weighted score is below 60/100.",
             evidence_gaps,
         )
-    repairable_high = any(
-        item["repairable"] and item["severity"] == "HIGH"
+    unresolved_severe = any(
+        item.get("status", "OPEN") not in {"RESOLVED", "CLOSED", "FIXED"}
+        and (
+            item.get("severity") == "FATAL"
+            or (
+                item.get("severity") == "HIGH"
+                and item.get("repairable") is True
+            )
+        )
         for item in findings
     )
-    if total < 80 or repairable_high:
+    if total < 80 or unresolved_severe:
         return (
             "CONDITIONAL",
             total,
             False,
-            "The C01-C07 weighted score is 60-79/100 or a repairable HIGH "
-            "with sufficient evidence remains.",
+            "The C01-C07 weighted score is 60-79/100 or an unresolved "
+            "repairable HIGH/FATAL finding remains.",
             evidence_gaps,
         )
     return (
@@ -1699,6 +1722,7 @@ def markdown_summary(report: dict[str, Any]) -> str:
     summary = report["summary"]
     configuration = report["configuration"]
     deterministic = report["deterministic_contract"]
+    effective = report.get("effective_deterministic_contract") or deterministic
     deterministic_core = report.get("deterministic_core", {})
     agent_quality = report.get("agent_quality", {})
     finding_lines = (
@@ -1897,7 +1921,9 @@ def markdown_summary(report: dict[str, Any]) -> str:
 - Disposition: {summary['disposition']}
 - Authoritative score (0–100): {summary['total_score']}
 - Scoring version: {summary['scoring_version']}
-- Deterministic D1-D6 status: {summary['deterministic_status']}
+- Machine D1-D6 status: {summary['machine_deterministic_status']}
+- Effective publication D1-D6 status: {summary['effective_deterministic_status']}
+- Agent contract status: {summary['agent_contract_status']}
 - Deterministic repair state: {summary['repair_state']}
 - Core reason: {summary['core_reason']}
 
@@ -1937,13 +1963,21 @@ Reason: This slice checks declared outputs and grading references.
 
 - Schema: {deterministic['schema_version']}
 - Registry: {deterministic['registry_version']}
-- Repair summary: {deterministic['repair_summary']}
-- Checks:
+- Machine repair summary: {deterministic['repair_summary']}
+- Machine checks:
 {chr(10).join(
     f"  - {item['check_id']}: {item['status']} "
     f"(blocking={item['blocking_finding_ids']}; "
     f"advisory={item['advisory_finding_ids']})"
     for item in deterministic['checks']
+)}
+- Effective publication repair summary: {effective['repair_summary']}
+- Effective publication checks:
+{chr(10).join(
+    f"  - {item['check_id']}: {item['status']} "
+    f"(machine={item.get('machine_status', item['status'])}; "
+    f"applied={item.get('adjudication_applied', False)})"
+    for item in effective['checks']
 )}
 
 ### 7.2 D6 Core-Output Scoring Chains
@@ -2063,6 +2097,12 @@ def write_disposition_artifacts(
         "evidence_gaps": evidence_gaps,
         "deterministic_contract": report["deterministic_contract"],
         "deterministic_repair": report["deterministic_repair"],
+        "effective_deterministic_contract": report.get(
+            "effective_deterministic_contract"
+        ),
+        "effective_deterministic_repair": report.get(
+            "effective_deterministic_repair"
+        ),
         "reason": summary["core_reason"],
     }
     manifest_data: dict[str, Any] = {}
@@ -2112,6 +2152,12 @@ def write_disposition_artifacts(
         "evidence_gaps": evidence_gaps,
         "deterministic_contract": report["deterministic_contract"],
         "deterministic_repair": report["deterministic_repair"],
+        "effective_deterministic_contract": report.get(
+            "effective_deterministic_contract"
+        ),
+        "effective_deterministic_repair": report.get(
+            "effective_deterministic_repair"
+        ),
     }
     (temp_dir / "disposition.json").write_text(
         json.dumps(disposition, indent=2, ensure_ascii=False),
@@ -2131,6 +2177,7 @@ def synthesize_report(
     resource_result: dict[str, Any] | None = None,
     execution_evidence: dict[str, Any] | None = None,
     agent_assessment: dict[str, Any] | None = None,
+    agent_contract_assessment: dict[str, Any] | None = None,
     paper_skip_reason: str | None = None,
     external_bindings: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -2342,15 +2389,34 @@ def synthesize_report(
         dimensions_v11,
         hard_gates,
     )
+    effective_contract = None
+    if agent_contract_assessment is not None:
+        effective_contract = derive_effective_contract(
+            deterministic_contract,
+            agent_contract_assessment,
+            hard_gates=hard_gates,
+            agent_quality_findings=[
+                item
+                for item in findings
+                if item.get("lane") in {"agent_quality", "quality_results"}
+            ],
+        )
+        validate_effective_contract(effective_contract)
+    gate_contract = resolve_publication_contract(
+        deterministic_contract,
+        effective_contract,
+        agent_contract_assessment,
+    )
     verdict, deterministic_reason = apply_deterministic_gate(
         verdict=verdict,
         score=score,
         hard_gate=hard_gate,
         evidence_gaps=evidence_gaps,
-        contract=deterministic_contract,
+        contract=gate_contract,
     )
+    effective_status = gate_contract["repair_summary"]["state"]
     deterministic_required = (
-        deterministic_contract["repair_summary"]["state"] == "REQUIRED"
+        effective_status == "REQUIRED"
     )
     if deterministic_reason is not None:
         reason = deterministic_reason
@@ -2375,9 +2441,16 @@ def synthesize_report(
         "disposition": verdict,
         "publishable": verdict == "PASS",
         "repair_state": repair_state,
-        "deterministic_status": deterministic_contract["repair_summary"][
-            "state"
-        ],
+        "deterministic_status": effective_status,
+        "machine_deterministic_status": deterministic_contract[
+            "repair_summary"
+        ]["state"],
+        "effective_deterministic_status": effective_status,
+        "agent_contract_status": (
+            "APPLIED"
+            if agent_contract_assessment is not None
+            else "NOT_SUPPLIED"
+        ),
         "deterministic_repair_required": (
             repair_state == "DETERMINISTIC_REPAIR_REQUIRED"
         ),
@@ -2400,7 +2473,9 @@ def synthesize_report(
     report["summary"].update(canonical)
     report["materials_qualification"] = {
         "axes": [],
-        "prescreen": static_result["materials_prescreen"],
+        "classification_context": static_result[
+            "materials_classification_context"
+        ],
         "authoritative": materials_assessment is not None,
         "classification": materials_class,
         "rationale": (
@@ -2423,6 +2498,28 @@ def synthesize_report(
     report["deterministic_repair"] = deterministic_repair_summary(
         deterministic_contract
     )
+    report["effective_deterministic_contract"] = effective_contract
+    report["effective_deterministic_repair"] = (
+        {
+            "schema_version": effective_contract["schema_version"],
+            "registry_version": effective_contract["registry_version"],
+            "contract_digest": effective_contract[
+                "effective_contract_digest"
+            ],
+            "state": effective_status,
+            "required_findings": effective_contract["repair_summary"][
+                "required_findings"
+            ],
+            "required_finding_ids": effective_contract["repair_summary"][
+                "required_finding_ids"
+            ],
+            "reason": effective_contract["repair_summary"]["reason"],
+            "complete": effective_contract["repair_summary"]["complete"],
+        }
+        if effective_contract is not None
+        else None
+    )
+    report["agent_contract_assessment"] = agent_contract_assessment
     report["source_bindings"] = external_bindings or {
         "assessment_hashes": {},
         "core_contract_digest": None,
@@ -2523,6 +2620,11 @@ def synthesize_report(
         "deterministic_contract_digest": deterministic_contract[
             "contract_digest"
         ],
+        "effective_deterministic_contract_digest": (
+            effective_contract["effective_contract_digest"]
+            if effective_contract is not None
+            else None
+        ),
     }
     report["taxonomy_labels"] = (
         agent_assessment["taxonomy"]
@@ -2688,6 +2790,8 @@ def synthesize_report(
         "schema_version": DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION,
         "lane": "deterministic_core",
         "contract": deterministic_contract,
+        "effective_contract": effective_contract,
+        "agent_contract_assessment": agent_contract_assessment,
         "probe_results": {
             **checker_result.get(
                 "deterministic_core",
@@ -2756,6 +2860,11 @@ def synthesize_report(
     )
     audit_manifest["deterministic_contract_digest"] = (
         deterministic_contract["contract_digest"]
+    )
+    audit_manifest["effective_deterministic_contract_digest"] = (
+        effective_contract["effective_contract_digest"]
+        if effective_contract is not None
+        else None
     )
     audit_manifest["review_lane"] = report["configuration"]["review_lane"]
     audit_manifest["solution_oracle_executed"] = checker_result[
@@ -3360,6 +3469,8 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         != manifest.get("review_implementation", {}).get("aggregate_hash")
         or binding.get("deterministic_contract_digest")
         != manifest.get("deterministic_contract_digest")
+        or binding.get("effective_deterministic_contract_digest")
+        != manifest.get("effective_deterministic_contract_digest")
     ):
         raise ValueError("audit binding differs from its manifest")
     last_position = -1
@@ -3372,13 +3483,42 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
     deterministic_contract = validate_deterministic_contract(
         report.get("deterministic_contract")
     )
+    effective_contract = report.get("effective_deterministic_contract")
+    agent_contract_assessment = report.get("agent_contract_assessment")
+    gate_contract = resolve_publication_contract(
+        deterministic_contract,
+        effective_contract,
+        agent_contract_assessment,
+    )
     if report.get("deterministic_repair") != deterministic_repair_summary(
         deterministic_contract
     ):
         raise ValueError("deterministic repair summary differs from contract")
+    expected_effective_repair = (
+        None
+        if effective_contract is None
+        else {
+            "schema_version": effective_contract["schema_version"],
+            "registry_version": effective_contract["registry_version"],
+            "contract_digest": effective_contract[
+                "effective_contract_digest"
+            ],
+            "state": effective_contract["repair_summary"]["state"],
+            "required_findings": effective_contract["repair_summary"][
+                "required_findings"
+            ],
+            "required_finding_ids": effective_contract["repair_summary"][
+                "required_finding_ids"
+            ],
+            "reason": effective_contract["repair_summary"]["reason"],
+            "complete": effective_contract["repair_summary"]["complete"],
+        }
+    )
+    if report.get("effective_deterministic_repair") != expected_effective_repair:
+        raise ValueError("effective deterministic repair summary is stale")
     if (
         summary.get("deterministic_status")
-        != deterministic_contract["repair_summary"]["state"]
+        != gate_contract["repair_summary"]["state"]
         or summary.get("deterministic_repair_required")
         is not (
             summary.get("repair_state")
@@ -3391,6 +3531,12 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         != deterministic_contract["schema_version"]
         or manifest.get("deterministic_contract_digest")
         != deterministic_contract["contract_digest"]
+        or manifest.get("effective_deterministic_contract_digest")
+        != (
+            effective_contract["effective_contract_digest"]
+            if effective_contract is not None
+            else None
+        )
     ):
         raise ValueError("manifest deterministic binding is stale")
     for artifact_name, artifact in (
@@ -3401,6 +3547,10 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
             artifact.get("deterministic_contract") != deterministic_contract
             or artifact.get("deterministic_repair")
             != deterministic_repair_summary(deterministic_contract)
+            or artifact.get("effective_deterministic_contract")
+            != effective_contract
+            or artifact.get("effective_deterministic_repair")
+            != report.get("effective_deterministic_repair")
         ):
             raise ValueError(
                 f"{artifact_name} deterministic contract differs from report"
@@ -3570,7 +3720,7 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         score=recomputed_total,
         hard_gate=expected_gate_triggered,
         evidence_gaps=recomputed_gaps,
-        contract=deterministic_contract,
+        contract=gate_contract,
     )
     if deterministic_reason is not None:
         expected_reason = deterministic_reason
@@ -3698,6 +3848,9 @@ def previous_audit_destination(output_root: Path, audit_id: str) -> Path:
 def finalize_audit(
     root: Path,
     output_dir: Path | None = None,
+    *,
+    temp_dir: Path | None = None,
+    lock: ReviewOutputLock | None = None,
 ) -> dict[str, Any]:
     resolved_root = root.expanduser().resolve()
     output_root = require_external_output_dir(
@@ -3708,7 +3861,55 @@ def finalize_audit(
         if output_dir is not None
         else "review",
     )
-    temp_dir = output_root / ".benchmark_audit_tmp"
+    if lock is None:
+        manifest_candidates = sorted(
+            (
+                path / "audit_manifest.json"
+                for path in (output_root / ".benchmark_audit_tmp").glob(
+                    "*/audit_manifest.json"
+                )
+                if path.is_file()
+            ),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        run_id = (
+            read_json(manifest_candidates[0]).get("audit_id")
+            if manifest_candidates
+            else "finalize-" + uuid.uuid4().hex
+        )
+        with ReviewOutputLock(output_root, str(run_id)) as owned_lock:
+            return finalize_audit(
+                root,
+                output_dir,
+                temp_dir=temp_dir,
+                lock=owned_lock,
+            )
+    temp_dir = (
+        temp_dir.expanduser().resolve()
+        if temp_dir is not None
+        else None
+    )
+    if temp_dir is None:
+        candidates = sorted(
+            (
+                path
+                for path in (output_root / ".benchmark_audit_tmp").iterdir()
+                if path.is_dir() and not path.is_symlink()
+            ),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        if len(candidates) != 1:
+            raise ValueError(
+                "finalize audit requires exactly one unique temp workspace"
+            )
+        temp_dir = candidates[0]
+    if (
+        temp_dir.parent != output_root / ".benchmark_audit_tmp"
+        or temp_dir.is_symlink()
+    ):
+        raise ValueError("audit temp workspace is outside the canonical run root")
     final_dir = output_root / "benchmark_audit"
     if not temp_dir.is_dir():
         raise FileNotFoundError(temp_dir)
@@ -3748,6 +3949,12 @@ def finalize_audit(
     context_path = temp_dir / "audit_context.json"
     if context_path.exists():
         context_path.unlink()
+    validate_finalized_audit_bundle(
+        temp_dir,
+        manifest,
+        report,
+        read_json(temp_dir / "disposition.json"),
+    )
 
     archived: Path | None = None
     if final_dir.exists():
@@ -3772,9 +3979,19 @@ def finalize_audit(
         if archived is not None and not final_dir.exists():
             archived.rename(final_dir)
         raise
+    finalized_manifest = read_json(final_dir / "audit_manifest.json")
+    finalized_report = read_json(final_dir / "audit_report.json")
+    finalized_disposition = read_json(final_dir / "disposition.json")
+    validate_finalized_audit_bundle(
+        final_dir,
+        finalized_manifest,
+        finalized_report,
+        finalized_disposition,
+    )
     return {
         "benchmark_root": str(root),
         "audit_dir": str(final_dir),
+        "audit_id": manifest["audit_id"],
         "verdict": report["summary"]["final_verdict"],
     }
 

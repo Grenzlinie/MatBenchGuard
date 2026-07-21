@@ -11,10 +11,17 @@
 - Final verdict: NOT_ASSESSABLE
 - Disposition: NOT_ASSESSABLE
 - Publishable: false
+- Canonical review_verdict: NOT_ASSESSABLE
+- Canonical publishability: EVIDENCE_PENDING
+- Canonical repair_decision: NOT_REQUIRED
+- Canonical repair_status: NOT_APPLICABLE
 - Repair state: NOT_REQUIRED
 - Authoritative score (0–100): null
 - Scoring version: materials-review-scoring/2.0
-- Deterministic D1-D6 status: NOT_APPLICABLE
+- Publication effective D1-D6 status: NOT_APPLICABLE
+- Machine deterministic status: NOT_APPLICABLE
+- Effective deterministic status: NOT_APPLICABLE
+- Agent contract status: NOT_SUPPLIED
 - Deterministic repair state: NOT_REQUIRED
 - Publication route: EVIDENCE_PENDING
 - Core reason: Audit not yet completed.
@@ -47,13 +54,30 @@ locations.
 The authoritative report records every D1-D6 status, proven/blocking finding
 IDs, advisory-only findings, the complete deterministic repair queue, and the
 source-bound implementation digest. Advisory risks do not block PASS. A
-publishable PASS requires deterministic `CLEAN`; an OPEN blocking finding at
+publishable PASS requires effective deterministic `CLEAN`; an OPEN blocking finding at
 any severity routes to `CONDITIONAL / REPAIR_QUEUE`.
+
+The machine contract is the authoritative D1-D6 artifact. An optional
+contract-only `agent_contract_assessment` is separate and additive; it can
+overlay only eligible unavailable (`BLOCKED`/`NOT_ASSESSABLE`) checks. It cannot
+override machine `FAIL`, proven facts, runtime contradictions, Hard Gates, or
+quality findings. The effective contract preserves machine findings and
+records the applied assessment.
 
 New deterministic repair plans use
 `materials-deterministic-repair-plan/1.0` and bind the source contract schema,
 registry, digest, audit identity, and every `required_finding_id`. Historical
 unbound repair plan `0.1` artifacts remain evidence archives.
+
+If preparation is incomplete because the machine summary is
+`NOT_APPLICABLE`, Review persists `agent_contract/request.json` under
+`materials-agent-contract-request/1.0` with status
+`AGENT_CONTRACT_PENDING`. The pending response is
+`NOT_ASSESSABLE`, `publishable=false`, and includes `request_path`; resume with
+`--agent-contract-assessment` reuses persisted probes and validates the
+package, implementation, artifact, and machine-contract bindings. A completed
+report records the assessment under `agent_contract_assessment` and the
+additive effective artifact under `effective_deterministic_contract`.
 
 ## 8. Resource Reachability
 
@@ -112,6 +136,13 @@ apply by severity ratio inside that dimension only. `summary.total_score` is the
 weighted 0–100 total. Robustness (C07) also records
 positive/negative/discrimination/equivalence provenance. C06/solution status
 records only solve/positive-mock status and never Oracle values.
+
+`summary.total_score` is a score, not the final verdict or publication route.
+The current artifacts do not emit `quality_score` or `pre_gate_score`. The
+final verdict is `summary.final_verdict`/top-level `review_verdict`; the
+deterministic gate uses the effective contract after Hard Gates and evidence
+availability are applied. `summary.publication_route`/top-level
+`publishability` are routing fields, not scores.
 
 | dim | title | weight | earned | normalized | key | finding IDs |
 | --- | --- | --- | --- | --- | --- | --- |

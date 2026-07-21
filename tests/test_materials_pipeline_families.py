@@ -397,7 +397,7 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            # Classification is Agent-authoritative (no keyword prescreen); a
+            # Classification is Agent-authoritative; a
             # NON_MAT verdict is the only thing that fires the C01 Hard Gate.
             quote = (
                 "Sort generic records and write "
@@ -462,7 +462,7 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
                 )["publishable"]
             )
 
-    def test_agent_materials_qualification_overrides_lexical_prescreen(self) -> None:
+    def test_agent_materials_qualification_overrides_lexical_guess(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package = workspace / "paper-boundary-material"
@@ -523,7 +523,9 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
             )
             self.assertEqual(report["summary"]["materials_class"], "MAT_CORE")
             self.assertEqual(
-                report["materials_qualification"]["prescreen"]["classification"],
+                report["materials_qualification"]["classification_context"][
+                    "classification"
+                ],
                 "NOT_PROVIDED",
             )
             self.assertTrue(report["materials_qualification"]["authoritative"])

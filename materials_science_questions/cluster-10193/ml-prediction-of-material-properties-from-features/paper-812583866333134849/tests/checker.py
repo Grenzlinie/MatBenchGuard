@@ -140,8 +140,9 @@ def score_0(artifact, step, ctx):
         if not group:
             checks.append(0)
             continue
-        y_true = [int(r['true_coordination']) for r in group]
-        y_pred = [int(r['predicted_coordination']) for r in group]
+        # Assessment baseline: y_true = [int(r['true_coordination']) for r in group]
+        y_true = [int(float(r['true_coordination'])) if math.isfinite(float(r['true_coordination'])) and float(r['true_coordination']).is_integer() else None for r in group]
+        y_pred = [int(float(r['predicted_coordination'])) if math.isfinite(float(r['predicted_coordination'])) and float(r['predicted_coordination']).is_integer() else None for r in group]
         acc = accuracy_score(y_true, y_pred)
         thr_acc = thresholds['accuracy'].get(metal, 1.0)
         checks.append(1.0 if acc >= thr_acc - 1e-9 else 0.0)
@@ -230,8 +231,8 @@ def score_3(artifact, step, ctx):
         for m in metals:
             g = [r for r in rows if r['metal']==m]
             if not g: continue
-            yt = [int(r['true_coordination']) for r in g]
-            yp = [int(r['predicted_coordination']) for r in g]
+            yt = [int(float(r['true_coordination'])) if math.isfinite(float(r['true_coordination'])) and float(r['true_coordination']).is_integer() else None for r in g]
+            yp = [int(float(r['predicted_coordination'])) if math.isfinite(float(r['predicted_coordination'])) and float(r['predicted_coordination']).is_integer() else None for r in g]
             acc = accuracy_score(yt, yp)
             f1s = {cl: f1_score(yt, yp, cl) for cl in [4,5,6]}
             out[m] = {'accuracy': acc, 'f1_4': f1s[4], 'f1_5': f1s[5], 'f1_6': f1s[6]}
@@ -253,12 +254,15 @@ def score_3(artifact, step, ctx):
     }
     # Compare with submitted metrics.json
     sub = artifact
+    if not isinstance(sub.get('coordination'), dict):
+        return 0.0
     for prop in ['coordination','distance','charge']:
         if prop not in sub:
             return 0.0
         if prop == 'coordination':
             for m in recomputed[prop]:
                 if m not in sub[prop]: return 0.0
+                if not isinstance(sub[prop][m], dict): return 0.0
                 for k in ['accuracy','f1_4','f1_5','f1_6']:
                     if abs(sub[prop][m].get(k,0) - recomputed[prop][m][k]) > step['tolerance']:
                         return 0.0

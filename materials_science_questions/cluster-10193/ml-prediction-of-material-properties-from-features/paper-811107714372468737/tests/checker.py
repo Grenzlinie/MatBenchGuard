@@ -143,6 +143,8 @@ def score_0(artifact, step, ctx):
         total = convex_weight * convex_score + cusp_weight * cusp_score
         return min(max(total, 0.0), 1.0)
 
+    return score(artifact, step, ctx)
+
 
 # === block: score_1 (check id='step_sigma13_energy') ===
 def score_1(artifact, step, ctx):
@@ -160,6 +162,8 @@ def score_1(artifact, step, ctx):
                 else:
                     return 0.0
         return 0.0
+
+    return score(artifact, step, ctx)
 
 
 # === block: score_2 (check id='step_sigma13_translation') ===
@@ -179,6 +183,8 @@ def score_2(artifact, step, ctx):
                         return 0.0
                 return 1.0
         return 0.0
+
+    return score(artifact, step, ctx)
 
 
 _SCORERS = {

@@ -28,6 +28,7 @@ sys.path.insert(0, str(REPAIR_SCRIPTS))
 import deterministic_contract  # noqa: E402
 import dynamic_checker_probe  # noqa: E402
 import artifact_schema  # noqa: E402
+import audit_integrity  # noqa: E402
 import certify_final_100  # noqa: E402
 import prepare_audit_output  # noqa: E402
 
@@ -75,10 +76,29 @@ class MaterialsReviewLaneTests(unittest.TestCase):
                     "schema_version": artifact_schema.AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION
                 },
             }
+            implementation = (
+                prepare_audit_output.collect_review_implementation_hashes()
+            )
+            files["audit_manifest.json"]["review_implementation"] = implementation
+            files["audit_report.json"]["audit_binding"] = {
+                "implementation_hash": implementation["aggregate_hash"]
+            }
+            files["disposition.json"] = {"audit_id": "audit-1"}
             for relative, value in files.items():
+                if relative == "audit_manifest.json":
+                    continue
                 path = audit / relative
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(json.dumps(value), encoding="utf-8")
+            output_hashes = audit_integrity.actual_output_hashes(audit)
+            files["audit_manifest.json"]["output_hashes"] = output_hashes
+            files["audit_manifest.json"]["bundle_hash"] = (
+                audit_integrity.canonical_json_hash(output_hashes)
+            )
+            manifest_path = audit / "audit_manifest.json"
+            manifest_path.write_text(
+                json.dumps(files["audit_manifest.json"]), encoding="utf-8"
+            )
 
             payload = prepare_audit_output.audit_attestation_payload(audit)
 

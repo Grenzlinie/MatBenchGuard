@@ -23,6 +23,29 @@ FINDINGS_SCHEMA_VERSION = "materials-audit-findings/2.0"
 CHECKER_TESTS_SCHEMA_VERSION = "materials-checker-tests/2.0"
 RESOURCE_CHECKS_SCHEMA_VERSION = "materials-resource-checks/2.0"
 AGENT_ASSESSMENT_SCHEMA_VERSION = "materials-agent-assessment/2.0"
+AGENT_CONTRACT_ASSESSMENT_SCHEMA_VERSION = (
+    "materials-agent-contract-assessment/1.0"
+)
+AGENT_CONTRACT_REQUEST_SCHEMA_VERSION = (
+    "materials-agent-contract-request/1.0"
+)
+EFFECTIVE_DETERMINISTIC_CONTRACT_SCHEMA_VERSION = (
+    "materials-effective-deterministic-contract/1.0"
+)
+# Descriptive aliases keep the review-side seam discoverable without creating
+# independent schema versions.
+AGENT_CONTRACT_WIRING_SCHEMA_VERSION = (
+    AGENT_CONTRACT_ASSESSMENT_SCHEMA_VERSION
+)
+AGENT_CONTRACT_WIRING_ASSESSMENT_SCHEMA_VERSION = (
+    AGENT_CONTRACT_ASSESSMENT_SCHEMA_VERSION
+)
+EFFECTIVE_CONTRACT_SCHEMA_VERSION = (
+    EFFECTIVE_DETERMINISTIC_CONTRACT_SCHEMA_VERSION
+)
+EFFECTIVE_CONTRACT_ARTIFACT_SCHEMA_VERSION = (
+    EFFECTIVE_DETERMINISTIC_CONTRACT_SCHEMA_VERSION
+)
 
 DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION = (
     "materials-deterministic-core/2.0"

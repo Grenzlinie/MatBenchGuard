@@ -51,7 +51,10 @@ class MaterialsReviewExternalAuditTests(unittest.TestCase):
                 output.resolve(),
             )
             self.assertTrue(
-                (output / ".benchmark_audit_tmp/audit_manifest.json").is_file()
+                (
+                    Path(context["audit_temp_dir"])
+                    / "audit_manifest.json"
+                ).is_file()
             )
             self.assertEqual(context["review_lane"], "dual")
 

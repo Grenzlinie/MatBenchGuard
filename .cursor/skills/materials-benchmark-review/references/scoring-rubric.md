@@ -64,6 +64,18 @@ Review side). The publication route is derived from the verdict
 - `NOT_ASSESSABLE`: a key dimension is null (temporary required evidence
   unavailable) and no Hard Gate forces rejection.
 
+`summary.total_score` is the authoritative C01–C07 weighted score, not the
+verdict and not a publication route. The current artifacts do not emit
+`quality_score` or `pre_gate_score`; those are not alternate score fields.
+Finalization applies Hard Gates, evidence availability, and the effective
+deterministic contract after scoring. The canonical final verdict is
+`summary.final_verdict` and top-level `review_verdict`; the route is
+`summary.publication_route` and top-level `publishability`. The machine and
+effective contract states remain separately visible as
+`summary.machine_deterministic_status` and
+`summary.effective_deterministic_status` (also
+`summary.deterministic_status`).
+
 Every scored finding is attributed to exactly one C01–C07 dimension.
 
 ## Lanes, robustness, and discrimination (C07)
@@ -81,6 +93,16 @@ external result directory. Review records them as unavailable in deterministic
 probe coverage with `source_kind=NONE`; the Agent may separately justify Gold,
 target, unit, formula, tolerance, threshold, and scoring direction from the
 paper or authoritative sources.
+
+The contract-only Agent assessment is different from those quality
+assessments. It uses only `instruction.md`, `tests/**/grading_spec` (with an
+optional extension), and deterministic probe artifacts, and only the claim
+scopes `CONTRACT_WIRING` or `DETERMINISTIC_CONTRACT`. It cannot use
+`paper/`, `solution/`, Oracle output, metadata, `tests/checker.py`, or
+science-quality evidence, and cannot adjudicate Gold, targets, tolerances,
+formulas, units, thresholds, or scoring direction. It may overlay only an
+eligible unavailable D1–D6 check, never a machine `FAIL`, proven fact, runtime
+contradiction, Hard Gate, or quality finding.
 
 Every deduction records a deterministic deduction ID, finding ID, point value,
 severity, observed fact, and exact affected location. Classification as
@@ -218,7 +240,7 @@ Repair runs fail-before and pass-after causal regressions, then invokes the
 equal-depth dual-lane Review CLI exactly once. Only that re-audit may establish the
 post-repair verdict and D1–D6 state. Atomic publication requires all of:
 
-`PASS + deterministic CLEAN + no Hard Gate + preserved identity + allowed
+`PASS + effective deterministic CLEAN + no Hard Gate + preserved identity + allowed
 mutation scope + every target finding resolved`.
 
 Residual deterministic blockers are terminal and non-publishable; local repair

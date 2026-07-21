@@ -4,14 +4,21 @@
 
 ```
 [Stage 0 Materials admissibility]  Agent reads Problem background / Approach /
-  Reproduction target and adjudicates (no keyword prescreen).
+  Reproduction target and adjudicates; deterministic code does not infer it.
   ├─ NON_MAT ─────► fail-fast REJECT (C01 Hard Gate); paper is NOT read.
   └─ MAT_CORE / MAT_METHOD / MAT_WRAPPER / AMBIGUOUS → continue (Wrapper is a task).
-[Stage 1 Deterministic core lane]  D1–D6 plus code-defined runtime probes.
+[Stage 1 Deterministic core lane]  machine D1–D6 contract plus code-defined
+  runtime probes.
+  ├─ CLEAN ───────► continue
+  ├─ REQUIRED ────► score, then CONDITIONAL / REPAIR_QUEUE when eligible
+  └─ NOT_APPLICABLE ─► persist contract request and return
+      AGENT_CONTRACT_PENDING until an external contract assessment is supplied.
+[Stage 1b Contract-only Agent overlay]  only eligible unavailable D1–D6 checks
+  may receive PASS; derive an additive effective contract.
 [Stage 2 Agent quality lane]  scientific justification and quality results.
 [Stage 3 Score + disposition]  C01–C07 normalized + weighted total + Hard Gates +
   verdict + unified terminal fields.
-  ├─ PASS           → publishable=true only when D1–D6=CLEAN
+  ├─ PASS           → publishable=true only when effective D1–D6=CLEAN
   ├─ CONDITIONAL    → repair
   ├─ REJECT         → abandon (total < 60 or a Hard Gate)
   └─ NOT_ASSESSABLE → re-audit after evidence is restored
@@ -20,16 +27,19 @@
 ```
 
 Repair is never a second scoring authority. It runs the canonical Review CLI
-exactly once at equal dual-lane depth after the isolated candidate pass. That one
-re-audit controls the post-repair verdict, D1–D6 state, Hard-Gate result, and
-target resolution.
+at equal dual-lane depth after the isolated candidate pass. A normal run
+finalizes in one invocation. If Review first returns
+`AGENT_CONTRACT_PENDING`, the prepared re-audit is resumed with the external
+contract assessment without rerunning its persisted probes; that completed
+re-audit is still the sole post-repair authority for verdict, D1–D6 state,
+Hard-Gate result, and target resolution.
 
 ## Classification reform (Agent-adjudicated)
 
 Classification is authoritative from the Agent reading the instruction's
 structured fields `## Problem background`, `## Approach`, and
 `## Reproduction target`; if fields are missing, the Agent reads the whole text
-and records `AMBIGUOUS`. There is no keyword prescreen. The Agent emits a
+and records `AMBIGUOUS`. No lexical fallback is used. The Agent emits a
 classification in {MAT_CORE, MAT_METHOD, MAT_WRAPPER, NON_MAT, AMBIGUOUS} with an
 exact `package_file` + `package_quote` per class. Only `NON_MAT` triggers the C01
 Hard Gate (REJECT); every other class continues (`AMBIGUOUS` may require more
@@ -52,15 +62,68 @@ is `NOT_ASSESSABLE`.
 
 Each D1–D6 check emits exactly one of `PASS`, `FAIL`, `BLOCKED`, or
 `NOT_ASSESSABLE`. Proven, OPEN, repairable D1–D6 findings are blocking; static
-warnings and unproven reachability risks are advisory. The deterministic repair
-summary is `CLEAN`, `REQUIRED`, or `NOT_APPLICABLE`, and `REQUIRED` contains
-the complete source queue, never a selected subset.
+warnings and unproven reachability risks are advisory. The machine deterministic
+repair summary is `CLEAN`, `REQUIRED`, or `NOT_APPLICABLE`, and `REQUIRED`
+contains the complete source queue, never a selected subset.
 
 Malformed, full-integration, partial, and all-wrong runtime cases are
 schema/step-derived code checks. The Agent does not author their files or
 interpret their values scientifically. Gold, target, unit, formula, tolerance,
 threshold, and scoring-direction justification belongs only to the Agent
 quality lane and requires source evidence.
+
+### Machine contract, contract-only Agent assessment, and effective contract
+
+The machine contract is authoritative and is persisted in
+`deterministic_core/report.json` and the report's `deterministic_contract`.
+It contains the D1–D6 statuses, machine findings, blocking queue, registry
+version, and `contract_digest`. An external `agent_contract_assessment` never
+rewrites that artifact.
+
+The contract-only Agent assessment uses schema
+`materials-agent-contract-assessment/1.0`, lane `deterministic_core`, and
+machine schema/registry/digest bindings. It contains D1 through D6 in order;
+each check is `PASS` or `NOT_PROVEN` with a rationale. Its provenance is
+`EXTERNAL_AGENT_ASSESSMENT`. Accepted evidence is limited to:
+
+- `instruction.md` (`source_kind=INSTRUCTION`);
+- `tests/**/grading_spec` with an optional extension
+  (`source_kind=GRADING_SPEC`); and
+- deterministic probe artifacts under `deterministic_core/` or
+  `deterministic_probe_artifacts/` (`source_kind=DETERMINISTIC_PROBE_ARTIFACT`).
+
+Evidence claim scope is only `CONTRACT_WIRING` or
+`DETERMINISTIC_CONTRACT`. The assessment must not use `paper/`, `solution/`,
+Oracle output, metadata, `tests/checker.py`, or science-quality evidence, and
+must not adjudicate Gold, targets, tolerances, formulas, units, thresholds, or
+scoring direction. `quality_results` and `agent_quality` findings are never
+merged into this lane.
+
+`NOT_APPLICABLE` is a deterministic repair-summary state, not an Agent check
+status. The Agent may directly overlay only a machine check whose status is
+`BLOCKED` or `NOT_ASSESSABLE`, with no proven finding, blocking finding,
+dependency failure, missing input, Hard Gate, or usable runtime contradiction.
+An Agent `PASS` can make that eligible unavailable check effectively `PASS`.
+Machine `FAIL`, any proven machine fact, runtime contradiction, Hard Gate, and
+quality finding cannot be overlaid. `NOT_PROVEN` leaves the check unavailable.
+Machine findings and blockers remain preserved in the effective artifact.
+
+The additive effective artifact has schema
+`materials-effective-deterministic-contract/1.0` and is persisted as
+`effective_deterministic_contract` in the report and as `effective_contract` in
+`deterministic_core/report.json`. It records machine and effective statuses,
+the assessment digest, eligibility and applied-check lists, and an effective
+repair summary. It may change only an eligible unavailable check from
+`BLOCKED`/`NOT_ASSESSABLE` to `PASS`; it cannot suppress machine findings or
+change a machine `FAIL`.
+
+Review persists `agent_contract/request.json` only when the machine summary is
+`NOT_APPLICABLE` and the assessment is not yet supplied. The request has schema
+`materials-agent-contract-request/1.0`, status `AGENT_CONTRACT_PENDING`, and
+hashes for the package, Review implementation, static/probe artifacts, and
+machine contract. A pending result is `NOT_ASSESSABLE`, not publishable, and
+includes `request_path`; resuming with `--agent-contract-assessment` validates
+those bindings and reuses the persisted probes.
 
 ## Checker execution precondition
 
@@ -109,10 +172,37 @@ and C06 (an indispensable direct input is permanently unavailable with no
 equivalent).
 
 An atomic repair publication is permitted only when the single equal-depth
-dual-lane re-audit reports overall `PASS`, deterministic `CLEAN`, no failed Hard Gate,
+dual-lane re-audit reports overall `PASS`, effective deterministic `CLEAN`, no failed Hard Gate,
 preserved package identity, allowed mutation scope, and resolution of every
 target finding. Residual deterministic blockers map to a non-published
 terminal state.
+
+Repair retains a complete external re-audit/history bundle for non-PASS
+outcomes, including partial, abandoned, and rolled-back attempts. The retained
+candidate/snapshot, re-audit report, unresolved findings, regression results,
+comparison, evidence, and history metadata preserve severe residuals as stable
+findings; they are not discarded or replaced by a score-only summary.
+
+## Score versus deterministic gate
+
+`summary.total_score` is the authoritative weighted C01–C07 total on a 0–100
+scale. It is not a verdict and does not by itself make a package publishable.
+The current artifacts do not emit `quality_score` or `pre_gate_score`; do not
+invent or consume those names.
+
+The finalizer first computes the C01–C07 score and then applies Hard Gates,
+evidence availability, and the deterministic contract gate. The report's
+`summary.final_verdict` (also the canonical top-level `review_verdict`) is the
+final result. `summary.machine_deterministic_status` is the machine summary;
+`summary.effective_deterministic_status` and `summary.deterministic_status`
+identify the contract used by the final gate. The publication route is separate:
+`summary.publication_route`, top-level `publishability`, and
+`disposition.json.route` contain `PUBLISH_CANDIDATE`, `REPAIR_QUEUE`,
+`QUARANTINE`, or `EVIDENCE_PENDING`.
+
+The effective deterministic state can turn an otherwise passing score into
+`CONDITIONAL` when it is `REQUIRED`, or into `NOT_ASSESSABLE` when it is not
+complete. Only a valid `CLEAN` state permits a scored `PASS` to remain PASS.
 
 ## Unified terminal fields
 
@@ -121,3 +211,14 @@ NOT_ASSESSABLE), `publishable` (bool), and `repair_state` (NOT_REQUIRED at
 review time; REPAIRED / PARTIALLY_REPAIRED / ABANDONED / ROLLED_BACK after
 repair). `publication_route` records the current publishability route
 (PUBLISH_CANDIDATE / REPAIR_QUEUE / QUARANTINE / EVIDENCE_PENDING).
+
+The top-level canonical fields are `review_verdict`, `publishability`,
+`repair_decision`, and `repair_status`. `summary.disposition` is the verdict;
+it is not the publication route. A Review preparation pause is returned as
+`AGENT_CONTRACT_PENDING` with `review_verdict=NOT_ASSESSABLE`,
+`publishability=EVIDENCE_PENDING`, and `publishable=false`; it is not a final
+audit bundle.
+
+There is no E1–E4 evidence-tier routing and no no-paper route. The dual-lane
+path is mandatory; only an authoritative Stage 0 `NON_MAT` classification
+skips `paper/`.

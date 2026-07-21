@@ -3,9 +3,11 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -41,6 +43,54 @@ def repair_module() -> Any:
 
 
 class MaterialsRepairInfrastructureTests(unittest.TestCase):
+    def test_changed_implementation_scope_does_not_reuse_old_breaker_history(
+        self,
+    ) -> None:
+        module = repair_module()
+        report = {"audit_id": "audit-scope"}
+        with patch.object(
+            module, "docker_image_identity", return_value="docker:test"
+        ), patch.object(
+            module,
+            "collect_review_implementation_hashes",
+            return_value={"aggregate_hash": "old-review"},
+        ):
+            old_scope = module.control_scope_id(report)
+        with patch.object(
+            module, "docker_image_identity", return_value="docker:test"
+        ), patch.object(
+            module,
+            "collect_review_implementation_hashes",
+            return_value={"aggregate_hash": "new-review"},
+        ):
+            new_scope = module.control_scope_id(report)
+        self.assertNotEqual(old_scope, new_scope)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            history = Path(temporary)
+            old_attempt = history / "old-control"
+            old_attempt.mkdir()
+            (old_attempt / "attempt_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "root_cause": "root-cause",
+                        "attempt_kind": "CONTROL_FAILURE",
+                        "control_scope_id": old_scope,
+                        "retryable": False,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with patch.object(
+                module, "history_root_for", return_value=history
+            ), patch.object(module, "validate_fixed_bundle"):
+                fresh_scope_history = module.prior_control_failures(
+                    Path(temporary) / "package",
+                    "root-cause",
+                    new_scope,
+                )
+            self.assertEqual(fresh_scope_history, [])
+
     def test_control_breaker_separates_transient_and_deterministic_failures(
         self,
     ) -> None:

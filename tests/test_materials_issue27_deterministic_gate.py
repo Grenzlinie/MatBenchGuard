@@ -324,11 +324,22 @@ class MaterialsIssue27DeterministicGateTests(unittest.TestCase):
             "schema_version": contract["schema_version"],
             "registry_version": contract["registry_version"],
             "contract_digest": contract["contract_digest"],
+            "audit_id": "A1",
+            "required_finding_ids": contract["repair_summary"][
+                "required_finding_ids"
+            ],
         }
         with self.assertRaisesRegex(ValueError, "complete source queue"):
             validate_deterministic_plan_binding(
-                {"deterministic_contract": contract},
-                {"deterministic_contract": binding, "findings": []},
+                {"audit_id": "A1", "deterministic_contract": contract},
+                {
+                    "deterministic_contract": binding,
+                    "source_audit": {
+                        "audit_id": "A1",
+                        "deterministic_contract": binding,
+                    },
+                    "findings": [],
+                },
             )
 
 

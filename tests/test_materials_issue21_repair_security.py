@@ -315,10 +315,8 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
 
             completed = run_repair(package, path, runner)
 
-            self.assertEqual(completed.returncode, 3)
-            self.assertEqual(
-                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
-            )
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn("attestation", completed.stderr)
 
     def test_tampered_authoritative_audit_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -335,10 +333,8 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
 
             completed = run_repair(package, path, runner)
 
-            self.assertEqual(completed.returncode, 3)
-            self.assertEqual(
-                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
-            )
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn("attestation", completed.stderr)
 
     def test_stale_current_review_implementation_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -359,10 +355,8 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
 
             completed = run_repair(package, path, runner)
 
-            self.assertEqual(completed.returncode, 3)
-            self.assertEqual(
-                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
-            )
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn("authoritative bytes", completed.stderr)
 
     def test_fabricated_source_is_abandoned_before_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -381,7 +375,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 3)
             result = json.loads(completed.stdout)
             self.assertEqual(result["decision"], "ABANDON")
-            self.assertEqual(result["status"], "BLOCKED_EVIDENCE")
+            self.assertEqual(result["status"], "ABANDONED")
             self.assertEqual(sha256_file(package / "instruction.md"), before)
             self.assertFalse((package / "benchmark_repair").exists())
 
@@ -409,7 +403,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
                     self.assertEqual(completed.returncode, 3)
                     self.assertEqual(
                         json.loads(completed.stdout)["status"],
-                        "BLOCKED_EVIDENCE",
+                        "ABANDONED",
                     )
 
     def test_wrong_quote_or_hash_is_blocked(self) -> None:
@@ -432,7 +426,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
                     self.assertEqual(completed.returncode, 3)
                     self.assertEqual(
                         json.loads(completed.stdout)["status"],
-                        "BLOCKED_EVIDENCE",
+                        "ABANDONED",
                     )
 
     def test_resolved_finding_cannot_be_repaired(self) -> None:
@@ -450,10 +444,8 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
 
             completed = run_repair(package, path, runner)
 
-            self.assertEqual(completed.returncode, 3)
-            self.assertEqual(
-                json.loads(completed.stdout)["decision"], "ABANDON"
-            )
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn("authoritative bytes", completed.stderr)
 
     def test_method_quote_cannot_lower_threshold(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -501,7 +493,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 3)
             self.assertEqual(
-                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+                json.loads(completed.stdout)["status"], "ABANDONED"
             )
             self.assertEqual(
                 json.loads(
@@ -559,7 +551,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 3)
             result = json.loads(completed.stdout)
-            self.assertEqual(result["status"], "POLICY_VIOLATION")
+            self.assertEqual(result["status"], "ABANDONED")
             self.assertNotIn(
                 "secret_field",
                 (package / "tests/checker.py").read_text(encoding="utf-8"),
@@ -595,11 +587,8 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
                     path = workspace / f"{field}.json"
                     write_plan(path, plan)
                     completed = run_repair(package, path, runner)
-                    self.assertEqual(completed.returncode, 3)
-                    self.assertEqual(
-                        json.loads(completed.stdout)["status"],
-                        "BLOCKED_EVIDENCE",
-                    )
+                    self.assertEqual(completed.returncode, 2)
+                    self.assertIn(field, completed.stderr)
 
     def test_unrelated_paper_quote_cannot_set_gold_value(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -667,7 +656,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 3)
             self.assertEqual(
-                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+                json.loads(completed.stdout)["status"], "ABANDONED"
             )
 
     def test_same_file_extra_operation_needs_its_own_semantic_assertion(self) -> None:
@@ -768,7 +757,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 3)
             self.assertEqual(
-                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+                json.loads(completed.stdout)["status"], "ABANDONED"
             )
 
     def test_abandon_plan_cannot_carry_an_operation(self) -> None:
@@ -846,7 +835,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 3)
             self.assertEqual(
-                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+                json.loads(completed.stdout)["status"], "ABANDONED"
             )
 
     def test_json_replace_cannot_invent_field_with_harbor_path_evidence(self) -> None:
@@ -898,7 +887,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 3)
             self.assertEqual(
-                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+                json.loads(completed.stdout)["status"], "ABANDONED"
             )
 
     def test_every_operation_requires_causal_regression_coverage(self) -> None:
@@ -984,10 +973,8 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
 
             completed = run_repair(package, path, runner)
 
-            self.assertEqual(completed.returncode, 3)
-            self.assertEqual(
-                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
-            )
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn("frozen core-contract digest", completed.stderr)
 
 
 if __name__ == "__main__":

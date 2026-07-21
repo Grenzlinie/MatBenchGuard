@@ -154,7 +154,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 3)
             result = json.loads(completed.stdout)
-            self.assertEqual(result["status"], "BLOCKED_EVIDENCE")
+            self.assertEqual(result["status"], "ABANDONED")
             self.assertEqual(sha256_file(package / "instruction.md"), before)
             self.assertFalse((package / "benchmark_repair").exists())
 
@@ -173,7 +173,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 3)
             result = json.loads(completed.stdout)
-            self.assertEqual(result["status"], "BLOCKED_EVIDENCE")
+            self.assertEqual(result["status"], "ABANDONED")
             self.assertFalse((package / "benchmark_repair").exists())
 
     def test_approved_primary_web_evidence_can_drive_assisted_fix(self) -> None:
@@ -236,9 +236,9 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
             completed = run_repair(package, plan, runner)
 
             self.assertEqual(completed.returncode, 3)
-            self.assertEqual(
-                json.loads(completed.stdout)["status"], "POLICY_VIOLATION"
-            )
+            result = json.loads(completed.stdout)
+            self.assertEqual(result["status"], "ABANDONED")
+            self.assertIn("core science", result["unresolved"][0]["reason"])
 
 
 
@@ -272,7 +272,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 3)
             self.assertEqual(
-                json.loads(completed.stdout)["status"], "POLICY_VIOLATION"
+                json.loads(completed.stdout)["status"], "ABANDONED"
             )
             self.assertNotIn(
                 secret,
@@ -315,7 +315,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 3)
             self.assertEqual(
-                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+                json.loads(completed.stdout)["status"], "ABANDONED"
             )
             self.assertEqual(
                 sha256_file(package / "tests/grading_spec.json"), before
@@ -356,7 +356,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
             ]
             self.assertEqual(
                 [item["status"] for item in results],
-                ["ROLLED_BACK", "ROLLED_BACK", "ROLLED_BACK"],
+                ["ROLLED_BACK", "INFRASTRUCTURE_BLOCKED", "INFRASTRUCTURE_BLOCKED"],
             )
             self.assertEqual(
                 sha256_file(package / "instruction.md"), instruction_before
@@ -375,9 +375,9 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
                 ),
                 key=lambda item: item["attempt_number"],
             )
-            self.assertEqual(
+            self.assertCountEqual(
                 [item["status"] for item in attempts],
-                ["ROLLED_BACK", "ROLLED_BACK", "ROLLED_BACK"],
+                ["ROLLED_BACK", "INFRASTRUCTURE_BLOCKED"],
             )
             for path in history_root.glob("*/attempt_manifest.json"):
                 attempt = json.loads(path.read_text(encoding="utf-8"))

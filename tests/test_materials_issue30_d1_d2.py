@@ -354,32 +354,71 @@ class MaterialsIssue30D1D2Tests(unittest.TestCase):
                     "outputs": [{"file": "result.csv"}]
                 },
             }
+            contract = evaluate_deterministic_contract(
+                normalized_instruction_contract={},
+                grading_contract={},
+                checker_analysis={
+                    "d6_core_output_scoring": {"status": "PROVEN"}
+                },
+                package_roles={},
+                findings=[
+                    {
+                        **report["findings"][0],
+                        "status": "OPEN",
+                        "repairable": True,
+                        "lane": "deterministic_core",
+                        "evidence": {},
+                    }
+                ],
+            )
+            report["deterministic_contract"] = contract
+            report["deterministic_core"]["contract"] = contract
             write_json(report_path, report)
+            deterministic_core_path = (
+                external_audit_dir(package) / "deterministic_core/report.json"
+            )
+            write_json(deterministic_core_path, report["deterministic_core"])
             manifest_path = external_audit_dir(package) / "audit_manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["output_hashes"]["audit_report.json"] = sha256_file(
                 report_path
             )
+            manifest["output_hashes"][
+                "deterministic_core/report.json"
+            ] = sha256_file(deterministic_core_path)
             write_json(manifest_path, manifest)
             write_audit_attestation(package)
             core_digest = repair_module().core_contract_digest(package)
 
             old = "Compute the evidence-backed quantity.\n"
             new = old + "- Output file: /app/outputs/result.csv\n"
-            plan = {
-                "schema_version": "0.1",
+            binding = {
+                "schema_version": contract["schema_version"],
+                "registry_version": contract["registry_version"],
+                "contract_digest": contract["contract_digest"],
                 "audit_id": report["audit_id"],
+                "required_finding_ids": contract["repair_summary"][
+                    "required_finding_ids"
+                ],
+            }
+            plan = {
+                "schema_version": "materials-deterministic-repair-plan/1.0",
+                "audit_id": report["audit_id"],
+                "deterministic_contract": binding,
                 "core_contract_digest": core_digest,
                 "source_audit": {
                     "audit_id": report["audit_id"],
                     "input_hashes": manifest["input_hashes"],
+                    "review_implementation": manifest["review_implementation"],
                     "review_lane": "dual",
                     "core_contract_digest": core_digest,
+                    "deterministic_contract": binding,
                 },
                 "findings": [
                     {
                         "finding_id": finding_id,
                         "deterministic_check": "D2",
+                        "finding_code": "INSTRUCTION_INTERNAL_INCONSISTENCY",
                         "repair_class": "AUTO_FIX",
                         "justification": "Synchronize the missing output declaration.",
                         "core_science_change": False,

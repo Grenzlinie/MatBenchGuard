@@ -57,7 +57,7 @@ Repair 仅在一次等深双车道 重审同时满足总体 `PASS`、D1–D6 全
 25. As a benchmark owner, I want Repair to run exactly one equal-depth dual-lane re-audit, so that before/after evidence remains comparable.
 26. As a benchmark owner, I want any remaining D1–D6 blocker to prevent atomic publication, so that partially repaired packages remain quarantined.
 27. As a benchmark owner, I want successful repair to imply both overall PASS and deterministic CLEAN, so that downstream certification can rely on one invariant.
-28. As a repository maintainer, I want existing non-deterministic repair plan 0.1 inputs to remain readable, so that historical repair bundles remain evidence archives.
+28. As a repository maintainer, I want legacy repair plans readable only inside historical bundles, while active Repair rejects them before execution or terminal recording.
 29. As a repository maintainer, I want new deterministic repair plans to bind the source deterministic schema, so that stale plans fail closed.
 30. As an agent implementing one ticket, I want a high-level Review seam and Repair seam for tests, so that behavior can be verified without coupling tests to internal helper functions.
 
@@ -86,7 +86,7 @@ Repair 仅在一次等深双车道 重审同时满足总体 `PASS`、D1–D6 全
 - Require ASSISTED_FIX for any operation that chooses or introduces scientific fields, units, Gold, tolerances, thresholds, scoring importance, scorer algorithms or ambiguous checker behavior.
 - Never use solution/Oracle content as evidence for a public instruction or checker-science change.
 - Keep unrecoverable core-output non-assessment as the existing checker-core Hard Gate.
-- Extend the deterministic repair plan schema while continuing to validate historical 0.1 plans. A deterministic plan must cover the full source queue and bind each finding’s check identity.
+- Active Repair accepts only `materials-deterministic-repair-plan/1.0` batch plans. Archival bundle validation may read historical 0.1/0.2 plans, but they cannot enter execution. Every active plan, including all-`ABANDON`, must cover the full source queue and bind each finding’s check identity, source hashes, source audit, and deterministic contract digest.
 - Require fail-before and pass-after causal regressions for every operation, followed by one equal-depth Review.
 - Publish only when the re-audit is overall PASS and the shared deterministic-contract module returns CLEAN.
 - Keep Review non-mutating. The caller invokes Repair after Review routes the package to the deterministic repair queue.
@@ -106,7 +106,7 @@ Repair 仅在一次等深双车道 重审同时满足总体 `PASS`、D1–D6 全
 - Verify that Repair rejects a deterministic plan omitting any source blocking finding.
 - Verify AUTO_FIX allowlisting for structural instruction/tests changes and rejection of semantic or unsupported modifications.
 - Verify ASSISTED_FIX evidence precision for weight, scorer and scoring-contract changes.
-- Verify schema 0.1 compatibility and deterministic schema stale-binding rejection.
+- Verify active rejection of 0.1/0.2 plans before history creation, archival readability, and current-schema stale-binding rejection.
 - Verify `REPAIRED` implies the re-audit reports deterministic CLEAN.
 - Reuse existing disposition, dual-lane review, safe repair, batch repair, assisted repair and certification test patterns.
 

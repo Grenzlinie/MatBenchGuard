@@ -12,7 +12,9 @@ SCRIPTS = REPO_ROOT / ".cursor/skills/materials-benchmark-review/scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import artifact_schema  # noqa: E402
+import agent_contract_wiring  # noqa: E402
 import certify_final_100  # noqa: E402
+import deterministic_contract  # noqa: E402
 
 
 def dimensions() -> list[dict[str, object]]:
@@ -88,7 +90,82 @@ def probe_coverage() -> dict[str, object]:
     }
 
 
+def effective_contract_bundle() -> tuple[
+    dict[str, object], dict[str, object], dict[str, object]
+]:
+    machine = deterministic_contract.evaluate_deterministic_contract(
+        normalized_instruction_contract={},
+        grading_contract={},
+        checker_analysis={"d6_core_output_scoring": {"status": "UNKNOWN"}},
+        package_roles={},
+        findings=[],
+    )
+    assessment = agent_contract_wiring.make_agent_contract_assessment(
+        machine,
+        {
+            check_id: {
+                "status": "PASS" if check_id == "D6" else "NOT_PROVEN",
+                "rationale": f"{check_id} contract wiring is established",
+                "evidence": (
+                    [
+                        {
+                            "source_kind": "DETERMINISTIC_PROBE_ARTIFACT",
+                            "path": "deterministic_core/probe_results.json",
+                            "scope": "CONTRACT_WIRING",
+                            "artifact_digest": "sha256:probe",
+                        }
+                    ]
+                    if check_id == "D6"
+                    else []
+                ),
+            }
+            for check_id in deterministic_contract.CHECK_IDS
+        },
+    )
+    effective = agent_contract_wiring.derive_effective_contract(
+        machine, assessment
+    )
+    return machine, assessment, effective
+
+
 class MaterialsFinal100CertificationTests(unittest.TestCase):
+    def test_canonical_pass_separates_verdict_from_publication_route(self) -> None:
+        report = {
+            "summary": {
+                "final_verdict": "PASS",
+                "disposition": "PASS",
+                "publication_route": "PUBLISH_CANDIDATE",
+                "publishability": "PUBLISH_CANDIDATE",
+            },
+            "publishability": "PUBLISH_CANDIDATE",
+        }
+        fields = {
+            "review_verdict": "PASS",
+            "publishability": "PUBLISH_CANDIDATE",
+        }
+
+        certify_final_100.validate_report_canonical_fields(report, fields)
+
+        route_mismatch = json.loads(json.dumps(report))
+        route_mismatch["summary"]["publication_route"] = "PASS"
+        with self.assertRaisesRegex(
+            certify_final_100.CertificationError,
+            "publication route",
+        ):
+            certify_final_100.validate_report_canonical_fields(
+                route_mismatch, fields
+            )
+
+        verdict_mismatch = json.loads(json.dumps(report))
+        verdict_mismatch["summary"]["disposition"] = "PUBLISH_CANDIDATE"
+        with self.assertRaisesRegex(
+            certify_final_100.CertificationError,
+            "verdict",
+        ):
+            certify_final_100.validate_report_canonical_fields(
+                verdict_mismatch, fields
+            )
+
     def test_v2_dimensions_and_score_snapshot_are_self_consistent(self) -> None:
         dims = dimensions()
         report = {
@@ -124,6 +201,32 @@ class MaterialsFinal100CertificationTests(unittest.TestCase):
                 artifact_schema.AUDIT_REPORT_SCHEMA_VERSION,
                 "legacy artifact",
             )
+
+    def test_persisted_pass_certifies_effective_clean_not_machine_state(self) -> None:
+        machine, assessment, effective = effective_contract_bundle()
+        report = {
+            "review_verdict": "PASS",
+            "publishability": "PUBLISH_CANDIDATE",
+            "repair_decision": "NOT_REQUIRED",
+            "repair_status": "NOT_APPLICABLE",
+            "summary": {
+                "final_verdict": "PASS",
+                "disposition": "PASS",
+                "publication_route": "PUBLISH_CANDIDATE",
+                "publishability": "PUBLISH_CANDIDATE",
+                "scoring_version": artifact_schema.SCORING_SCHEMA_VERSION,
+                "total_score": 90,
+                "hard_gate_triggered": False,
+            },
+            "dimensions_v11": dimensions(),
+            "hard_gates": hard_gates(),
+            "deterministic_contract": machine,
+            "effective_deterministic_contract": effective,
+            "agent_contract_assessment": assessment,
+            "findings": [],
+        }
+
+        certify_final_100.validate_persisted_reaudit_pass(report)
 
 
 if __name__ == "__main__":

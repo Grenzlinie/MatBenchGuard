@@ -18,6 +18,7 @@ from d5_package_completeness import (
     repair_class_for_finding as d5_repair_class_for_finding,
 )
 from d3_d4_checker import expected_repair_class
+from artifact_schema import EFFECTIVE_DETERMINISTIC_CONTRACT_SCHEMA_VERSION
 
 
 DETERMINISTIC_SCHEMA_VERSION = "materials-deterministic-contract/1.0"
@@ -752,6 +753,27 @@ def validate_deterministic_contract(value: Any) -> dict[str, Any]:
     return value
 
 
+def validate_publication_contract(value: Any) -> dict[str, Any]:
+    """Validate the contract consumed by a publication decision.
+
+    The machine contract remains the default.  An effective contract is a
+    separate schema and must use its own validator; treating it as a machine
+    contract would incorrectly turn a valid Agent-adjudicated CLEAN state
+    into NOT_ASSESSABLE.
+    """
+
+    if (
+        isinstance(value, dict)
+        and value.get("schema_version")
+        == EFFECTIVE_DETERMINISTIC_CONTRACT_SCHEMA_VERSION
+    ):
+        # Import locally because agent_contract_wiring depends on this module.
+        from agent_contract_wiring import validate_effective_contract
+
+        return validate_effective_contract(value)
+    return validate_deterministic_contract(value)
+
+
 def deterministic_repair_summary(contract: dict[str, Any]) -> dict[str, Any]:
     """Return the compact source-bound repair summary for artifacts."""
 
@@ -812,8 +834,13 @@ def apply_deterministic_gate(
         )
     if verdict != "PASS":
         return verdict, None
+    if numeric_score < 80:
+        return (
+            "CONDITIONAL",
+            "The authoritative score is below the 80-point publication threshold.",
+        )
     try:
-        validated_contract = validate_deterministic_contract(contract)
+        validated_contract = validate_publication_contract(contract)
     except (TypeError, ValueError):
         return (
             "NOT_ASSESSABLE",
@@ -825,6 +852,15 @@ def apply_deterministic_gate(
             "CONDITIONAL",
             "The authoritative C01-C07 score is publishable, but one or more "
             "proven OPEN repairable D1-D6 blockers require deterministic Repair.",
+        )
+    if state == "NOT_APPLICABLE" and any(
+        item["status"] == "FAIL"
+        for item in validated_contract["checks"]
+    ):
+        return (
+            "REJECT",
+            "The authoritative deterministic contract contains a proven "
+            "D1-D6 failure and cannot be treated as an evidence-only gap.",
         )
     if state != "CLEAN":
         return (
@@ -844,7 +880,7 @@ def validate_deterministic_plan_binding(
 
     binding = plan.get("deterministic_contract")
     if binding is None:
-        return
+        raise ValueError("deterministic repair binding is absent")
     contract = validate_deterministic_contract(report.get("deterministic_contract"))
     if not isinstance(binding, dict):
         raise ValueError("deterministic repair binding must be an object")
@@ -855,26 +891,19 @@ def validate_deterministic_plan_binding(
     ):
         raise ValueError("deterministic repair binding is stale")
     report_audit_id = report.get("audit_id")
-    if (
-        binding.get("audit_id") is not None
-        and binding.get("audit_id") != report_audit_id
-    ):
+    if binding.get("audit_id") != report_audit_id:
         raise ValueError("deterministic repair audit binding is stale")
     required_ids = contract["repair_summary"]["required_finding_ids"]
-    if (
-        plan.get("schema_version") in DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES
-        and binding.get("required_finding_ids") != required_ids
-    ):
+    if binding.get("required_finding_ids") != required_ids:
         raise ValueError("deterministic repair queue binding is stale")
-    if plan.get("schema_version") in DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES:
-        source_audit = plan.get("source_audit")
-        if not isinstance(source_audit, dict):
-            raise ValueError("deterministic source audit binding is absent")
-        if (
-            source_audit.get("audit_id") != report_audit_id
-            or source_audit.get("deterministic_contract") != binding
-        ):
-            raise ValueError("deterministic source audit binding is stale")
+    source_audit = plan.get("source_audit")
+    if not isinstance(source_audit, dict):
+        raise ValueError("deterministic source audit binding is absent")
+    if (
+        source_audit.get("audit_id") != report_audit_id
+        or source_audit.get("deterministic_contract") != binding
+    ):
+        raise ValueError("deterministic source audit binding is stale")
     expected = contract["repair_summary"]["required_findings"]
     planned = plan.get("findings")
     if not isinstance(planned, list):
@@ -904,17 +933,15 @@ def validate_deterministic_plan_binding(
             raise ValueError("deterministic repair target check is unknown")
         if check_id != source["check_id"]:
             raise ValueError("deterministic finding ownership is stale")
-        allowed_classes = {source["repair_class"]}
+        allowed_classes = {source["repair_class"], "ABANDON"}
         if source["check_id"] == "D5":
             # D5 may discover that an AUTO_FIX candidate lacks a unique
-            # implementation at plan time.  It must then be escalated to a
-            # human-assisted decision or explicitly abandoned.
-            allowed_classes.update({"ASSISTED_FIX", "ABANDON"})
+            # implementation at plan time and escalate to assisted repair.
+            allowed_classes.add("ASSISTED_FIX")
         if item.get("repair_class") not in allowed_classes:
             raise ValueError("deterministic repair class is stale")
-        if (
-            plan.get("schema_version") in DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES
-            and item.get("finding_code", item.get("title"))
-            not in {source["title"], None}
-        ):
+        if item.get("finding_code", item.get("title")) not in {
+            source["title"],
+            None,
+        }:
             raise ValueError("deterministic finding code is stale")

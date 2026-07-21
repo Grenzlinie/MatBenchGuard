@@ -16,6 +16,41 @@ No other package role is quality evidence. `manifest.json`, `resources.json`,
 `steps.json`, `task.toml`, `environment/`, and directory labels cannot affect
 the score or gates.
 
+## Deterministic contract artifacts
+
+The machine D1–D6 contract is authoritative for deterministic checks. Review
+persists it under `deterministic_contract` and in
+`deterministic_core/report.json`, including the machine statuses, findings,
+repair summary, registry version, and `contract_digest`.
+
+When the machine repair summary is `NOT_APPLICABLE`, Review may persist
+`agent_contract/request.json` with schema
+`materials-agent-contract-request/1.0` and status
+`AGENT_CONTRACT_PENDING`. The request binds the package, Review implementation,
+static/probe artifacts, and machine contract. A supplied assessment uses schema
+`materials-agent-contract-assessment/1.0`, lane `deterministic_core`, D1–D6 in
+order, and per-check status `PASS` or `NOT_PROVEN`. It must bind the machine
+schema, registry, and digest.
+
+This is a contract-only Agent seam, separate from the paper-grounded
+`agent_quality` lane. Its evidence may come only from `instruction.md`,
+`tests/**/grading_spec` (with an optional extension), or deterministic probe
+artifacts under `deterministic_core/` or
+`deterministic_probe_artifacts/`. Its claim scope is `CONTRACT_WIRING` or
+`DETERMINISTIC_CONTRACT`. It must not use `paper/`, `solution/`, Oracle output,
+metadata, `tests/checker.py`, or science-quality evidence, and must not
+adjudicate Gold, targets, tolerances, formulas, units, thresholds, or scoring
+direction.
+
+The Agent can overlay only an unavailable machine check (`BLOCKED` or
+`NOT_ASSESSABLE`) that has no proven or blocking finding, dependency failure,
+missing input, Hard Gate, or usable runtime contradiction. It cannot overlay a
+machine `FAIL`, machine facts, runtime contradictions, Hard Gates, or quality
+findings. `NOT_PROVEN` leaves the check unavailable. The additive effective
+contract uses schema `materials-effective-deterministic-contract/1.0`, preserves
+machine findings and blockers, and can change only an eligible unavailable check
+to effective `PASS`.
+
 ## Output roles inside instruction.md
 
 An instruction may deliberately name intermediate process artifacts in addition

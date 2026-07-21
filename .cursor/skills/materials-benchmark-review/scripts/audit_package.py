@@ -168,7 +168,7 @@ def _has_process_annotation(
     )
 
 
-def materials_classification_stub(text: str) -> dict[str, Any]:
+def materials_classification_context(text: str) -> dict[str, Any]:
     """Record that materials admissibility must be Agent-adjudicated.
 
     The deterministic layer no longer classifies packages from a keyword term
@@ -196,7 +196,8 @@ def materials_classification_stub(text: str) -> dict[str, Any]:
         "structured_fields_expected": list(INSTRUCTION_CLASSIFICATION_FIELDS),
         "note": (
             "Materials admissibility is decided by the Agent from the "
-            "instruction's structured fields; no keyword prescreen is applied."
+            "instruction's structured fields; deterministic code does not "
+            "infer the classification."
         ),
     }
 
@@ -1300,13 +1301,14 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
             {"role_conflicts": contract_map["role_conflicts"]},
             ["instruction.md"],
         )
-    qualification = materials_classification_stub(instruction)
+    qualification = materials_classification_context(instruction)
     add_issue(
         issues,
         "HIGH",
         "MATERIALS_ADMISSIBILITY_REQUIRES_ADJUDICATION",
         "materials admissibility must be decided by the Agent from the "
-        "instruction's structured fields; no keyword prescreen is applied",
+        "instruction's structured fields; deterministic code does not infer "
+        "the classification",
         {
             "structured_fields_present": qualification[
                 "structured_fields_present"
@@ -1405,7 +1407,7 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
             "metadata_roles_excluded": list(METADATA_ROLE_PATHS),
         },
         "grading_contract": specification,
-        "materials_prescreen": qualification,
+        "materials_classification_context": qualification,
         "instruction_consistency": instruction_consistency,
         "gold_provenance": gold_provenance,
         "cross_file_sets": cross_file_sets,
@@ -1421,7 +1423,8 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
         "static_verdict": static_verdict,
         "limitations": [
             "materials classification (C01) is decided by the Agent from the "
-            "instruction structured fields; no keyword prescreen is applied",
+            "instruction structured fields; deterministic code does not "
+            "infer the classification",
             "resource reachability is not tested in this slice",
             "paper fidelity is adjudicated separately by the Agent lane",
         ],

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -16,17 +17,28 @@ from typing import Any
 sys.dont_write_bytecode = True
 
 from audit_package import static_audit
+from agent_contract_wiring import validate_agent_contract_assessment
 from dynamic_checker_probe import TASK_FAMILY_ATTACKS, dynamic_checker_probe
-from finalize_audit_output import finalize_audit, synthesize_report
+from deterministic_contract import UNAVAILABLE_CHECK_STATUSES
+from finalize_audit_output import (
+    finalize_audit,
+    synthesize_report,
+)
 from prepare_audit_output import (
+    AGENT_CONTRACT_PENDING,
+    AGENT_CONTRACT_REQUEST_RELATIVE_PATH,
     QUALITY_EVIDENCE_ROLES,
+    archive_agent_contract_request,
     bind_external_evidence,
     locate_root,
+    validate_agent_contract_request,
     prepare_workspace,
+    write_agent_contract_request,
     record_paper_input_hashes,
     skill_root,
     validate_paper_boundary,
     write_audit_attestation,
+    new_audit_id,
 )
 from artifact_schema import (
     AGENT_ASSESSMENT_SCHEMA_VERSION,
@@ -40,6 +52,7 @@ from review_path_policy import (
     default_review_output_dir,
     require_external_output_dir,
 )
+from review_lock import ReviewOutputLock
 import sandbox_runtime
 
 
@@ -623,79 +636,8 @@ def pre_paper_hard_gate_codes(
     return [code for code in ordered if code in codes]
 
 
-def run_review(
-    input_path: Path,
-    agent_assessment_path: Path | None = None,
-    resource_timeout: float = 8,
-    allow_private_network: bool = False,
-    audit_output_dir: Path | None = None,
-    output_purpose: str = "review",
-) -> dict[str, Any]:
-    root = locate_root(input_path)
-    output_dir = resolve_output_destination(
-        root, audit_output_dir, purpose=output_purpose
-    )
-    sandbox_runtime.ensure_env()
-    skip_paper = False
-    agent_assessment: dict[str, Any] | None = None
-    paper_skip_reason: str | None = None
-    if agent_assessment_path is not None:
-        agent_assessment = validate_agent_assessment(
-            root,
-            agent_assessment_path.expanduser().resolve(),
-        )
-        skip_paper = bool(agent_assessment.get("paper_skipped"))
-        if skip_paper:
-            paper_skip_reason = agent_assessment.get("paper_skip_reason")
-    context = prepare_workspace(
-        root,
-        output_dir,
-        skip_paper=skip_paper,
-    )
-    temp_dir = Path(context["audit_temp_dir"])
-    static_result = static_audit(
-        root, temp_dir / "evidence/static_checks/audit_static.json"
-    )
-    static_fatal = any(
-        issue["severity"] == "FATAL" for issue in static_result["issues"]
-    )
-    checker_ready = all(
-        static_result["parse_status"].get(role) == "ok"
-        for role in (
-            "tests/checker.py",
-            "tests/grading_spec.json",
-            "tests/test.sh",
-        )
-    ) and (
-        static_result.get("contract_map", {})
-        .get("checker_analysis", {})
-        .get("parse_status")
-        == "OK"
-    )
-    if static_fatal or not checker_ready:
-        checker_result = checker_skipped_by_static_gate(
-            root,
-            temp_dir / "checker_tests.json",
-            reason=(
-                "HARBOR_VERIFIER_ENTRYPOINT_MISSING"
-                if static_result["parse_status"].get("tests/test.sh") != "ok"
-                else "REQUIRED_CHECKER_MISSING_OR_UNPARSEABLE"
-                if not checker_ready
-                else "STATIC_FATAL_GATE"
-            ),
-        )
-    else:
-        checker_result = dynamic_checker_probe(
-            root,
-            temp_dir / "checker_tests.json",
-        )
-    resource_result = probe_resources(
-        root,
-        temp_dir / "resource_checks.json",
-        timeout=resource_timeout,
-        allow_private_network=allow_private_network,
-    )
-    execution_evidence = {
+def _execution_evidence() -> dict[str, Any]:
+    return {
         "status": "NOT_ASSESSED",
         "claim": EXECUTION_CLAIM,
         "scientific_reproduction": False,
@@ -712,13 +654,240 @@ def run_review(
         ),
         "review_lane": REVIEW_LANE,
     }
+
+
+def _load_prepared_inputs(temp_dir: Path) -> tuple[
+    dict[str, Any], dict[str, Any], dict[str, Any]
+]:
+    return (
+        read_json(temp_dir / "evidence/static_checks/audit_static.json"),
+        read_json(temp_dir / "checker_tests.json"),
+        read_json(temp_dir / "resource_checks.json"),
+    )
+
+
+def _pending_result(
+    root: Path,
+    output_dir: Path,
+    request: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "benchmark_root": str(root),
+        "audit_output_dir": str(output_dir),
+        "audit_temp_dir": request.get(
+            "audit_temp_dir",
+            str(output_dir / ".benchmark_audit_tmp"),
+        ),
+        "request_path": str(
+            output_dir / AGENT_CONTRACT_REQUEST_RELATIVE_PATH
+        ),
+        "status": AGENT_CONTRACT_PENDING,
+        "review_status": AGENT_CONTRACT_PENDING,
+        "verdict": "NOT_ASSESSABLE",
+        "publishable": False,
+        "deterministic_status": "NOT_APPLICABLE",
+        "machine_contract_digest": request.get("machine_contract_digest"),
+        "machine_status": request.get("machine_status"),
+        "message": (
+            "Deterministic preparation is persisted. Supply a valid "
+            "--agent-contract-assessment to resume without rerunning probes."
+        ),
+    }
+
+
+def agent_contract_pending_eligible(
+    machine_contract: dict[str, Any],
+    report: dict[str, Any],
+) -> bool:
+    """Return whether an unavailable contract may pause for adjudication."""
+
+    summary = machine_contract.get("repair_summary")
+    if not isinstance(summary, dict) or summary.get("state") != "NOT_APPLICABLE":
+        return False
+    checks = machine_contract.get("checks")
+    if not isinstance(checks, list) or not checks:
+        return False
+    if not any(
+        isinstance(check, dict)
+        and check.get("status") in UNAVAILABLE_CHECK_STATUSES
+        for check in checks
+    ):
+        return False
+    if any(
+        not isinstance(check, dict)
+        or check.get("status") == "FAIL"
+        or check.get("proven_finding_ids")
+        or check.get("blocking_finding_ids")
+        or check.get("trace_status") == "FAILED"
+        or check.get("usable_runtime_contradiction") is True
+        or check.get("runtime_contradiction") is True
+        or str(check.get("runtime_status", "")).upper()
+        in {"CONTRADICTED", "CONTRADICTION", "FAILED"}
+        for check in checks
+    ):
+        return False
+    hard_gates = report.get("hard_gates")
+    if isinstance(hard_gates, list) and any(
+        isinstance(gate, dict) and gate.get("status") != "PASS"
+        for gate in hard_gates
+    ):
+        return False
+    for finding in report.get("findings", []):
+        if not isinstance(finding, dict):
+            continue
+        if finding.get("lane") != "deterministic_core":
+            continue
+        evidence = finding.get("evidence")
+        if isinstance(evidence, dict) and (
+            evidence.get("usable_runtime_contradiction") is True
+            or evidence.get("runtime_contradiction") is True
+        ):
+            return False
+        if (
+            finding.get("proven_defect") is True
+            or finding.get("blocking") is True
+            or finding.get("advisory") is not True
+        ):
+            return False
+    return True
+
+
+def _run_review_locked(
+    input_path: Path,
+    agent_assessment_path: Path | None = None,
+    agent_contract_assessment_path: Path | None = None,
+    resource_timeout: float = 8,
+    allow_private_network: bool = False,
+    audit_output_dir: Path | None = None,
+    output_purpose: str = "review",
+    run_id: str | None = None,
+    lock: ReviewOutputLock | None = None,
+    attestation_output_path: Path | None = None,
+) -> dict[str, Any]:
+    root = locate_root(input_path)
+    output_dir = resolve_output_destination(
+        root, audit_output_dir, purpose=output_purpose
+    )
+    sandbox_runtime.ensure_env()
+    skip_paper = False
+    agent_assessment: dict[str, Any] | None = None
+    agent_contract_assessment: dict[str, Any] | None = None
+    paper_skip_reason: str | None = None
+    if agent_assessment_path is not None:
+        agent_assessment = validate_agent_assessment(
+            root,
+            agent_assessment_path.expanduser().resolve(),
+        )
+        skip_paper = bool(agent_assessment.get("paper_skipped"))
+        if skip_paper:
+            paper_skip_reason = agent_assessment.get("paper_skip_reason")
+    request_path = output_dir / AGENT_CONTRACT_REQUEST_RELATIVE_PATH
+    existing_request = request_path.is_file()
+    pending_request: dict[str, Any] | None = None
+    if existing_request:
+        try:
+            request_preview = read_json(request_path)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            raise ValueError(
+                "agent contract request is unreadable"
+            ) from exc
+        pending_audit_id = request_preview.get("audit_id")
+        if not isinstance(pending_audit_id, str) or not pending_audit_id:
+            raise ValueError("agent contract request audit ID is invalid")
+        temp_dir = (
+            output_dir / ".benchmark_audit_tmp" / pending_audit_id
+        )
+        pending_request = validate_agent_contract_request(root, temp_dir)
+        if agent_assessment_path is None:
+            quality_path = temp_dir / "agent_quality/assessment.json"
+            if quality_path.is_file():
+                stored_quality = read_json(quality_path)
+                stored_assessment = (
+                    stored_quality.get("assessment")
+                    if isinstance(stored_quality, dict)
+                    else None
+                )
+                if isinstance(stored_assessment, dict) and stored_assessment:
+                    agent_assessment = stored_assessment
+                    skip_paper = bool(stored_assessment.get("paper_skipped"))
+                    if skip_paper:
+                        paper_skip_reason = stored_assessment.get(
+                            "paper_skip_reason"
+                        )
+        context = read_json(temp_dir / "audit_context.json")
+        if context.get("skip_paper") is not skip_paper:
+            raise ValueError("agent contract request paper mode is stale")
+        if agent_contract_assessment_path is None:
+            pending = _pending_result(root, output_dir, pending_request)
+            if attestation_output_path is not None:
+                pending["audit_attestation"] = (
+                    "NOT_AVAILABLE_AGENT_CONTRACT_PENDING"
+                )
+            return pending
+        static_result, checker_result, resource_result = (
+            _load_prepared_inputs(temp_dir)
+        )
+    else:
+        context = prepare_workspace(
+            root,
+            output_dir,
+            skip_paper=skip_paper,
+            run_id=run_id,
+        )
+        temp_dir = Path(context["audit_temp_dir"])
+        static_result = static_audit(
+            root, temp_dir / "evidence/static_checks/audit_static.json"
+        )
+        static_fatal = any(
+            issue["severity"] == "FATAL"
+            for issue in static_result["issues"]
+        )
+        checker_ready = all(
+            static_result["parse_status"].get(role) == "ok"
+            for role in (
+                "tests/checker.py",
+                "tests/grading_spec.json",
+                "tests/test.sh",
+            )
+        ) and (
+            static_result.get("contract_map", {})
+            .get("checker_analysis", {})
+            .get("parse_status")
+            == "OK"
+        )
+        if static_fatal or not checker_ready:
+            checker_result = checker_skipped_by_static_gate(
+                root,
+                temp_dir / "checker_tests.json",
+                reason=(
+                    "HARBOR_VERIFIER_ENTRYPOINT_MISSING"
+                    if static_result["parse_status"].get("tests/test.sh")
+                    != "ok"
+                    else "REQUIRED_CHECKER_MISSING_OR_UNPARSEABLE"
+                    if not checker_ready
+                    else "STATIC_FATAL_GATE"
+                ),
+            )
+        else:
+            checker_result = dynamic_checker_probe(
+                root,
+                temp_dir / "checker_tests.json",
+            )
+        resource_result = probe_resources(
+            root,
+            temp_dir / "resource_checks.json",
+            timeout=resource_timeout,
+            allow_private_network=allow_private_network,
+        )
+    execution_evidence = _execution_evidence()
     if agent_assessment is not None and not skip_paper:
         record_paper_input_hashes(root, temp_dir)
     external_bindings = bind_external_evidence(
         temp_dir,
         agent_assessment_path if agent_assessment is not None else None,
+        agent_contract_assessment_path,
     )
-    synthesize_report(
+    report = synthesize_report(
         root,
         temp_dir,
         static_result,
@@ -729,7 +898,95 @@ def run_review(
         paper_skip_reason=paper_skip_reason,
         external_bindings=external_bindings,
     )
-    return finalize_audit(root, output_dir=output_dir)
+    machine_contract = report["deterministic_contract"]
+    if agent_contract_assessment_path is not None:
+        agent_contract_assessment = validate_agent_contract_assessment(
+            read_json(agent_contract_assessment_path.expanduser().resolve()),
+            machine_contract,
+        )
+        report = synthesize_report(
+            root,
+            temp_dir,
+            static_result,
+            checker_result,
+            resource_result=resource_result,
+            execution_evidence=execution_evidence,
+            agent_assessment=agent_assessment,
+            agent_contract_assessment=agent_contract_assessment,
+            paper_skip_reason=paper_skip_reason,
+            external_bindings=external_bindings,
+        )
+        if (
+            pending_request is not None
+            and report["deterministic_contract"].get("contract_digest")
+            != pending_request.get("machine_contract_digest")
+        ):
+            raise ValueError(
+                "agent contract resume machine contract digest is stale"
+            )
+    elif agent_contract_pending_eligible(machine_contract, report):
+        request = write_agent_contract_request(
+            root, temp_dir, machine_contract
+        )
+        return _pending_result(root, output_dir, request)
+    result = finalize_audit(
+        root,
+        output_dir=output_dir,
+        temp_dir=temp_dir,
+        lock=lock,
+    )
+    result["agent_contract_status"] = (
+        "APPLIED" if agent_contract_assessment is not None else "NOT_SUPPLIED"
+    )
+    if existing_request:
+        archived_request = archive_agent_contract_request(
+            output_dir, result.get("audit_id", context.get("audit_id"))
+        )
+        if archived_request is not None:
+            result["agent_contract_request_archive"] = str(archived_request)
+    if attestation_output_path is not None:
+        result["audit_attestation"] = write_audit_attestation(
+            Path(result["benchmark_root"]),
+            attestation_output_path,
+            audit_dir=Path(result["audit_dir"]),
+        )
+    return result
+
+
+def run_review(
+    input_path: Path,
+    agent_assessment_path: Path | None = None,
+    agent_contract_assessment_path: Path | None = None,
+    resource_timeout: float = 8,
+    allow_private_network: bool = False,
+    audit_output_dir: Path | None = None,
+    output_purpose: str = "review",
+    attestation_output_path: Path | None = None,
+) -> dict[str, Any]:
+    root = locate_root(input_path)
+    output_dir = resolve_output_destination(
+        root, audit_output_dir, purpose=output_purpose
+    )
+    run_id = new_audit_id()
+    with ReviewOutputLock(output_dir, run_id) as lock:
+        try:
+            return _run_review_locked(
+                input_path,
+                agent_assessment_path=agent_assessment_path,
+                agent_contract_assessment_path=agent_contract_assessment_path,
+                resource_timeout=resource_timeout,
+                allow_private_network=allow_private_network,
+                audit_output_dir=output_dir,
+                output_purpose=output_purpose,
+                run_id=run_id,
+                lock=lock,
+                attestation_output_path=attestation_output_path,
+            )
+        except Exception:
+            own_temp = output_dir / ".benchmark_audit_tmp" / run_id
+            if own_temp.is_dir() and not own_temp.is_symlink():
+                shutil.rmtree(own_temp)
+            raise
 
 
 def resolve_output_destination(
@@ -770,6 +1027,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--agent-assessment",
         help="Agent-authored paper fidelity and taxonomy assessment JSON",
+    )
+    parser.add_argument(
+        "--agent-contract-assessment",
+        help=(
+            "External D1-D6 contract-wiring adjudication JSON; resumes a "
+            "pending preparation without rerunning deterministic probes"
+        ),
     )
     parser.add_argument(
         "--attestation-output",
@@ -820,6 +1084,11 @@ def main() -> int:
                 if arguments.agent_assessment
                 else None
             ),
+            agent_contract_assessment_path=(
+                Path(arguments.agent_contract_assessment)
+                if arguments.agent_contract_assessment
+                else None
+            ),
             resource_timeout=arguments.resource_timeout,
             allow_private_network=arguments.allow_private_network,
             audit_output_dir=(
@@ -828,13 +1097,12 @@ def main() -> int:
                 else None
             ),
             output_purpose=arguments.output_purpose,
+            attestation_output_path=(
+                Path(arguments.attestation_output)
+                if arguments.attestation_output
+                else None
+            ),
         )
-        if arguments.attestation_output:
-            result["audit_attestation"] = write_audit_attestation(
-                Path(result["benchmark_root"]),
-                Path(arguments.attestation_output),
-                audit_dir=Path(result["audit_dir"]),
-            )
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     except Exception as exc:  # noqa: BLE001
