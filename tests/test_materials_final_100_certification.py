@@ -114,17 +114,6 @@ class MaterialsFinal100CertificationTests(unittest.TestCase):
         certify_final_100.validate_score(report, snapshot)
         certify_final_100.validate_hard_gates(report)
 
-    def test_v2_probe_coverage_keeps_oracle_positive_separate(self) -> None:
-        checker = {"probe_coverage": probe_coverage()}
-        certify_final_100.validate_probes(checker)
-
-        contaminated = json.loads(json.dumps(checker))
-        contaminated["probe_coverage"]["negative"]["provenance"]["oracle_used"] = True
-        with self.assertRaisesRegex(
-            certify_final_100.CertificationError,
-            "non-positive probe crossed Oracle boundary",
-        ):
-            certify_final_100.validate_probes(contaminated)
 
     def test_legacy_scoring_schema_is_rejected(self) -> None:
         with self.assertRaisesRegex(

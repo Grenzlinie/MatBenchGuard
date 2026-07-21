@@ -21,7 +21,7 @@ already present in the frozen contract:
   preserves their proven ratios and does not choose a new scoring importance.
 
 Every such operation needs source-bound proof, `core_science_change=false`, a
-causal fail-before/pass-after regression, and the single equal-depth E1
+causal fail-before/pass-after regression, and the single equal-depth dual-lane
 re-audit. A passing regression alone is not scientific evidence.
 
 `AUTO_FIX` must not introduce or choose any of the following:
@@ -97,7 +97,7 @@ casebook records the decision boundary, not solution output.
 - A deterministic plan must bind the complete source queue and current
   contract digest; stale or omitted bindings fail closed.
 - A residual D1–D6 blocker prevents publication. The candidate needs one
-  equal-depth E1 re-audit and a clean deterministic contract.
+  equal-depth dual-lane re-audit and a clean deterministic contract.
 
 ## Assisted semantic repairs
 

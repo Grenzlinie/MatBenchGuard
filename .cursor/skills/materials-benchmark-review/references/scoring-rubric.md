@@ -107,7 +107,7 @@ Each finding maps to exactly one dimension (`scored_dimension_v11_for`):
 - **C05 答案泄漏**: `SOLUTION_BOUNDARY_VIOLATION`, `ANSWER_LEAKAGE`,
   `ORACLE_VALUE_LEAKED`, and `PAPER_*` leak/identity findings;
 - **C06 可复现性**: `INDISPENSABLE_DIRECT_INPUT_*`, `RESOURCE_USABILITY`
-  findings, `E2_SMOKE_FAILED`, and residual `PAPER_*` fidelity findings;
+  findings, and residual `PAPER_*` fidelity findings;
 - **C07 难度与可审计性**: Agent-quality gradient / invariance assessments and
   other explicitly evidenced auditability findings.
 
@@ -215,7 +215,7 @@ contract digest, source audit identity, and the complete set of
 target, stale digest/schema, or stale source binding fails closed.
 
 Repair runs fail-before and pass-after causal regressions, then invokes the
-equal-depth E1 Review CLI exactly once. Only that re-audit may establish the
+equal-depth dual-lane Review CLI exactly once. Only that re-audit may establish the
 post-repair verdict and D1–D6 state. Atomic publication requires all of:
 
 `PASS + deterministic CLEAN + no Hard Gate + preserved identity + allowed

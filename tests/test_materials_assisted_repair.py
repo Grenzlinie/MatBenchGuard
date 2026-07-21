@@ -8,6 +8,8 @@ from typing import Any
 
 from tests.test_materials_safe_repair import (
     initial_repair_context,
+    external_audit_dir,
+    external_repair_dir,
     repair_module,
     run_repair,
     safe_plan,
@@ -106,7 +108,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
-                workspace, paper_mode="paper_grounded"
+                workspace, review_lane="dual"
             )
             plan = workspace / "assisted-plan.json"
             value = assisted_plan(report["audit_id"], finding_id)
@@ -129,7 +131,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
                 (package / "instruction.md").read_text(encoding="utf-8"),
             )
             manifest = json.loads(
-                (package / "benchmark_repair/repair_manifest.json").read_text(
+                ((external_repair_dir(package) / "benchmark_repair") / "repair_manifest.json").read_text(
                     encoding="utf-8"
                 )
             )
@@ -140,7 +142,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
-                workspace, paper_mode="paper_grounded"
+                workspace, review_lane="dual"
             )
             plan = workspace / "assisted-plan.json"
             value = assisted_plan(report["audit_id"], finding_id)
@@ -160,7 +162,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
-                workspace, paper_mode="paper_grounded"
+                workspace, review_lane="dual"
             )
             plan = workspace / "assisted-plan.json"
             value = assisted_plan(report["audit_id"], finding_id)
@@ -178,7 +180,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
-                workspace, paper_mode="paper_grounded"
+                workspace, review_lane="dual"
             )
             plan = workspace / "web-assisted-plan.json"
             write_plan(
@@ -224,7 +226,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
-                workspace, paper_mode="paper_grounded"
+                workspace, review_lane="dual"
             )
             plan = workspace / "assisted-plan.json"
             value = assisted_plan(report["audit_id"], finding_id)
@@ -238,17 +240,19 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
                 json.loads(completed.stdout)["status"], "POLICY_VIOLATION"
             )
 
+
+
     def test_solution_content_cannot_be_copied_into_instruction(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
-                workspace, paper_mode="paper_grounded"
+                workspace, review_lane="dual"
             )
             secret = "hidden_answer = 7.314159265"
             (package / "solution/answer.py").write_text(
                 secret + "\n", encoding="utf-8"
             )
-            audit_manifest = package / "benchmark_audit/audit_manifest.json"
+            audit_manifest = external_audit_dir(package) / "audit_manifest.json"
             manifest = json.loads(audit_manifest.read_text(encoding="utf-8"))
             manifest["input_hashes"]["solution/answer.py"] = sha256_file(
                 package / "solution/answer.py"
@@ -279,7 +283,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
-                workspace, paper_mode="paper_grounded"
+                workspace, review_lane="dual"
             )
             plan = workspace / "assisted-plan.json"
             value = assisted_plan(report["audit_id"], finding_id)
@@ -321,7 +325,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
-                workspace, paper_mode="paper_grounded"
+                workspace, review_lane="dual"
             )
             plan = workspace / "failing-plan.json"
             value = safe_plan(report["audit_id"], finding_id)

@@ -7,10 +7,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.test_materials_benchmark_review_paper_grounded import (
+from tests.test_materials_benchmark_review_dual_lane import (
     REPO_ROOT,
     RUNNER,
+    assessment as base_assessment,
     copy_source_package,
+    external_audit_dir,
 )
 from tests.test_materials_safe_repair import safe_plan
 
@@ -128,7 +130,8 @@ def taxonomy_assessment(
     *,
     explicit_reproduction: bool = False,
 ) -> dict[str, object]:
-    return {
+    value = base_assessment()
+    value.update({
         "schema_version": "0.1",
         "taxonomy": {
             "computation_task": [task],
@@ -192,36 +195,8 @@ def taxonomy_assessment(
                 },
             ],
         },
-        "paper_trigger_adjudication": [
-            {
-                "trigger": trigger,
-                "status": (
-                    "TRIGGERED"
-                    if trigger == "EXPLICIT_REPRODUCTION_CLAIM"
-                    and explicit_reproduction
-                    else "NOT_TRIGGERED"
-                ),
-                "rationale": (
-                    "The source fixture explicitly describes a reproduction."
-                    if trigger == "EXPLICIT_REPRODUCTION_CLAIM"
-                    and explicit_reproduction
-                    else "The public fixture supplies no evidence for this trigger."
-                ),
-                "evidence": [
-                    {
-                        "package_file": "instruction.md",
-                        "package_quote": quote,
-                    }
-                ],
-            }
-            for trigger in (
-                "SCIENTIFIC_CONFLICT",
-                "NECESSARY_INFORMATION_MISSING",
-                "GOLD_PROVENANCE_UNCERTAIN",
-                "EXPLICIT_REPRODUCTION_CLAIM",
-            )
-        ],
-    }
+    })
+    return value
 
 
 def solution_repair_plan(
@@ -306,10 +281,6 @@ def run_taxonomy_review(
             sys.executable,
             str(RUNNER),
             str(package),
-            "--paper-mode",
-            "no_paper",
-            "--execution-level",
-            "E1",
             "--agent-assessment",
             str(assessment_path),
         ],
@@ -362,26 +333,22 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
                     )
                     report = json.loads(
                         (
-                            package / "benchmark_audit/audit_report.json"
+                            external_audit_dir(package) / "audit_report.json"
                         ).read_text(encoding="utf-8")
                     )
                     self.assertEqual(
                         report["summary"]["disposition"],
-                        "NOT_ASSESSABLE",
+                        "CONDITIONAL",
                     )
                     self.assertEqual(
                         report["summary"]["publication_route"],
-                        "EVIDENCE_PENDING",
+                        "REPAIR_QUEUE",
                     )
                     self.assertEqual(
                         report["summary"]["answer_type"], answer_type
                     )
                     self.assertEqual(
                         report["taxonomy_labels"]["computation_task"], [task]
-                    )
-                    self.assertIn(
-                        "triggered_paper_review",
-                        report["evidence_contract"]["gaps"],
                     )
                     observed.add(answer_type)
             self.assertEqual(
@@ -460,6 +427,8 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
                     )
                 ],
             }
+            value.pop("dimensions", None)
+            value.pop("reproduction_type", None)
             assessment_path = Path(temporary) / "assessment.json"
             assessment_path.write_text(
                 json.dumps(value, ensure_ascii=False), encoding="utf-8"
@@ -469,7 +438,7 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             report = json.loads(
-                (package / "benchmark_audit/audit_report.json").read_text(
+                (external_audit_dir(package) / "audit_report.json").read_text(
                     encoding="utf-8"
                 )
             )
@@ -488,8 +457,7 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
             self.assertFalse(
                 json.loads(
                     (
-                        package
-                        / "benchmark_audit/corpus_index_entry.json"
+                        external_audit_dir(package) / "corpus_index_entry.json"
                     ).read_text(encoding="utf-8")
                 )["publishable"]
             )
@@ -525,6 +493,10 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
                     )
                 ],
             }
+            for dimension in value["dimensions"].values():
+                for evidence in dimension["evidence"]:
+                    evidence["package_file"] = "instruction.md"
+                    evidence["package_quote"] = quote
             assessment_path = workspace / "assessment.json"
             assessment_path.write_text(
                 json.dumps(value, ensure_ascii=False), encoding="utf-8"
@@ -535,10 +507,6 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
                     sys.executable,
                     str(RUNNER),
                     str(package),
-                    "--paper-mode",
-                    "no_paper",
-                    "--execution-level",
-                    "E1",
                     "--agent-assessment",
                     str(assessment_path),
                 ],
@@ -551,7 +519,7 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             report = json.loads(
-                (package / "benchmark_audit/audit_report.json").read_text()
+                (external_audit_dir(package) / "audit_report.json").read_text()
             )
             self.assertEqual(report["summary"]["materials_class"], "MAT_CORE")
             self.assertEqual(

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Execute isolated E1 submissions against the real Harbor checker."""
+"""Execute isolated submissions against the real Harbor checker."""
 
 from __future__ import annotations
 
@@ -350,9 +350,9 @@ def write_malformed_outputs(
 def declared_scoring_components(
     specification: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    """Return unique positive-weight components from explicit grading steps."""
+    """Return every positive-weight declared step without file-level collapse."""
     outputs = {
-        basename(item.get("file"))
+        basename(item.get("file")): item
         for item in (
             (specification.get("output_contract", {}) or {}).get("outputs", [])
             or []
@@ -360,7 +360,6 @@ def declared_scoring_components(
         if isinstance(item, dict) and basename(item.get("file"))
     }
     components: list[dict[str, Any]] = []
-    seen_files: set[str] = set()
     for step in grading_steps(specification):
         if not isinstance(step, dict):
             continue
@@ -369,44 +368,126 @@ def declared_scoring_components(
         if (
             not filename
             or filename not in outputs
-            or filename in seen_files
             or weight is None
             or weight <= 0
         ):
             continue
-        seen_files.add(filename)
+        target = step.get("target")
+        paths: list[list[str | int]] = []
+
+        def collect_paths(value: Any, prefix: list[str | int]) -> None:
+            if isinstance(value, dict):
+                for key in sorted(value):
+                    collect_paths(value[key], [*prefix, key])
+            elif isinstance(value, list):
+                for index, item in enumerate(value):
+                    collect_paths(item, [*prefix, index])
+            else:
+                paths.append(prefix)
+
+        if isinstance(target, (dict, list)):
+            collect_paths(target, [])
         components.append(
             {
                 "component_id": str(step.get("id") or filename),
                 "file": filename,
                 "declared_weight": weight,
+                "format": str(outputs[filename].get("format", "")).lower(),
+                "paths": paths,
             }
         )
     return components
 
 
+def _flip_categorical(value: str) -> str | None:
+    """Return another valid-looking categorical token when possible."""
+    lowered = value.strip().lower()
+    catalog = {
+        "true": "false",
+        "false": "true",
+        "yes": "no",
+        "no": "yes",
+        "pass": "fail",
+        "fail": "pass",
+        "positive": "negative",
+        "negative": "positive",
+        "metal": "insulator",
+        "insulator": "metal",
+        "stable": "unstable",
+        "unstable": "stable",
+        "a": "b",
+        "b": "a",
+    }
+    if lowered in catalog:
+        flipped = catalog[lowered]
+        if value.isupper():
+            return flipped.upper()
+        if value[:1].isupper():
+            return flipped[:1].upper() + flipped[1:]
+        return flipped
+    if value.isdigit():
+        return str((int(value) + 1) % 10)
+    return None
+
+
 def _mutate_json_value(value: Any, *, all_wrong: bool = False) -> tuple[Any, bool]:
+    """Mutate scored JSON values while preserving contracted shape/types.
+
+    ``all_wrong`` mutates every mutable leaf. Partial mode mutates the first
+    mutable leaf only.
+    """
     if isinstance(value, bool):
+        if all_wrong:
+            return (not value), True
         return value, False
-    if isinstance(value, (int, float)) and math.isfinite(float(value)):
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if not math.isfinite(float(value)):
+            return value, False
+        if isinstance(value, int) and not isinstance(value, bool):
+            delta = 1 if all_wrong else 1
+            return value + delta, True
         number = float(value)
-        return number + (1.0 if all_wrong else 0.25) * max(abs(number), 1.0), True
+        delta = (1.0 if all_wrong else 0.25) * max(abs(number), 1.0)
+        return number + delta, True
+    if isinstance(value, str):
+        flipped = _flip_categorical(value)
+        if flipped is not None and flipped != value:
+            return flipped, True
+        return value, False
     if isinstance(value, list):
-        for index, item in enumerate(value):
-            mutated, changed = _mutate_json_value(item, all_wrong=all_wrong)
+        if not all_wrong:
+            for index, item in enumerate(value):
+                mutated, changed = _mutate_json_value(item, all_wrong=False)
+                if changed:
+                    result = list(value)
+                    result[index] = mutated
+                    return result, True
+            return value, False
+        result = list(value)
+        changed_any = False
+        for index, item in enumerate(result):
+            mutated, changed = _mutate_json_value(item, all_wrong=True)
             if changed:
-                value = list(value)
-                value[index] = mutated
-                return value, True
-        return value, False
+                result[index] = mutated
+                changed_any = True
+        return result, changed_any
     if isinstance(value, dict):
-        for key in sorted(value):
-            mutated, changed = _mutate_json_value(value[key], all_wrong=all_wrong)
+        if not all_wrong:
+            for key in sorted(value):
+                mutated, changed = _mutate_json_value(value[key], all_wrong=False)
+                if changed:
+                    result = dict(value)
+                    result[key] = mutated
+                    return result, True
+            return value, False
+        result = dict(value)
+        changed_any = False
+        for key in sorted(result):
+            mutated, changed = _mutate_json_value(result[key], all_wrong=True)
             if changed:
-                value = dict(value)
-                value[key] = mutated
-                return value, True
-        return value, False
+                result[key] = mutated
+                changed_any = True
+        return result, changed_any
     return value, False
 
 
@@ -415,11 +496,20 @@ def mutate_declared_component(
     component: dict[str, Any],
     *,
     all_wrong: bool = False,
+    specification: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Deterministically make one declared component wrong in an Oracle copy."""
+    """Deterministically make declared component(s) wrong in an Oracle copy."""
     filename = str(component["file"])
     path = output_dir / filename
-    output_format = path.suffix.lower().lstrip(".")
+    output_format = str(component.get("format") or "").lower()
+    if not output_format and specification is not None:
+        for output in (
+            (specification.get("output_contract", {}) or {}).get("outputs", [])
+            or []
+        ):
+            if basename(output.get("file")) == filename:
+                output_format = str(output.get("format", "")).lower()
+                break
     detail: dict[str, Any] = {
         "component_id": component["component_id"],
         "file": filename,
@@ -428,15 +518,40 @@ def mutate_declared_component(
     }
     if output_format == "json":
         value = read_json(path)
-        mutated, changed = _mutate_json_value(value, all_wrong=all_wrong)
-        if changed:
-            path.write_text(
-                json.dumps(mutated, ensure_ascii=False),
-                encoding="utf-8",
+        paths = component.get("paths") or []
+        mutated = json.loads(json.dumps(value))
+        changed = False
+        selected = paths if all_wrong else paths[:1]
+        for declared_path in selected:
+            parent = mutated
+            try:
+                for segment in declared_path[:-1]:
+                    parent = parent[segment]
+                key = declared_path[-1]
+                replacement, did_change = _mutate_json_value(
+                    parent[key], all_wrong=True
+                )
+                if did_change:
+                    parent[key] = replacement
+                    changed = True
+            except (KeyError, IndexError, TypeError):
+                continue
+        if not selected:
+            mutated, changed = _mutate_json_value(value, all_wrong=all_wrong)
+        if not changed:
+            detail["mutation"] = "not_assessable"
+            detail["not_assessable_reason"] = (
+                "schema cannot support a meaningful wrong mutation while "
+                "preserving contracted JSON shape/types"
             )
-        else:
-            path.write_text('"wrong-component"\n', encoding="utf-8")
-        detail["mutation"] = "first_numeric_json_value" if changed else "invalid_json_scalar"
+            return detail
+        path.write_text(
+            json.dumps(mutated, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        detail["mutation"] = (
+            "all_scored_json_leaves" if all_wrong else "first_mutable_json_leaf"
+        )
         return detail
     if output_format in {"csv", "tsv"}:
         delimiter = "\t" if output_format == "tsv" else ","
@@ -444,28 +559,119 @@ def mutate_declared_component(
             reader = csv.DictReader(handle, delimiter=delimiter)
             fieldnames = list(reader.fieldnames or [])
             rows = list(reader)
-        column = response_column(fieldnames, rows)
+        required_columns: list[str] = []
+        if specification is not None:
+            for output in (
+                (specification.get("output_contract", {}) or {}).get("outputs", [])
+                or []
+            ):
+                if basename(output.get("file")) != filename:
+                    continue
+                schema = output.get("schema", {}) or {}
+                required_columns = list(schema.get("required_columns", []) or [])
+        mutable_columns = [
+            column
+            for column in (required_columns or fieldnames)
+            if column
+            and any(finite_number(row.get(column)) is not None for row in rows)
+        ]
+        if not mutable_columns:
+            # Preserve categorical/format-valid labels by flipping known tokens.
+            categorical_columns = [
+                column
+                for column in (required_columns or fieldnames)
+                if column
+                and any(
+                    isinstance(row.get(column), str)
+                    and _flip_categorical(str(row.get(column))) is not None
+                    for row in rows
+                )
+            ]
+            mutable_columns = categorical_columns
+        anchor_names = {
+            "id",
+            "index",
+            "true",
+            "true_value",
+            "label",
+            "target",
+            "ground_truth",
+        }
+        scored_columns = [
+            column
+            for column in mutable_columns
+            if column is not None
+            and column.strip().lower() not in anchor_names
+            and not column.strip().lower().startswith("true_")
+        ]
+        if all_wrong:
+            target_columns = scored_columns or mutable_columns
+        else:
+            column = response_column(fieldnames, rows)
+            if column is not None and column in (scored_columns or mutable_columns):
+                target_columns = [column]
+            else:
+                target_columns = (scored_columns or mutable_columns)[:1]
         changed = 0
-        if column is not None:
+        for column_index, column in enumerate(target_columns):
+            if column is None:
+                continue
             for row in rows:
                 number = finite_number(row.get(column))
-                if number is None:
+                if number is not None:
+                    # Distinct per-column deltas keep relationships from
+                    # remaining accidentally correct after all_wrong.
+                    multiplier = (
+                        (1.0 + 0.5 * column_index) if all_wrong else 0.25
+                    )
+                    row[column] = (
+                        f"{number + multiplier * max(abs(number), 1.0):.12g}"
+                    )
+                    changed += 1
                     continue
-                multiplier = 1.0 if all_wrong else 0.25
-                row[column] = f"{number + multiplier * max(abs(number), 1.0):.12g}"
-                changed += 1
+                raw = row.get(column)
+                if isinstance(raw, str):
+                    flipped = _flip_categorical(raw)
+                    if flipped is not None and flipped != raw:
+                        row[column] = flipped
+                        changed += 1
+        if changed == 0:
+            detail["mutation"] = "not_assessable"
+            detail["not_assessable_reason"] = (
+                "schema cannot support a meaningful wrong mutation while "
+                "preserving contracted tabular shape/types"
+            )
+            return detail
         with path.open("w", newline="", encoding="utf-8") as handle:
             writer = csv.DictWriter(
                 handle, fieldnames=fieldnames, delimiter=delimiter
             )
             writer.writeheader()
             writer.writerows(rows)
-        detail["mutation"] = "numeric_response_column"
-        detail["response_column"] = column
+        detail["mutation"] = (
+            "all_mutable_columns" if all_wrong else "numeric_response_column"
+        )
+        detail["response_columns"] = target_columns
         detail["changed_values"] = changed
         return detail
-    path.write_text("wrong-component\n", encoding="utf-8")
-    detail["mutation"] = "scalar_text_replacement"
+    if output_format in {"txt", "text", "number", "numeric"}:
+        raw = path.read_text(encoding="utf-8").strip()
+        number = finite_number(raw)
+        if number is None:
+            detail["mutation"] = "not_assessable"
+            detail["not_assessable_reason"] = (
+                "declared scalar text is not parseable numeric text"
+            )
+            return detail
+        delta = max(abs(number), 1.0) * (1.0 if all_wrong else 0.25)
+        path.write_text(f"{number + delta:.12g}\n", encoding="utf-8")
+        detail["mutation"] = "parseable_numeric_text"
+        return detail
+    detail["mutation"] = "not_assessable"
+    detail["not_assessable_reason"] = (
+        f"unsupported contracted format {output_format!r} for shape-preserving "
+        "wrong mutation"
+    )
     return detail
 
 
@@ -1148,9 +1354,42 @@ def run_checker_case(
                     outputs_dir,
                     component,
                     all_wrong=mode == "all_wrong",
+                    specification=specification,
                 )
                 for component in components
             ]
+            if any(
+                item.get("mutation") == "not_assessable"
+                for item in transformations
+            ):
+                reason = next(
+                    item.get("not_assessable_reason")
+                    for item in transformations
+                    if item.get("mutation") == "not_assessable"
+                )
+                return {
+                    "case": case_name,
+                    "mode": mode,
+                    "created_outputs": created,
+                    "transformations": transformations,
+                    "returncode": None,
+                    "reward": None,
+                    "breakdown": None,
+                    "stdout": "",
+                    "stderr": str(reason),
+                    "crashed": False,
+                    "runtime_not_assessable": True,
+                    "runtime_not_assessable_reason": str(reason),
+                    "runtime_provenance": "sandbox",
+                    "checker_dependency_env": "sandbox",
+                    "verifier_entrypoint": "tests/test.sh",
+                    "direct_checker_harness": False,
+                    "runtime_package_contains_solution": (
+                        package_dir / "solution"
+                    ).exists(),
+                    "component": component,
+                    "lane": probe_lane(case_name),
+                }
         elif mode != "missing":
             created = write_synthetic_outputs(
                 outputs_dir, specification, mode
@@ -1202,7 +1441,7 @@ def run_checker_case(
             ),
             encoding="utf-8",
         )
-        # Checker execution is an E1 regression boundary: callers may tighten
+        # Checker execution is a regression boundary: callers may tighten
         # its timeout, but must never extend the contractual 60-second limit.
         run_timeout = checker_run_timeout()
         process = sandbox_runtime.run_in_sandbox(
@@ -1563,22 +1802,13 @@ def evaluate_results(
             and min(partial_scores) > all_wrong + 1e-6
         )
     ):
-        findings.append(
-            finding(
-                "HIGH",
-                "CORE_RUNTIME_ORDERING_VIOLATION",
-                "schema-derived full/partial/all-wrong rewards violate the "
-                "declared deterministic ordering",
-                "schema_derived_ordering",
-                {
-                    "full_reward": full,
-                    "partial_rewards": partial_scores,
-                    "all_wrong_reward": all_wrong,
-                    "expected_order": "full > partial > all_wrong",
-                    "deterministic_core": True,
-                },
-            )
-        )
+        by_case["all_wrong"]["ordering_assessment"] = {
+            "status": "NOT_ASSESSABLE",
+            "reason": (
+                "declared scoring semantics do not establish strict "
+                "full > partial > all_wrong ordering"
+            ),
+        }
     return findings
 
 

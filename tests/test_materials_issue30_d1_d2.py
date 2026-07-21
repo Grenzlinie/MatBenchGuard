@@ -21,6 +21,18 @@ from tests.test_materials_safe_repair import (  # noqa: E402
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+def external_audit_dir(package: Path) -> Path:
+    paper_id = (
+        package.name[len("paper-"):]
+        if package.name.startswith("paper-")
+        else package.name
+    )
+    path = package.parent / "review_outputs" / paper_id / "benchmark_audit"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 SCRIPTS = REPO_ROOT / ".cursor/skills/materials-benchmark-review/scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
@@ -169,7 +181,7 @@ class MaterialsIssue30D1D2Tests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 0, completed.stderr)
             report = json.loads(
-                (package / "benchmark_audit/audit_report.json").read_text(
+                (external_audit_dir(package) / "audit_report.json").read_text(
                     encoding="utf-8"
                 )
             )
@@ -324,7 +336,7 @@ class MaterialsIssue30D1D2Tests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, _, finding_id, runner = initial_repair_context(workspace)
-            report_path = package / "benchmark_audit/audit_report.json"
+            report_path = external_audit_dir(package) / "audit_report.json"
             report = json.loads(report_path.read_text(encoding="utf-8"))
             report["findings"][0].update(
                 {
@@ -343,7 +355,7 @@ class MaterialsIssue30D1D2Tests(unittest.TestCase):
                 },
             }
             write_json(report_path, report)
-            manifest_path = package / "benchmark_audit/audit_manifest.json"
+            manifest_path = external_audit_dir(package) / "audit_manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["output_hashes"]["audit_report.json"] = sha256_file(
                 report_path
@@ -361,8 +373,7 @@ class MaterialsIssue30D1D2Tests(unittest.TestCase):
                 "source_audit": {
                     "audit_id": report["audit_id"],
                     "input_hashes": manifest["input_hashes"],
-                    "paper_mode": "no_paper",
-                    "execution_level": "E1",
+                    "review_lane": "dual",
                     "core_contract_digest": core_digest,
                 },
                 "findings": [

@@ -9,6 +9,31 @@ from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+def external_audit_dir(package: Path) -> Path:
+    paper_id = (
+        package.name[len("paper-"):]
+        if package.name.startswith("paper-")
+        else package.name
+    )
+    path = package.parent / "review_outputs" / paper_id / "benchmark_audit"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def external_reaudit_dir(package: Path) -> Path:
+    paper_id = package.name.removeprefix("paper-")
+    path = (
+        package.parent
+        / "review_outputs"
+        / paper_id
+        / "repair_reaudit"
+        / "benchmark_audit"
+    )
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 REVIEW_SCRIPTS = (
     REPO_ROOT / ".cursor/skills/materials-benchmark-review/scripts"
 )
@@ -147,7 +172,7 @@ def published_bundle(
         "operation": "text_replace",
         "before_hash": None,
         "after_hash": "sha256:after",
-        "evidence_ids": ["E1"],
+        "evidence_ids": ["EV1"],
     }
     regression = {
         "id": "R1",
@@ -188,8 +213,8 @@ def published_bundle(
             "audit_id": "A1",
             "package_identity": identity,
         },
-        "source_configuration": {"execution_level": "E1"},
-        "reaudit_configuration": {"execution_level": "E1"},
+        "source_configuration": {"review_lane": "dual"},
+        "reaudit_configuration": {"review_lane": "dual"},
         "reaudit_audit_id": "A2",
         "reaudit_count": 1,
         "reaudit_verdict": "PASS",
@@ -223,7 +248,7 @@ def published_bundle(
     }
     evidence = [
         {
-            "id": "E1",
+            "id": "EV1",
             "source": "benchmark_audit/audit_report.json",
             "audit_id": "A1",
             "package_identity": identity,
@@ -345,19 +370,20 @@ class MaterialsIssue32DeterministicRepairTests(unittest.TestCase):
         self.assertFalse(deterministic_contract.is_deterministic_repair_plan(plan))
         self.assertEqual(plan["schema_version"], "0.1")
 
+
+
     def test_residual_deterministic_blocker_cannot_pass_reaudit(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             candidate = Path(temporary)
-            audit = candidate / "benchmark_audit"
-            audit.mkdir()
+            audit = external_reaudit_dir(candidate)
+            audit.mkdir(parents=True, exist_ok=True)
             (audit / "audit_manifest.json").write_text(
                 json.dumps({"input_hashes": {}}), encoding="utf-8"
             )
             report = {
                 "audit_id": "A2",
                 "configuration": {
-                    "paper_mode": "no_paper",
-                    "execution_level": "E1",
+                    "review_lane": "dual",
                 },
                 **authoritative_pass_fields(required_contract()),
             }
@@ -368,25 +394,26 @@ class MaterialsIssue32DeterministicRepairTests(unittest.TestCase):
                     {"finding_id": "F1"},
                     {
                         "configuration": {
-                            "paper_mode": "no_paper",
-                            "execution_level": "E1",
+                            "review_lane": "dual",
                         }
                     },
+                    {},
                 )
 
-    def test_reaudit_is_equal_depth_e1_and_exactly_one(self) -> None:
+
+
+    def test_reaudit_is_equal_depth_and_exactly_one(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             candidate = Path(temporary)
-            audit = candidate / "benchmark_audit"
-            audit.mkdir()
+            audit = external_reaudit_dir(candidate)
+            audit.mkdir(parents=True, exist_ok=True)
             (audit / "audit_manifest.json").write_text(
                 json.dumps({"input_hashes": {}}), encoding="utf-8"
             )
             reaudit = {
                 "audit_id": "A2",
                 "configuration": {
-                    "paper_mode": "no_paper",
-                    "execution_level": "E1",
+                    "review_lane": "dual",
                 },
                 **authoritative_pass_fields(clean_contract()),
             }
@@ -396,28 +423,29 @@ class MaterialsIssue32DeterministicRepairTests(unittest.TestCase):
                 {"finding_id": "F1"},
                 {
                     "configuration": {
-                        "paper_mode": "no_paper",
-                        "execution_level": "E1",
+                        "review_lane": "dual",
                     }
                 },
+                {},
             )
 
         self.assertEqual(comparison["reaudit_count"], 1)
-        self.assertEqual(comparison["reaudit_configuration"]["execution_level"], "E1")
+        self.assertEqual(comparison["reaudit_configuration"]["review_lane"], "dual")
+
+
 
     def test_reaudit_rejects_historical_scoring_schema(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             candidate = Path(temporary)
-            audit = candidate / "benchmark_audit"
-            audit.mkdir()
+            audit = external_reaudit_dir(candidate)
+            audit.mkdir(parents=True, exist_ok=True)
             (audit / "audit_manifest.json").write_text(
                 json.dumps({"input_hashes": {}}), encoding="utf-8"
             )
             reaudit = {
                 "audit_id": "A2",
                 "configuration": {
-                    "paper_mode": "no_paper",
-                    "execution_level": "E1",
+                    "review_lane": "dual",
                 },
                 **authoritative_pass_fields(clean_contract()),
             }
@@ -429,10 +457,10 @@ class MaterialsIssue32DeterministicRepairTests(unittest.TestCase):
                     {"finding_id": "F1"},
                     {
                         "configuration": {
-                            "paper_mode": "no_paper",
-                            "execution_level": "E1",
+                            "review_lane": "dual",
                         }
                     },
+                    {},
                 )
 
     def test_atomic_publication_requires_every_invariant(self) -> None:

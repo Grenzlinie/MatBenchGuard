@@ -8,26 +8,23 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.test_materials_benchmark_review_paper_grounded import (
+from tests.test_materials_benchmark_review_dual_lane import (
     REPO_ROOT,
     RUNNER,
     assessment,
     copy_source_package,
-    no_paper_assessment,
-    run_paper_grounded,
+    dual_lane_assessment,
+    external_audit_dir,
+    run_dual_lane,
 )
 
 
-def run_no_paper(package: Path) -> subprocess.CompletedProcess[str]:
+def run_dual_review(package: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [
             sys.executable,
             str(RUNNER),
             str(package),
-            "--paper-mode",
-            "no_paper",
-            "--execution-level",
-            "E1",
         ],
         cwd=REPO_ROOT,
         capture_output=True,
@@ -38,7 +35,7 @@ def run_no_paper(package: Path) -> subprocess.CompletedProcess[str]:
 
 
 def read_bundle(package: Path) -> tuple[dict[str, object], dict[str, object]]:
-    audit = package / "benchmark_audit"
+    audit = external_audit_dir(package)
     report = json.loads(
         (audit / "audit_report.json").read_text(encoding="utf-8")
     )
@@ -87,7 +84,7 @@ class MaterialsDispositionTests(unittest.TestCase):
             copy_source_package(package)
             (package / "solution/solve.sh").unlink()
 
-            completed = run_no_paper(package)
+            completed = run_dual_review(package)
 
             self.assertEqual(
                 completed.returncode,
@@ -170,8 +167,8 @@ class MaterialsDispositionTests(unittest.TestCase):
             ):
                 (stripped / relative).unlink()
 
-            baseline_run = run_no_paper(baseline)
-            stripped_run = run_no_paper(stripped)
+            baseline_run = run_dual_review(baseline)
+            stripped_run = run_dual_review(stripped)
 
             self.assertEqual(baseline_run.returncode, 0, msg=baseline_run.stderr)
             self.assertEqual(stripped_run.returncode, 0, msg=stripped_run.stderr)
@@ -203,7 +200,7 @@ class MaterialsDispositionTests(unittest.TestCase):
             package = Path(temporary) / "paper-fixture"
             copy_source_package(package)
 
-            completed = run_no_paper(package)
+            completed = run_dual_review(package)
 
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             report, index = read_bundle(package)
@@ -224,7 +221,7 @@ class MaterialsDispositionTests(unittest.TestCase):
                 {item["title"] for item in report["findings"]},
             )
 
-    def test_unresolved_high_routes_to_repair_queue_above_score_gate(
+    def test_assessable_clean_report_passes_above_score_gate(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -234,7 +231,7 @@ class MaterialsDispositionTests(unittest.TestCase):
             install_passing_oracle(package)
             assessment_value = assessment()
             assessment_value["materials_qualification"] = (
-                no_paper_assessment()["materials_qualification"]
+                dual_lane_assessment()["materials_qualification"]
             )
             assessment_value["dimensions"]["data_fidelity"]["status"] = "PASS"
             assessment_value["dimensions"]["checker_fidelity"]["evidence"][0][
@@ -254,10 +251,6 @@ class MaterialsDispositionTests(unittest.TestCase):
                     sys.executable,
                     str(RUNNER),
                     str(package),
-                    "--paper-mode",
-                    "paper_grounded",
-                    "--execution-level",
-                    "E1",
                     "--agent-assessment",
                     str(assessment_path),
                 ],
@@ -275,11 +268,11 @@ class MaterialsDispositionTests(unittest.TestCase):
             )
             report, index = read_bundle(package)
             summary = report["summary"]
-            self.assertEqual(summary["final_verdict"], "CONDITIONAL")
+            self.assertEqual(summary["final_verdict"], "PASS")
             self.assertGreaterEqual(summary["total_score"], 80)
-            self.assertEqual(summary["disposition"], "CONDITIONAL")
-            self.assertFalse(summary["publishable"])
-            self.assertEqual(summary["publication_route"], "REPAIR_QUEUE")
+            self.assertEqual(summary["disposition"], "PASS")
+            self.assertTrue(summary["publishable"])
+            self.assertEqual(summary["publication_route"], "PUBLISH_CANDIDATE")
             v11 = {item["dimension"]: item for item in report["dimensions_v11"]}
             self.assertTrue(
                 all(
@@ -294,14 +287,13 @@ class MaterialsDispositionTests(unittest.TestCase):
                     for item in report["dimensions_v11"]
                 )
             )
-            self.assertEqual(index["route"], "REPAIR_QUEUE")
-            self.assertFalse(index["publishable"])
-            self.assertEqual(index["paper_mode"], "paper_grounded")
-            self.assertEqual(index["execution_level"], "E1")
+            self.assertEqual(index["route"], "PUBLISH_CANDIDATE")
+            self.assertTrue(index["publishable"])
+            self.assertEqual(index["review_lane"], "dual")
             self.assertIn("taxonomy_labels", index)
             self.assertIn("finding_summary", index)
             self.assertTrue(
-                (package / "benchmark_audit/disposition.json").is_file()
+                (external_audit_dir(package) / "disposition.json").is_file()
             )
 
     def test_conditional_routes_to_repair_queue_with_taxonomy(self) -> None:
@@ -316,7 +308,7 @@ class MaterialsDispositionTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            completed = run_paper_grounded(package, assessment_path)
+            completed = run_dual_lane(package, assessment_path)
 
             self.assertEqual(
                 completed.returncode,
@@ -325,10 +317,10 @@ class MaterialsDispositionTests(unittest.TestCase):
             )
             report, index = read_bundle(package)
             self.assertEqual(
-                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
+                report["summary"]["final_verdict"], "CONDITIONAL"
             )
             self.assertEqual(
-                report["summary"]["disposition"], "NOT_ASSESSABLE"
+                report["summary"]["disposition"], "CONDITIONAL"
             )
             self.assertFalse(report["summary"]["publishable"])
             self.assertFalse(index["publishable"])
@@ -356,7 +348,7 @@ class MaterialsDispositionTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            completed = run_paper_grounded(package, assessment_path)
+            completed = run_dual_lane(package, assessment_path)
 
             self.assertEqual(
                 completed.returncode,
@@ -365,10 +357,10 @@ class MaterialsDispositionTests(unittest.TestCase):
             )
             report, index = read_bundle(package)
             self.assertEqual(
-                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
+                report["summary"]["final_verdict"], "CONDITIONAL"
             )
             self.assertFalse(report["summary"]["hard_gate_triggered"])
-            self.assertEqual(index["route"], "EVIDENCE_PENDING")
+            self.assertEqual(index["route"], "REPAIR_QUEUE")
             finding = next(
                 item
                 for item in report["findings"]
@@ -388,13 +380,13 @@ class MaterialsDispositionTests(unittest.TestCase):
             instruction = package / "instruction.md"
             before = hashlib.sha256(instruction.read_bytes()).hexdigest()
 
-            completed = run_no_paper(package)
+            completed = run_dual_review(package)
 
             self.assertEqual(completed.returncode, 0)
             report, index = read_bundle(package)
             disposition = json.loads(
                 (
-                    package / "benchmark_audit/disposition.json"
+                    external_audit_dir(package) / "disposition.json"
                 ).read_text(encoding="utf-8")
             )
             self.assertEqual(report["summary"]["final_verdict"], "REJECT")
@@ -419,7 +411,7 @@ class MaterialsDispositionTests(unittest.TestCase):
                 "raise SystemExit(0)\n", encoding="utf-8"
             )
 
-            completed = run_no_paper(package)
+            completed = run_dual_review(package)
 
             self.assertEqual(completed.returncode, 0)
             report, index = read_bundle(package)
@@ -442,7 +434,7 @@ class MaterialsDispositionTests(unittest.TestCase):
             copy_source_package(package)
             (package / "tests/checker.py").unlink()
 
-            completed = run_no_paper(package)
+            completed = run_dual_review(package)
 
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             report, _ = read_bundle(package)

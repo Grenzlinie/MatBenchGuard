@@ -20,7 +20,7 @@
 ```
 
 Repair is never a second scoring authority. It runs the canonical Review CLI
-exactly once at equal E1 depth after the isolated candidate pass. That one
+exactly once at equal dual-lane depth after the isolated candidate pass. That one
 re-audit controls the post-repair verdict, D1–D6 state, Hard-Gate result, and
 target resolution.
 
@@ -64,7 +64,7 @@ quality lane and requires source evidence.
 
 ## Checker execution precondition
 
-Dynamic E1 checker cases and Repair argv command regressions run through the
+Dynamic dual-lane checker cases and Repair argv command regressions run through the
 disposable prebuilt `qa-checker` Docker sandbox. Build it once with
 `.cursor/skills/materials-benchmark-review/scripts/sandbox/build_qa_checker.sh`.
 Docker daemon reachability, the local image, and a writable uv cache are
@@ -85,8 +85,8 @@ No human- or Agent-authored result directory is accepted.
 | A4 | paper fidelity & reproducibility | are instruction/data/params/Gold faithful and reproducible | **paper (always read)** + `instruction` + direct-input probe | EXACT / METHOD (default) / EXTENSION |
 | A5 | Gold credibility | is Gold/tolerance/scoring basis credible and method-independent | `tests/grading_spec`, `tests/checker.py`, **paper (always read)** | see A5 checklist in `paper-grounded-audit.md` |
 
-There is no paper trigger switch: A2/A4/A5 always read `paper/`; A1/A3 are
-package-first and may extend to the paper. The only path that skips the paper is
+The Agent lane always reads `paper/` for A2/A4/A5; A1/A3 are package-first and
+may extend to the paper. The only path that skips the paper is
 the Stage 0 `NON_MAT` fail-fast. Every A-layer conclusion cites an exact
 package/paper quote verified by deterministic code.
 
@@ -108,8 +108,8 @@ does not evaluate the core task and cannot be repaired without redefining it),
 and C06 (an indispensable direct input is permanently unavailable with no
 equivalent).
 
-An atomic repair publication is permitted only when the single equal-depth E1
-re-audit reports overall `PASS`, deterministic `CLEAN`, no failed Hard Gate,
+An atomic repair publication is permitted only when the single equal-depth
+dual-lane re-audit reports overall `PASS`, deterministic `CLEAN`, no failed Hard Gate,
 preserved package identity, allowed mutation scope, and resolution of every
 target finding. Residual deterministic blockers map to a non-published
 terminal state.

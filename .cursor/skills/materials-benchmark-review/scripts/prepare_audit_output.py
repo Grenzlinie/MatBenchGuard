@@ -31,6 +31,11 @@ from artifact_schema import (
     SCORING_SCHEMA_VERSION,
     RESOURCE_CHECKS_SCHEMA_VERSION,
 )
+from review_path_policy import (
+    REVIEW_LANE,
+    management_purpose,
+    require_external_output_dir,
+)
 
 
 REQUIRED_ROLES = {
@@ -60,9 +65,11 @@ PRUNED_DIRS = {
     "benchmark_audit",
     "benchmark_audit_history",
     ".benchmark_audit_tmp",
+    "review_outputs",
+    "review_records",
+    "repair_history",
     "__MACOSX",
 }
-AUTHORITATIVE_EXECUTION_LEVEL = "E1"
 HASH_NAMES = {
     *QUALITY_EVIDENCE_ROLES,
 }
@@ -277,10 +284,11 @@ def collect_input_hashes(root: Path) -> dict[str, str]:
 def collect_source_role_inventory(
     root: Path,
     *,
-    paper_mode: str,
+    skip_paper: bool = False,
 ) -> dict[str, dict[str, Any]]:
+    """Inventory quality roles; paper is in-scope unless NON_MAT skips it."""
     hashes = collect_input_hashes(root)
-    if paper_mode == "paper_grounded":
+    if not skip_paper:
         for relative in PAPER_EVIDENCE_ROLES:
             path = root / relative
             if path.is_file():
@@ -301,8 +309,7 @@ def collect_source_role_inventory(
             "tests/test.sh",
         }
         if relative.startswith("paper/"):
-            required = paper_mode == "paper_grounded"
-            if paper_mode == "no_paper":
+            if skip_paper:
                 inventory[relative] = {
                     "status": "NOT_IN_SCOPE",
                     "required": False,
@@ -311,6 +318,8 @@ def collect_source_role_inventory(
                     "size_bytes": None,
                 }
                 continue
+            # Dual-lane default: paper is required when present in-scope.
+            required = True
         path = root / relative
         if path.is_file():
             inventory[relative] = {
@@ -503,7 +512,7 @@ def validate_paper_boundary(root: Path) -> None:
 
 
 def record_paper_input_hashes(root: Path, temp_dir: Path) -> None:
-    """Add bundled paper hashes only after the no-paper Hard gate passes."""
+    """Bind bundled paper hashes for the dual-lane Agent paper read."""
     validate_paper_boundary(root)
     manifest_path = temp_dir / "audit_manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -515,7 +524,7 @@ def record_paper_input_hashes(root: Path, temp_dir: Path) -> None:
     )
     manifest["source_role_inventory"] = collect_source_role_inventory(
         root,
-        paper_mode="paper_grounded",
+        skip_paper=False,
     )
     manifest_path.write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False),
@@ -525,32 +534,23 @@ def record_paper_input_hashes(root: Path, temp_dir: Path) -> None:
 
 def prepare_workspace(
     root: Path,
-    paper_mode: str,
-    execution_level: str,
     audit_output_dir: Path | None = None,
+    *,
+    skip_paper: bool = False,
 ) -> dict[str, Any]:
-    """Prepare a new candidate audit without moving the authoritative prior one."""
-    if execution_level != AUTHORITATIVE_EXECUTION_LEVEL:
-        raise ValueError(
-            "authoritative materials review is E1-only; "
-            f"received execution level {execution_level!r}"
-        )
+    """Prepare a candidate audit under a required external output root."""
     resolved_root = root.expanduser().resolve()
-    output_root = (
-        audit_output_dir.expanduser().resolve()
+    output_root = require_external_output_dir(
+        resolved_root,
+        audit_output_dir,
+        label="audit output directory",
+        purpose=management_purpose(resolved_root, audit_output_dir)
         if audit_output_dir is not None
-        else resolved_root
+        else "review",
     )
-    if audit_output_dir is not None and (
-        output_root == resolved_root
-        or output_root.is_relative_to(resolved_root)
-    ):
-        raise ValueError(
-            "audit output directory must remain outside the Harbor 题包"
-        )
     parent_audit_id: str | None = None
     previous_manifest = output_root / "benchmark_audit/audit_manifest.json"
-    if paper_mode == "paper_grounded" and previous_manifest.is_file():
+    if previous_manifest.is_file():
         previous = json.loads(
             previous_manifest.read_text(encoding="utf-8")
         )
@@ -581,8 +581,7 @@ def prepare_workspace(
         "AUDIT_ID": audit_id,
         "BENCHMARK_NAME": root.name,
         "BENCHMARK_ROOT": str(root),
-        "PAPER_MODE": paper_mode,
-        "EXECUTION_LEVEL": execution_level,
+        "REVIEW_LANE": REVIEW_LANE,
         "STARTED_AT": started_at,
     }
     (temp_dir / "audit_report.md").write_text(
@@ -612,7 +611,7 @@ def prepare_workspace(
         "audit_id": audit_id,
         "parent_audit_id": parent_audit_id,
         "review_type": (
-            "PAPER_GROUNDED_REAUDIT"
+            "DUAL_LANE_REAUDIT"
             if parent_audit_id is not None
             else "INITIAL_AUDIT"
         ),
@@ -621,13 +620,11 @@ def prepare_workspace(
         "auditor_version": "materials-benchmark-review/2.0",
         "benchmark_root": str(root),
         **canonical_fields("NOT_ASSESSABLE"),
-        "execution_level": execution_level,
-        # Paper roles are deliberately added only after the no-paper gate
-        # passes, so a terminal E0/E1 result never traverses paper content.
+        "review_lane": REVIEW_LANE,
         "input_hashes": collect_input_hashes(root),
         "source_role_inventory": collect_source_role_inventory(
             root,
-            paper_mode=paper_mode,
+            skip_paper=skip_paper,
         ),
         "review_implementation": collect_review_implementation_hashes(),
         "core_contract_digest": core_contract_digest(root),
@@ -660,8 +657,8 @@ def prepare_workspace(
         "audit_temp_dir": str(temp_dir),
         "audit_output_root": str(output_root),
         "final_audit_dir": str(output_root / "benchmark_audit"),
-        "paper_mode": paper_mode,
-        "execution_level": execution_level,
+        "review_lane": REVIEW_LANE,
+        "skip_paper": skip_paper,
     }
     (temp_dir / "audit_context.json").write_text(
         json.dumps(context, indent=2, ensure_ascii=False), encoding="utf-8"
@@ -673,21 +670,20 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("input")
     parser.add_argument(
-        "--paper-mode",
-        choices=["no_paper", "paper_grounded"],
-        default="no_paper",
-    )
-    parser.add_argument(
-        "--execution-level",
-        choices=[AUTHORITATIVE_EXECUTION_LEVEL],
-        default=AUTHORITATIVE_EXECUTION_LEVEL,
+        "--audit-output-dir",
+        required=True,
+        help=(
+            "external directory that owns benchmark_audit; must remain outside "
+            "the Harbor 题包 (sibling convention: "
+            "<topic>/review_outputs/<paper-id>/)"
+        ),
     )
     arguments = parser.parse_args()
     try:
+        root = locate_root(Path(arguments.input))
         context = prepare_workspace(
-            locate_root(Path(arguments.input)),
-            arguments.paper_mode,
-            arguments.execution_level,
+            root,
+            Path(arguments.audit_output_dir),
         )
         print(json.dumps(context, indent=2, ensure_ascii=False))
         return 0

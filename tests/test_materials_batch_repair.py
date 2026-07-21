@@ -18,6 +18,34 @@ from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+def external_audit_dir(package: Path) -> Path:
+    paper_id = (
+        package.name[len("paper-"):]
+        if package.name.startswith("paper-")
+        else package.name
+    )
+    path = package.parent / "review_outputs" / paper_id / "benchmark_audit"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def external_repair_dir(package: Path) -> Path:
+    paper_id = package.name.removeprefix("paper-")
+    return package.parent / "review_outputs" / paper_id / "repair"
+
+
+def external_reaudit_dir(package: Path) -> Path:
+    paper_id = package.name.removeprefix("paper-")
+    return (
+        package.parent
+        / "review_outputs"
+        / paper_id
+        / "repair_reaudit"
+        / "benchmark_audit"
+    )
+
+
 REPAIR_RUNNER = (
     REPO_ROOT
     / ".cursor"
@@ -134,20 +162,19 @@ def dims(all_full):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("root")
-parser.add_argument("--paper-mode", required=True)
-parser.add_argument("--execution-level", required=True)
+parser.add_argument("--audit-output-dir", required=True)
+parser.add_argument("--output-purpose", choices=["reaudit"], required=True)
 parser.add_argument("--agent-assessment")
-parser.add_argument("--e2-smoke-plan")
 args = parser.parse_args()
 root = Path(args.root)
 instruction_text = (root / "instruction.md").read_text()
 broken = "STILL_BROKEN" in instruction_text
 residual_target = "STILL_LISTS_TARGET" in instruction_text
 low_score = "LOW_SCORE" in instruction_text
-audit = root / "benchmark_audit"
+audit = Path(args.audit_output_dir) / "benchmark_audit"
 if audit.exists():
     shutil.rmtree(audit)
-audit.mkdir()
+audit.mkdir(parents=True, exist_ok=True)
 if broken:
     verdict, route = "CONDITIONAL", "REPAIR_QUEUE"
     findings = [{"finding_id": "reaudit-open", "status": "OPEN",
@@ -200,8 +227,7 @@ report = {
     "schema_version": AUDIT_REPORT_SCHEMA_VERSION,
     "bundle_schema_version": AUDIT_BUNDLE_SCHEMA_VERSION,
     "audit_id": "audit-reaudit-batch",
-    "configuration": {"paper_mode": args.paper_mode,
-                      "execution_level": args.execution_level},
+    "configuration": {"review_lane": "dual"},
     "findings": findings,
     "deterministic_core": deterministic_core,
     "agent_quality": agent_quality,
@@ -312,7 +338,7 @@ def install_harness(workspace: Path) -> Path:
 
 
 def write_audit_attestation(package: Path) -> Path:
-    audit = package / "benchmark_audit"
+    audit = external_audit_dir(package)
     manifest = json.loads(
         (audit / "audit_manifest.json").read_text(encoding="utf-8")
     )
@@ -446,7 +472,7 @@ def batch_context(
         "schema_version": AUDIT_REPORT_SCHEMA_VERSION,
         "bundle_schema_version": AUDIT_BUNDLE_SCHEMA_VERSION,
         "audit_id": AUDIT_ID,
-        "configuration": {"paper_mode": "paper_grounded", "execution_level": "E1"},
+        "configuration": {"review_lane": "dual"},
         "findings": [
             {
                 "finding_id": FINDING_A,
@@ -483,9 +509,9 @@ def batch_context(
             },
         },
     }
-    write_json(package / "benchmark_audit/audit_report.json", report)
+    write_json(external_audit_dir(package) / "audit_report.json", report)
     write_json(
-        package / "benchmark_audit/disposition.json",
+        external_audit_dir(package) / "disposition.json",
         {
             "schema_version": DISPOSITION_SCHEMA_VERSION,
             "audit_id": AUDIT_ID,
@@ -494,15 +520,15 @@ def batch_context(
         },
     )
     write_json(
-        package / "benchmark_audit/deterministic_core/report.json",
+        external_audit_dir(package) / "deterministic_core/report.json",
         deterministic_core,
     )
     write_json(
-        package / "benchmark_audit/deterministic_core/probe_results.json",
+        external_audit_dir(package) / "deterministic_core/probe_results.json",
         probe_results,
     )
     write_json(
-        package / "benchmark_audit/agent_quality/assessment.json",
+        external_audit_dir(package) / "agent_quality/assessment.json",
         agent_quality,
     )
     for relative in (
@@ -510,7 +536,7 @@ def batch_context(
         "checker_tests.json",
         "resource_checks.json",
     ):
-        write_json(package / f"benchmark_audit/{relative}", {})
+        write_json(external_audit_dir(package) / relative, {})
     input_hashes = {
         relative: sha256_file(package / relative)
         for relative in (
@@ -523,7 +549,7 @@ def batch_context(
         )
     }
     write_json(
-        package / "benchmark_audit/audit_manifest.json",
+        external_audit_dir(package) / "audit_manifest.json",
         {
             "schema_version": AUDIT_MANIFEST_SCHEMA_VERSION,
             "bundle_schema_version": AUDIT_BUNDLE_SCHEMA_VERSION,
@@ -535,29 +561,28 @@ def batch_context(
             "assessment_hashes": {},
             "output_hashes": {
                 "audit_report.json": sha256_file(
-                    package / "benchmark_audit/audit_report.json"
+                    external_audit_dir(package) / "audit_report.json"
                 ),
                 "disposition.json": sha256_file(
-                    package / "benchmark_audit/disposition.json"
+                    external_audit_dir(package) / "disposition.json"
                 ),
                 "corpus_index_entry.json": sha256_file(
-                    package / "benchmark_audit/corpus_index_entry.json"
+                    external_audit_dir(package) / "corpus_index_entry.json"
                 ),
                 "checker_tests.json": sha256_file(
-                    package / "benchmark_audit/checker_tests.json"
+                    external_audit_dir(package) / "checker_tests.json"
                 ),
                 "resource_checks.json": sha256_file(
-                    package / "benchmark_audit/resource_checks.json"
+                    external_audit_dir(package) / "resource_checks.json"
                 ),
                 "deterministic_core/report.json": sha256_file(
-                    package / "benchmark_audit/deterministic_core/report.json"
+                    external_audit_dir(package) / "deterministic_core/report.json"
                 ),
                 "deterministic_core/probe_results.json": sha256_file(
-                    package
-                    / "benchmark_audit/deterministic_core/probe_results.json"
+                    external_audit_dir(package) / "deterministic_core/probe_results.json"
                 ),
                 "agent_quality/assessment.json": sha256_file(
-                    package / "benchmark_audit/agent_quality/assessment.json"
+                    external_audit_dir(package) / "agent_quality/assessment.json"
                 ),
             },
         },
@@ -617,19 +642,18 @@ def finding_entry(
 def bind_batch_plan(package: Path, plan: dict[str, Any]) -> None:
     module = repair_module()
     manifest = json.loads(
-        (package / "benchmark_audit/audit_manifest.json").read_text(
+        (external_audit_dir(package) / "audit_manifest.json").read_text(
             encoding="utf-8"
         )
     )
-    report_hash = sha256_file(package / "benchmark_audit/audit_report.json")
+    report_hash = sha256_file(external_audit_dir(package) / "audit_report.json")
     digest = module.core_contract_digest(package)
     plan["core_contract_digest"] = digest
     plan["source_audit"] = {
         "audit_id": plan["audit_id"],
         "input_hashes": manifest["input_hashes"],
         "review_implementation": manifest.get("review_implementation", {}),
-        "paper_mode": "paper_grounded",
-        "execution_level": "E1",
+        "review_lane": "dual",
         "core_contract_digest": digest,
         "assessment_hashes": {},
     }
@@ -665,6 +689,10 @@ def run_repair(
             str(plan_path),
             "--audit-attestation",
             str(package.parent / "audit-attestation.json"),
+            "--audit-dir",
+            str(external_audit_dir(package)),
+            "--repair-output-dir",
+            str(external_repair_dir(package)),
         ],
         cwd=REPO_ROOT,
         capture_output=True,
@@ -718,6 +746,8 @@ class MaterialsBatchRepairTests(unittest.TestCase):
             )
         )
 
+
+
     def test_batch_multi_finding_repaired_and_published(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
@@ -762,7 +792,9 @@ class MaterialsBatchRepairTests(unittest.TestCase):
             self.assertEqual(result["repair_delta"]["C02"]["before_normalized"], 40.0)
             self.assertEqual(result["repair_delta"]["C02"]["after_normalized"], 100.0)
             self.assertEqual(result["repair_delta"]["C02"]["delta_pp"], 60.0)
-            repair_module().validate_fixed_bundle(package / "benchmark_repair")
+            repair_module().validate_fixed_bundle(
+                external_repair_dir(package) / "benchmark_repair"
+            )
             repair_module().validate_fixed_bundle(Path(result["history_dir"]))
 
     def test_batch_partial_fix_not_published_preserves_original(self) -> None:
@@ -873,6 +905,8 @@ class MaterialsBatchRepairTests(unittest.TestCase):
             self.assertIn(FINDING_B, unresolved_ids)
             self.assertFalse((package / "solution/solve.sh").is_file())
 
+
+
     def test_batch_publishes_reading_publication_route_not_verdict(self) -> None:
         # Regression for Bug 1: the re-audit stub emits the real v11 layout
         # where summary.disposition holds the VERDICT ("PASS") and the publish
@@ -915,14 +949,16 @@ class MaterialsBatchRepairTests(unittest.TestCase):
             self.assertTrue((package / "solution/solve.sh").is_file())
             # Confirm the published re-audit really used the v11 layout: the
             # verdict lives in disposition, and the route is elsewhere.
-            reaudit = json.loads(
-                (package / "benchmark_audit/audit_report.json").read_text(
-                    encoding="utf-8"
-                )
+            repair_manifest = json.loads(
+                (
+                    external_repair_dir(package)
+                    / "benchmark_repair/repair_manifest.json"
+                ).read_text(encoding="utf-8")
             )
-            self.assertEqual(reaudit["summary"]["disposition"], "PASS")
+            comparison = repair_manifest["re_audit_comparison"]
+            self.assertEqual(comparison["reaudit_verdict"], "PASS")
             self.assertEqual(
-                reaudit["summary"]["publication_route"], "PUBLISH_CANDIDATE"
+                comparison["publication_route"], "PUBLISH_CANDIDATE"
             )
 
     def test_batch_residual_target_finding_blocks_publish(self) -> None:

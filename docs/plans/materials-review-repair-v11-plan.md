@@ -113,7 +113,7 @@
 
 1. **材料准入前置、纯 Agent 判定、放弃制**：取消关键词预筛；非材料直接 REJECT，不再进入后续；`MAT_WRAPPER` 不再被「排除」而是作为合法任务继续评分。
 2. **确定性层集中在前**，明确「这些问题都可修复」，为修复阶段提供确定的、可回归的目标。
-3. **LLM 层每个检查项显式声明输入文件**（见第 6 节表格）；A2/A4/A5 必读 paper，常规路径默认 paper-grounded E1。
+3. **LLM 层每个检查项显式声明输入文件**（见第 6 节表格）；A2/A4/A5 必读 paper，常规路径默认 dual-lane Review。
 
 ---
 
@@ -155,7 +155,7 @@
 | A5 | Gold 可信度（参考标准 1.8） | Gold/容差/评分依据是否可信、是否独立于被测方法 | tests/grading_spec、tests/checker.py、**paper（必读）** | 见下方「A5 Gold 可信度判定清单」 |
 
 > **取消 paper 触发开关**：不再用 SCIENTIFIC_CONFLICT / NECESSARY_INFORMATION_MISSING / GOLD_PROVENANCE_UNCERTAIN / EXPLICIT_REPRODUCTION_CLAIM 决定是否读 paper。改为**固定规则**：A2（必要定义齐全）、A4（论文忠实与可复现）、A5（Gold 可信度）**恒读 `paper/`**；A1、A3 以题包内文件为主，需要时可扩展至 paper。
-> 因此本 skill 的常规审查路径**默认进入 paper-grounded E1**；唯一例外是 Stage 0 命中 Hard Gate（`NON_MAT` 非材料）时 fail-fast，不读 paper。
+> 因此本 skill 的常规审查路径**默认进入 dual-lane Review**；唯一例外是 Stage 0 命中 Hard Gate（`NON_MAT` 非材料）时 fail-fast，不读 paper。
 > 所有 A 层结论必须落到题包/论文原文引用，由确定性代码核验（引用存在、标签合法、哈希绑定），防止 agent 凭空发挥。
 
 #### A5 Gold 可信度判定清单（参考标准 1.8）
@@ -262,7 +262,7 @@ Reviewer 改造后，Repair skill（`materials-benchmark-repair`）需同步以�
    - 仅「加异常捕获 / 修 Harbor 路径合同」这类无需科学论文的操作，用崩溃栈与现有代码即可支撑。
 5. **分类与放弃对齐**：`NON_MAT` 不进入修复；核心科学定义需改动或证据不足 → `ABANDON`（材料版放弃文案参考 `references/出题-质检-修复.md`）。
 6. **过程文件不作 checker 必需项**：修复不得把过程/中间文件改成 checker 必检字段（防作弊交由 trace，另属他任务）；checker 仍聚焦 instruction 声明的核心输出。
-7. **取消 `no_paper` 模式带来的证据规则调整**：现状 SKILL 里「paper 证据仅在 `paper_grounded` 审查里有效，`no_paper` 审查不能授权 paper 证据」的分支需改写——因为审查已默认 paper-grounded（唯一非 paper 路径是 `NON_MAT` fail-fast，且永不进修复）。改为：**paper 证据始终可用，但必须绑定 source audit 已哈希的那一个 `paper/**` 文件**（哈希不匹配或未绑定 → `BLOCKED_EVIDENCE`）。删除 `no_paper` 相关的判定与文案，`run_repair.py` 中按 paper 模式分支的逻辑相应简化。
+7. **取消 论文读取回退模式带来的证据规则调整**：现状 SKILL 里「paper 证据仅在 双车道审查里有效，论文读取回退审查不能授权 paper 证据」的分支需改写——因为审查已默认 paper-grounded（唯一非 paper 路径是 `NON_MAT` fail-fast，且永不进修复）。改为：**paper 证据始终可用，但必须绑定 source audit 已哈希的那一个 `paper/**` 文件**（哈希不匹配或未绑定 → `BLOCKED_EVIDENCE`）。删除旧论文读取回退相关的判定与文案，`run_repair.py` 中按 paper 模式分支的逻辑相应简化。
 
 ### 8.2 「能修 / 放弃」对照表（操作类型 × 所需证据精度 × 判定）
 
@@ -338,7 +338,7 @@ Reviewer 改造后，Repair skill（`materials-benchmark-repair`）需同步以�
 
 #### 8.3.4 与统一约束的一致性
 
-- **no_paper 模式已移除**：paper 证据始终可用，但每条 paper 证据必须绑定 source audit 已哈希的那一个 `paper/**` 文件，哈希不匹配 / 未绑定 → `BLOCKED_EVIDENCE`（§8.1 item 7）。这正是 2.3「无依据不编造」在材料域的确定性落地——「依据」即已哈希的论文 / 题包原文。
+- **论文读取回退模式已移除**：paper 证据始终可用，但每条 paper 证据必须绑定 source audit 已哈希的那一个 `paper/**` 文件，哈希不匹配 / 未绑定 → `BLOCKED_EVIDENCE`（§8.1 item 7）。这正是 2.3「无依据不编造」在材料域的确定性落地——「依据」即已哈希的论文 / 题包原文。
 - **证据精度匹配矩阵**（§8.1 item 4 / §8.2）是 2.3「不改任务含义 / 不猜造参数」与 2.7 红线的机器可核验形式。
 - **终态字段统一** `disposition + publishable + repair_state` 与 2.8 的四态对齐（批量语义见 §8.4）：`REPAIRED → disposition=PASS & publishable=true`（整包所有阻塞 finding 均解决）；`PARTIALLY_REPAIRED → 部分 finding 解决但仍有未解决 HIGH，disposition=CONDITIONAL & publishable=false`；`ABANDONED → REJECT 族 & publishable=false`；`ROLLED_BACK → 批量应用/回归失败，保持原始题包`。
 
@@ -360,7 +360,7 @@ Reviewer 改造后，Repair skill（`materials-benchmark-repair`）需同步以�
   2. 收集所有 AUTO_FIX/ASSISTED_FIX 的 operations，逐条按证据精度矩阵（§8.1 item 4）校验；**任一 operation 证据不合格 → 该 operation 记 `BLOCKED_EVIDENCE`，不阻断其余合格 operation**；
   3. 对 candidate 应用全部合格 operation，记录前后哈希与证据链；
   4. 跑全部回归（每个 operation 一条语义对应断言，修前失败/修后通过）；
-  5. **只做一次**整包等深 Review CLI（同 paper 模式、同 E1 执行级）。
+  5. **只做一次**整包等深 Review CLI（同一双车道深度）。
 - **终态判定（批量）**：
   - **REPAIRED**：等深复审 `PASS` 且无未解决 HIGH/FATAL、身份不变、无越界改动 → `disposition=PASS`、`publishable=true`，原子换入发布；
   - **PARTIALLY_REPAIRED**：部分 finding 已解决但复审仍非 PASS（尚存未解决 HIGH，或某些 finding 为 BLOCKED_EVIDENCE/ABANDON）→ **不发布，保持原始题包**，`disposition=CONDITIONAL`、`publishable=false`，报告列出「已解决 / 未解决 / 放弃」清单；
@@ -417,7 +417,8 @@ Reviewer 改造后，Repair skill（`materials-benchmark-repair`）需同步以�
 Review：
 - `.cursor/skills/materials-benchmark-review/SKILL.md`（两张表格 + 新流程 + 分类改造说明）
 - `references/scoring-rubric.md`（C01–C07 模型）
-- `references/no-paper-e1.md`、`references/paper-grounded-audit.md`（删除 paper 触发开关；改为 A2/A4/A5 恒读 paper 的固定规则 + A 层输入文件）
+- 删除的论文回退参考、`references/paper-grounded-audit.md`（改为 A2/A4/A5
+  恒读 paper 的固定规则 + A 层输入文件）
 - `scripts/audit_package.py`（D2 instruction 内部一致 + 分类字段读取）
 - `scripts/run_review.py`（分类改造、流程编排、材料准入放弃门）
 - `scripts/finalize_audit_output.py`（七维评分、报告结构、修前/修后 delta）

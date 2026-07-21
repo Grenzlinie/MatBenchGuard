@@ -18,19 +18,29 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 import prepare_audit_output  # noqa: E402
+import review_path_policy  # noqa: E402
 
 
 class MaterialsReviewExternalAuditTests(unittest.TestCase):
+    def test_default_sibling_review_outputs_convention(self) -> None:
+        package = Path(
+            "/tmp/topic/ml-prediction/paper-1043370649185157132"
+        )
+        self.assertEqual(
+            review_path_policy.default_review_output_dir(package),
+            Path(
+                "/tmp/topic/ml-prediction/review_outputs/1043370649185157132"
+            ).resolve(),
+        )
+
     def test_external_output_keeps_generated_audit_outside_package(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            package = Path(temporary) / "paper-1"
-            package.mkdir()
-            output = Path(temporary) / "review_records/paper-1"
+            package = Path(temporary) / "theme" / "paper-1"
+            package.mkdir(parents=True)
+            output = Path(temporary) / "theme/review_outputs/1"
 
             context = prepare_audit_output.prepare_workspace(
                 package,
-                "no_paper",
-                "E1",
                 audit_output_dir=output,
             )
 
@@ -43,18 +53,36 @@ class MaterialsReviewExternalAuditTests(unittest.TestCase):
             self.assertTrue(
                 (output / ".benchmark_audit_tmp/audit_manifest.json").is_file()
             )
+            self.assertEqual(context["review_lane"], "dual")
 
     def test_external_output_inside_package_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            package = Path(temporary) / "paper-1"
-            package.mkdir()
+            package = Path(temporary) / "theme/paper-1"
+            package.mkdir(parents=True)
 
-            with self.assertRaises(ValueError):
+            with self.assertRaisesRegex(ValueError, "canonical|outside the Harbor"):
                 prepare_audit_output.prepare_workspace(
                     package,
-                    "no_paper",
-                    "E1",
-                    audit_output_dir=package / "review_records",
+                    audit_output_dir=package / "review_outputs",
+                )
+
+    def test_missing_low_level_output_path_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary) / "theme/paper-1"
+            package.mkdir(parents=True)
+
+            with self.assertRaisesRegex(ValueError, "required"):
+                prepare_audit_output.prepare_workspace(package)
+
+    def test_wrong_sibling_output_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary) / "theme-a/paper-1"
+            package.mkdir(parents=True)
+            wrong = Path(temporary) / "theme-b/review_outputs/1"
+            with self.assertRaisesRegex(ValueError, "canonical|theme-sibling"):
+                prepare_audit_output.prepare_workspace(
+                    package,
+                    audit_output_dir=wrong,
                 )
 
 

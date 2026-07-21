@@ -68,6 +68,11 @@ from d6_core_output_scoring import (  # noqa: E402
     unique_wiring_auto_fix_operation_error,
 )
 import sandbox_runtime  # noqa: E402
+from review_path_policy import (  # noqa: E402
+    REVIEW_LANE,
+    canonical_management_path,
+    require_management_path,
+)
 
 DECISIONS = {"AUTO_FIX", "ASSISTED_FIX", "ABANDON"}
 # The batch five-state lifecycle mapped onto the unified terminal fields
@@ -98,7 +103,6 @@ def terminal_fields(
         "repair_state": repair_state,
     }
 REPAIR_CLASSES = {"AUTO_FIX", "ASSISTED_FIX"}
-AUTHORITATIVE_EXECUTION_LEVEL = "E1"
 OPERATION_TYPES = {"write_file", "replace_text", "text_replace", "json_set", "delete_file"}
 REGRESSION_TYPES = {
     "file_exists",
@@ -115,6 +119,9 @@ GENERATED_TOP_LEVEL = {
     "benchmark_repair",
     ".benchmark_audit_tmp",
     ".benchmark_repair_tmp",
+    "review_outputs",
+    "review_records",
+    "repair_history",
 }
 EVIDENCE_SOURCE_PREFIX = "benchmark_audit:"
 REMOVED_FIXTURE_FIELDS = frozenset(
@@ -127,7 +134,6 @@ METADATA_ROOTS = {
     "task.toml",
     "environment",
 }
-REQUIRED_AUDIT_EXECUTION_LEVEL = "E1"
 CORE_CONTRACT_SCHEMA = "materials-core-contract/1.0"
 CURRENT_SCORING_VERSION = SCORING_SCHEMA_VERSION
 MINIMUM_REPAIR_SCORE = 60.0
@@ -262,26 +268,33 @@ def write_json(path: Path, value: Any) -> None:
     )
 
 
+def default_source_audit_dir(root: Path) -> Path:
+    return canonical_management_path(root, "source_audit")
+
+
 def source_audit_dir(root: Path, plan: dict[str, Any]) -> Path:
     raw = plan.get("source_audit_dir")
-    audit = (
-        Path(str(raw)).expanduser().resolve()
-        if raw is not None
-        else root / "benchmark_audit"
-    )
-    if raw is not None and audit.is_relative_to(root.resolve()):
-        raise ValueError("source audit directory must remain outside the Harbor 题包")
-    return audit
+    path = Path(str(raw)).expanduser().resolve() if raw is not None else default_source_audit_dir(root)
+    return require_management_path(root, path, purpose="source_audit", label="source audit directory")
 
 
-def repair_output_root(root: Path, plan: dict[str, Any]) -> Path | None:
+def default_repair_output_dir(root: Path) -> Path:
+    return canonical_management_path(root, "repair")
+
+
+def repair_output_root(root: Path, plan: dict[str, Any]) -> Path:
     raw = plan.get("repair_output_dir")
-    if raw is None:
-        return None
-    output = Path(str(raw)).expanduser().resolve()
-    if output.is_relative_to(root.resolve()):
-        raise ValueError("repair output directory must remain outside the Harbor 题包")
-    return output
+    path = Path(str(raw)).expanduser().resolve() if raw is not None else default_repair_output_dir(root)
+    return require_management_path(root, path, purpose="repair", label="repair output directory")
+
+
+def reaudit_output_root(root: Path) -> Path:
+    return canonical_management_path(root, "reaudit")
+
+
+def reaudit_audit_dir(root: Path, plan: dict[str, Any]) -> Path:
+    del plan
+    return reaudit_output_root(root) / "benchmark_audit"
 
 
 def sha256_file(path: Path) -> str:
@@ -1026,17 +1039,12 @@ def validate_source_audit_binding(
             "BLOCKED_EVIDENCE", "authoritative audit lacks configuration"
         )
     if (
-        source_audit.get("paper_mode", source_audit.get("paper_review_mode"))
-        != configuration.get("paper_mode")
-        or source_audit.get(
-            "execution_level", source_audit.get("evidence_depth")
-        )
-        != REQUIRED_AUDIT_EXECUTION_LEVEL
-        or configuration.get("execution_level") != REQUIRED_AUDIT_EXECUTION_LEVEL
+        source_audit.get("review_lane") != REVIEW_LANE
+        or configuration.get("review_lane") != REVIEW_LANE
     ):
         raise PolicyStop(
             "BLOCKED_EVIDENCE",
-            "Repair source audit and re-audit must be fixed at E1 depth",
+            "Repair source audit and re-audit must use review_lane='dual'",
         )
     digest = core_contract_digest(root)
     bound_digest = source_audit.get("core_contract_digest")
@@ -2893,20 +2901,13 @@ def assert_mutation_boundary(
         raise ValueError("repair modified a read-only package role")
 
 
-def report_configuration(report: dict[str, Any]) -> tuple[str, str]:
+def report_configuration(report: dict[str, Any]) -> str:
     configuration = report.get("configuration")
     if not isinstance(configuration, dict):
         raise ValueError("Review report requires configuration")
-    paper_mode = configuration.get("paper_mode")
-    execution_level = configuration.get("execution_level")
-    if paper_mode not in {"no_paper", "paper_grounded"}:
-        raise ValueError("Review report has an unsupported paper_mode")
-    if execution_level != AUTHORITATIVE_EXECUTION_LEVEL:
-        raise ValueError(
-            "authoritative repair re-audit is E1-only; "
-            f"received execution level {execution_level!r}"
-        )
-    return paper_mode, execution_level
+    if configuration.get("review_lane") != REVIEW_LANE:
+        raise ValueError("Review report must use review_lane='dual'")
+    return REVIEW_LANE
 
 
 def run_equal_depth_review(
@@ -2926,23 +2927,18 @@ def run_equal_depth_review(
     )
     if not runner.is_file():
         raise FileNotFoundError(f"Review runner is missing: {runner}")
-    paper_mode, execution_level = report_configuration(report)
-    if execution_level != REQUIRED_AUDIT_EXECUTION_LEVEL:
-        raise ValueError("Repair equal-depth re-audit is fixed at E1")
+    source_lane = report_configuration(report)
     external_binding_hashes(candidate, plan, source_manifest)
+    audit_output_dir = reaudit_output_root(candidate)
     command = [
         sys.executable,
         str(runner),
         str(candidate),
-        "--paper-mode",
-        paper_mode,
-        "--execution-level",
-        execution_level,
+        "--audit-output-dir",
+        str(audit_output_dir),
+        "--output-purpose",
+        "reaudit",
     ]
-    if plan.get("e2_smoke_plan") is not None:
-        raise ValueError(
-            "E2/E3/E4 plans cannot enter an authoritative E1 repair re-audit"
-        )
     for key, flag in {"agent_assessment": "--agent-assessment"}.items():
         raw = plan.get(key)
         if raw is None:
@@ -2962,9 +2958,9 @@ def run_equal_depth_review(
     )
     if process.returncode != 0:
         raise ValueError("equal-depth re-audit failed: " + process.stderr[-2000:])
-    reaudit = read_json(candidate / "benchmark_audit/audit_report.json")
-    if report_configuration(reaudit) != (paper_mode, execution_level):
-        raise ValueError("re-audit evidence depth differs from the source audit")
+    reaudit = read_json(audit_output_dir / "benchmark_audit/audit_report.json")
+    if report_configuration(reaudit) != source_lane:
+        raise ValueError("re-audit review lane differs from the source audit")
     return reaudit
 
 
@@ -3163,11 +3159,12 @@ def validate_reaudit(
     reaudit: dict[str, Any],
     source_finding: dict[str, Any],
     source_report: dict[str, Any],
+    plan: dict[str, Any],
     *,
     require_deterministic: bool = True,
 ) -> dict[str, Any]:
     summary = reaudit.get("summary", {})
-    disposition_path = candidate / "benchmark_audit/disposition.json"
+    disposition_path = reaudit_audit_dir(candidate, plan) / "disposition.json"
     disposition = read_json(disposition_path) if disposition_path.is_file() else {}
     verdict = summary.get("final_verdict") or disposition.get("verdict")
     # The publish route lives in disposition.json ``route`` (and the finalizer's
@@ -3190,14 +3187,12 @@ def validate_reaudit(
         raise ValueError("target finding remains open after re-audit")
     pass_evidence = validate_authoritative_pass(reaudit)
     configuration = reaudit.get("configuration", {})
-    manifest_path = candidate / "benchmark_audit/audit_manifest.json"
+    manifest_path = reaudit_audit_dir(candidate, plan) / "audit_manifest.json"
     manifest = read_json(manifest_path) if manifest_path.is_file() else {}
-    if configuration.get("execution_level") != REQUIRED_AUDIT_EXECUTION_LEVEL:
-        raise ValueError("re-audit execution level is not E1")
-    if configuration.get("paper_mode") != source_report.get(
-        "configuration", {}
-    ).get("paper_mode"):
-        raise ValueError("re-audit paper mode is not equal to the source audit")
+    if configuration.get("review_lane") != REVIEW_LANE:
+        raise ValueError("re-audit review lane is not dual")
+    if source_report.get("configuration", {}).get("review_lane") != REVIEW_LANE:
+        raise ValueError("source audit review lane is not dual")
     manifest_hashes = manifest.get("input_hashes")
     current_hashes = (
         {
@@ -3216,16 +3211,8 @@ def validate_reaudit(
             "status": source_finding.get("status", "OPEN"),
         },
         "target_resolved": True,
-        "source_configuration": {
-            "paper_mode": source_report.get("configuration", {}).get("paper_mode"),
-            "execution_level": source_report.get("configuration", {}).get(
-                "execution_level"
-            ),
-        },
-        "reaudit_configuration": {
-            "paper_mode": configuration.get("paper_mode"),
-            "execution_level": configuration.get("execution_level"),
-        },
+        "source_configuration": {"review_lane": REVIEW_LANE},
+        "reaudit_configuration": {"review_lane": REVIEW_LANE},
         "reaudit_audit_id": reaudit.get("audit_id"),
         "reaudit_count": 1,
         "reaudit_verdict": verdict,
@@ -3253,8 +3240,10 @@ def replace_paths(value: Any, old: str, new: str) -> Any:
     return value
 
 
-def rebase_audit_paths(candidate: Path, final_root: Path) -> None:
-    audit = candidate / "benchmark_audit"
+def rebase_audit_paths(
+    candidate: Path, final_root: Path, plan: dict[str, Any]
+) -> None:
+    audit = reaudit_audit_dir(candidate, plan)
     old = str(candidate)
     new = str(final_root)
     for path in audit.rglob("*"):
@@ -3300,26 +3289,32 @@ def externalize_generated_bundles(
     root: Path,
     plan: dict[str, Any],
 ) -> dict[str, str]:
+    """Record externally generated repair bundles.
+
+    Equal-depth re-audit already writes under
+    ``<repair_output_dir>/repair_reaudit/benchmark_audit``. Optional
+    package-local ``benchmark_repair`` artifacts are moved beside it.
+    """
     output = repair_output_root(root, plan)
-    if output is None:
-        return {}
-    destinations = {
-        "benchmark_audit": output / "repair_reaudit",
-        "benchmark_repair": output / "benchmark_repair",
-    }
-    for name, destination in destinations.items():
-        source = candidate / name
-        if not source.is_dir():
-            raise FileNotFoundError(
-                f"generated {name} bundle is missing before publication"
-            )
+    published: dict[str, str] = {}
+    reaudit = reaudit_audit_dir(candidate, plan)
+    if not reaudit.is_dir():
+        raise FileNotFoundError(
+            "generated repair_reaudit/benchmark_audit bundle is missing "
+            "before publication"
+        )
+    published["benchmark_audit"] = str(reaudit.parent)
+    repair_bundle = candidate / "benchmark_repair"
+    if repair_bundle.is_dir():
+        destination = output / "benchmark_repair"
         if destination.exists() or destination.is_symlink():
             raise FileExistsError(
                 f"external repair output already exists: {destination}"
             )
         destination.parent.mkdir(parents=True, exist_ok=True)
-        source.rename(destination)
-    return {name: str(path) for name, path in destinations.items()}
+        repair_bundle.rename(destination)
+        published["benchmark_repair"] = str(destination)
+    return published
 
 
 def root_cause_id(report: dict[str, Any], plan: dict[str, Any]) -> str:
@@ -3999,17 +3994,12 @@ def validate_source_audit_binding_batch(
             "BLOCKED_EVIDENCE", "authoritative audit lacks configuration"
         )
     if (
-        source_audit.get("paper_mode", source_audit.get("paper_review_mode"))
-        != configuration.get("paper_mode")
-        or source_audit.get(
-            "execution_level", source_audit.get("evidence_depth")
-        )
-        != REQUIRED_AUDIT_EXECUTION_LEVEL
-        or configuration.get("execution_level") != REQUIRED_AUDIT_EXECUTION_LEVEL
+        source_audit.get("review_lane") != REVIEW_LANE
+        or configuration.get("review_lane") != REVIEW_LANE
     ):
         raise PolicyStop(
             "BLOCKED_EVIDENCE",
-            "Repair source audit and re-audit must be fixed at E1 depth",
+            "Repair source audit and re-audit must use review_lane='dual'",
         )
     digest = core_contract_digest(root)
     bound_digest = source_audit.get("core_contract_digest")
@@ -4920,7 +4910,7 @@ def repair_batch(
     # finalizer's ``summary.publication_route`` / ``summary.publishability``).
     # ``summary.disposition`` holds the VERDICT, not the route, so it must not
     # be used here (mirrors read_ext_disposition and finalize_audit_output).
-    reaudit_disposition_path = candidate / "benchmark_audit/disposition.json"
+    reaudit_disposition_path = reaudit_audit_dir(candidate, plan) / "disposition.json"
     reaudit_disposition = (
         read_json(reaudit_disposition_path)
         if reaudit_disposition_path.is_file()
@@ -4994,7 +4984,7 @@ def repair_batch(
         and package_identity(candidate, directory_name=root.name) == identity
     )
     repair_delta = compute_repair_delta(report, reaudit)
-    paper_mode, execution_level = report_configuration(reaudit)
+    review_lane = report_configuration(reaudit)
     comparison = {
         "target_resolved": fully_passed,
         "reaudit_audit_id": reaudit.get("audit_id"),
@@ -5022,16 +5012,8 @@ def repair_batch(
             "finding_id": resolved_targets[0] if resolved_targets else None,
             "status": "OPEN",
         },
-        "source_configuration": {
-            "paper_mode": report.get("configuration", {}).get("paper_mode"),
-            "execution_level": report.get("configuration", {}).get(
-                "execution_level"
-            ),
-        },
-        "reaudit_configuration": {
-            "paper_mode": paper_mode,
-            "execution_level": execution_level,
-        },
+        "source_configuration": {"review_lane": report_configuration(report)},
+        "reaudit_configuration": {"review_lane": review_lane},
         "repair_delta": repair_delta,
         "source_score": authoritative_total_score(
             report, context="source audit"
@@ -5169,17 +5151,16 @@ def repair_batch(
         "repair_delta": repair_delta,
         "reaudit": {
             "audit_id": reaudit["audit_id"],
-            "paper_mode": paper_mode,
-            "execution_level": execution_level,
+            "review_lane": review_lane,
             "verdict": verdict,
             "disposition": route,
         },
         "atomic_publish": True,
         "published_at": timestamp(),
     }
-    rebase_audit_paths(candidate, root)
-    reaudit_report_path = candidate / "benchmark_audit/audit_report.json"
-    reaudit_manifest_path = candidate / "benchmark_audit/audit_manifest.json"
+    rebase_audit_paths(candidate, root, plan)
+    reaudit_report_path = reaudit_audit_dir(candidate, plan) / "audit_report.json"
+    reaudit_manifest_path = reaudit_audit_dir(candidate, plan) / "audit_manifest.json"
     repair_manifest.update(
         {
             "reaudit_audit_id": reaudit["audit_id"],
@@ -5363,17 +5344,13 @@ def repair(
                 f"re-audit total score {reaudit_score:g} permits only a "
                 "partial, non-published repair",
             )
-        re_audit_comparison = validate_reaudit(
-            candidate,
-            reaudit,
-            finding,
-            report,
+        re_audit_comparison = validate_reaudit(candidate, reaudit, finding, report, plan,
             require_deterministic=is_deterministic_repair_plan(plan),
         )
         assert_mutation_boundary(snapshot, candidate, operation_files)
         if package_identity(candidate, directory_name=root.name) != identity:
             raise ValueError("repair changed the Harbor package identity")
-        paper_mode, execution_level = report_configuration(reaudit)
+        review_lane = report_configuration(reaudit)
         repair_canonical = canonical_fields(
             reaudit.get(
                 "review_verdict",
@@ -5415,17 +5392,16 @@ def repair(
             "re_audit_comparison": re_audit_comparison,
             "reaudit": {
                 "audit_id": reaudit["audit_id"],
-                "paper_mode": paper_mode,
-                "execution_level": execution_level,
+                "review_lane": review_lane,
                 "verdict": reaudit["summary"]["final_verdict"],
                 "disposition": reaudit["summary"].get("disposition"),
             },
             "atomic_publish": True,
             "published_at": timestamp(),
         }
-        rebase_audit_paths(candidate, root)
-        reaudit_report_path = candidate / "benchmark_audit/audit_report.json"
-        reaudit_manifest_path = candidate / "benchmark_audit/audit_manifest.json"
+        rebase_audit_paths(candidate, root, plan)
+        reaudit_report_path = reaudit_audit_dir(candidate, plan) / "audit_report.json"
+        reaudit_manifest_path = reaudit_audit_dir(candidate, plan) / "audit_manifest.json"
         repair_manifest.update(
             {
                 "reaudit_audit_id": reaudit["audit_id"],

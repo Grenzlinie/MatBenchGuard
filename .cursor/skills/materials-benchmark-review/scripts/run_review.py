@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Run the E1 materials review with isolated core and quality lanes.
+"""Run the dual-lane materials review.
 
-Static checks and schema-derived runtime probes form the deterministic core.
-Agent assessments provide the separate quality lane; no external result
-directory is accepted as a probe input.
+Deterministic code checks and Agent paper-grounded quality assessment form one
+default path. Only an established NON_MAT classification may skip paper.
 """
 
 from __future__ import annotations
@@ -11,7 +10,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +19,6 @@ from audit_package import static_audit
 from dynamic_checker_probe import TASK_FAMILY_ATTACKS, dynamic_checker_probe
 from finalize_audit_output import finalize_audit, synthesize_report
 from prepare_audit_output import (
-    AUTHORITATIVE_EXECUTION_LEVEL,
     QUALITY_EVIDENCE_ROLES,
     bind_external_evidence,
     locate_root,
@@ -37,6 +34,12 @@ from artifact_schema import (
     RESOURCE_CHECKS_SCHEMA_VERSION,
 )
 from probe_resources import probe_resources
+from review_path_policy import (
+    EXECUTION_CLAIM,
+    REVIEW_LANE,
+    default_review_output_dir,
+    require_external_output_dir,
+)
 import sandbox_runtime
 
 
@@ -53,13 +56,6 @@ REPRODUCTION_TYPES = {
     "METHOD_REIMPLEMENTATION",
     "SCIENTIFIC_EXTENSION",
 }
-PAPER_TRIGGERS = {
-    "SCIENTIFIC_CONFLICT",
-    "NECESSARY_INFORMATION_MISSING",
-    "GOLD_PROVENANCE_UNCERTAIN",
-    "EXPLICIT_REPRODUCTION_CLAIM",
-}
-PAPER_TRIGGER_ADJUDICATION_STATUSES = {"TRIGGERED", "NOT_TRIGGERED"}
 TAXONOMY_EVIDENCE_DIMENSIONS = {
     "computation_task",
     "research_domain",
@@ -318,193 +314,10 @@ def validate_materials_qualification(
     return None
 
 
-def validate_agent_assessment(
-    root: Path, path: Path, paper_mode: str
+def validate_paper_dimensions(
+    root: Path, assessment: dict[str, Any]
 ) -> dict[str, Any]:
-    resolved_path = path.expanduser().resolve()
-    if resolved_path.is_relative_to(root.resolve()):
-        raise ValueError(
-            "agent assessment must be outside the Harbor 题包"
-        )
-    if not resolved_path.is_file():
-        raise FileNotFoundError(
-            f"agent assessment is missing: {resolved_path}"
-        )
-    assessment = read_json(resolved_path)
-    if not isinstance(assessment, dict):
-        raise ValueError("agent assessment must be an object")
-    taxonomy = read_json(
-        skill_root() / "references/materials-taxonomy.json"
-    )
-    normalized_taxonomy = validate_taxonomy_labels(
-        assessment.get("taxonomy"), taxonomy
-    )
-    normalized: dict[str, Any] = {
-        "schema_version": AGENT_ASSESSMENT_SCHEMA_VERSION,
-        "taxonomy": normalized_taxonomy,
-        "taxonomy_evidence": validate_taxonomy_evidence(
-            root,
-            assessment.get("taxonomy_evidence"),
-            normalized_taxonomy,
-        ),
-        "taxonomy_source": taxonomy["source"],
-    }
-    qualification = validate_materials_qualification(
-        root, assessment.get("materials_qualification")
-    )
-    if qualification is not None:
-        normalized["materials_qualification"] = qualification
-    if paper_mode == "no_paper":
-        adjudication = assessment.get("paper_trigger_adjudication")
-        if not isinstance(adjudication, list) or {
-            item.get("trigger")
-            for item in adjudication
-            if isinstance(item, dict)
-        } != PAPER_TRIGGERS:
-            raise ValueError(
-                "paper_trigger_adjudication must cover exactly "
-                f"{sorted(PAPER_TRIGGERS)}"
-            )
-        normalized_adjudication: list[dict[str, Any]] = []
-        for index, item in enumerate(adjudication, start=1):
-            if not isinstance(item, dict):
-                raise ValueError(
-                    f"paper trigger adjudication {index} must be an object"
-                )
-            trigger = item.get("trigger")
-            status = item.get("status")
-            rationale = item.get("rationale")
-            evidence = item.get("evidence")
-            if status not in PAPER_TRIGGER_ADJUDICATION_STATUSES:
-                raise ValueError(
-                    f"paper trigger adjudication {trigger} has invalid status"
-                )
-            if not isinstance(rationale, str) or not rationale.strip():
-                raise ValueError(
-                    f"paper trigger adjudication {trigger} requires a rationale"
-                )
-            if not isinstance(evidence, list) or not evidence:
-                raise ValueError(
-                    f"paper trigger adjudication {trigger} requires evidence"
-                )
-            normalized_evidence: list[dict[str, str]] = []
-            for evidence_index, evidence_item in enumerate(evidence, start=1):
-                if not isinstance(evidence_item, dict):
-                    raise ValueError(
-                        f"paper trigger adjudication {trigger} evidence "
-                        f"{evidence_index} must be an object"
-                    )
-                package_file, package_quote = validate_package_quote(
-                    root,
-                    evidence_item.get("package_file"),
-                    evidence_item.get("package_quote"),
-                    f"paper trigger adjudication {trigger} evidence "
-                    f"{evidence_index}",
-                )
-                normalized_evidence.append(
-                    {
-                        "package_file": package_file,
-                        "package_quote": package_quote,
-                    }
-                )
-            normalized_adjudication.append(
-                {
-                    "trigger": trigger,
-                    "status": status,
-                    "rationale": rationale.strip(),
-                    "evidence": normalized_evidence,
-                }
-            )
-        normalized["paper_trigger_adjudication"] = normalized_adjudication
-        if (
-            "paper_triggers" in assessment
-            or "reproduction_type" in assessment
-            or "dimensions" in assessment
-        ):
-            raise ValueError(
-                "no_paper assessment must not claim paper fidelity"
-            )
-        return normalized
-
-    triggers = assessment.get("paper_triggers")
-    if (
-        not isinstance(triggers, list)
-        or not triggers
-        or not all(isinstance(item, str) for item in triggers)
-    ):
-        raise ValueError("paper_grounded assessment requires paper_triggers")
-    unknown_triggers = sorted(set(triggers) - PAPER_TRIGGERS)
-    if unknown_triggers:
-        raise ValueError(f"unknown paper triggers: {unknown_triggers}")
-    adjudication = assessment.get("paper_trigger_adjudication")
-    if not isinstance(adjudication, list) or {
-        item.get("trigger")
-        for item in adjudication
-        if isinstance(item, dict)
-    } != PAPER_TRIGGERS:
-        raise ValueError(
-            "paper_trigger_adjudication must cover exactly "
-            f"{sorted(PAPER_TRIGGERS)}"
-        )
-    normalized_adjudication: list[dict[str, Any]] = []
-    for index, item in enumerate(adjudication, start=1):
-        if not isinstance(item, dict):
-            raise ValueError(
-                f"paper trigger adjudication {index} must be an object"
-            )
-        trigger = item.get("trigger")
-        status = item.get("status")
-        rationale = item.get("rationale")
-        evidence = item.get("evidence")
-        if status not in PAPER_TRIGGER_ADJUDICATION_STATUSES:
-            raise ValueError(
-                f"paper trigger adjudication {trigger} has invalid status"
-            )
-        if not isinstance(rationale, str) or not rationale.strip():
-            raise ValueError(
-                f"paper trigger adjudication {trigger} requires a rationale"
-            )
-        if not isinstance(evidence, list) or not evidence:
-            raise ValueError(
-                f"paper trigger adjudication {trigger} requires evidence"
-            )
-        normalized_evidence: list[dict[str, str]] = []
-        for evidence_index, evidence_item in enumerate(evidence, start=1):
-            if not isinstance(evidence_item, dict):
-                raise ValueError(
-                    f"paper trigger adjudication {trigger} evidence "
-                    f"{evidence_index} must be an object"
-                )
-            package_file, package_quote = validate_package_quote(
-                root,
-                evidence_item.get("package_file"),
-                evidence_item.get("package_quote"),
-                f"paper trigger adjudication {trigger} evidence "
-                f"{evidence_index}",
-            )
-            normalized_evidence.append(
-                {
-                    "package_file": package_file,
-                    "package_quote": package_quote,
-                }
-            )
-        normalized_adjudication.append(
-            {
-                "trigger": trigger,
-                "status": status,
-                "rationale": rationale.strip(),
-                "evidence": normalized_evidence,
-            }
-        )
-    if {
-        item["trigger"]
-        for item in normalized_adjudication
-        if item["status"] == "TRIGGERED"
-    } != set(triggers):
-        raise ValueError(
-            "paper_triggers must equal the TRIGGERED adjudication set"
-        )
-    normalized["paper_trigger_adjudication"] = normalized_adjudication
+    """Validate Agent paper-grounded fidelity dimensions (dual-lane default)."""
     reproduction_type = assessment.get(
         "reproduction_type", "METHOD_REIMPLEMENTATION"
     )
@@ -516,9 +329,10 @@ def validate_agent_assessment(
             "paper assessment dimensions must be exactly "
             f"{sorted(PAPER_DIMENSIONS)}"
         )
-    paper_path = root / "paper/paper.md"
     validate_paper_boundary(root)
-    paper_text = paper_path.read_text(encoding="utf-8", errors="replace")
+    paper_text = (root / "paper/paper.md").read_text(
+        encoding="utf-8", errors="replace"
+    )
     normalized_dimensions: dict[str, Any] = {}
     for name in sorted(PAPER_DIMENSIONS):
         value = dimensions[name]
@@ -576,13 +390,67 @@ def validate_agent_assessment(
             "rationale": rationale.strip(),
             "evidence": normalized_evidence,
         }
-    normalized.update(
-        {
-            "paper_triggers": list(dict.fromkeys(triggers)),
-            "reproduction_type": reproduction_type,
-            "dimensions": normalized_dimensions,
-        }
+    return {
+        "reproduction_type": reproduction_type,
+        "dimensions": normalized_dimensions,
+    }
+
+
+def validate_agent_assessment(root: Path, path: Path) -> dict[str, Any]:
+    """Validate Agent assessment for the dual-lane review path."""
+    resolved_path = path.expanduser().resolve()
+    if resolved_path.is_relative_to(root.resolve()):
+        raise ValueError(
+            "agent assessment must be outside the Harbor 题包"
+        )
+    if not resolved_path.is_file():
+        raise FileNotFoundError(
+            f"agent assessment is missing: {resolved_path}"
+        )
+    assessment = read_json(resolved_path)
+    if not isinstance(assessment, dict):
+        raise ValueError("agent assessment must be an object")
+    taxonomy = read_json(
+        skill_root() / "references/materials-taxonomy.json"
     )
+    normalized_taxonomy = validate_taxonomy_labels(
+        assessment.get("taxonomy"), taxonomy
+    )
+    normalized: dict[str, Any] = {
+        "schema_version": AGENT_ASSESSMENT_SCHEMA_VERSION,
+        "taxonomy": normalized_taxonomy,
+        "taxonomy_evidence": validate_taxonomy_evidence(
+            root,
+            assessment.get("taxonomy_evidence"),
+            normalized_taxonomy,
+        ),
+        "taxonomy_source": taxonomy["source"],
+        "review_lane": REVIEW_LANE,
+    }
+    qualification = validate_materials_qualification(
+        root, assessment.get("materials_qualification")
+    )
+    if qualification is None:
+        raise ValueError(
+            "dual-lane assessment requires authoritative materials_qualification"
+        )
+    normalized["materials_qualification"] = qualification
+    if qualification["classification"] == "NON_MAT":
+        if (
+            "reproduction_type" in assessment
+            or "dimensions" in assessment
+        ):
+            raise ValueError(
+                "NON_MAT assessment must not claim paper fidelity"
+            )
+        normalized["paper_skipped"] = True
+        normalized["paper_skip_reason"] = (
+            "Paper read skipped because materials_qualification established "
+            "NON_MAT."
+        )
+        return normalized
+    normalized.update(validate_paper_dimensions(root, assessment))
+    normalized["paper_skipped"] = False
     return normalized
 
 
@@ -671,7 +539,7 @@ def checker_skipped_by_static_gate(
             )
         },
         "limitations": [
-            "E1 checker probes were skipped because the checker contract was not runnable."
+            "Checker probes were skipped because the checker contract was not runnable."
         ],
     }
     result["probe_coverage"]["negative"]["subcoverage"] = {
@@ -757,79 +625,32 @@ def pre_paper_hard_gate_codes(
 
 def run_review(
     input_path: Path,
-    paper_mode: str = "no_paper",
     agent_assessment_path: Path | None = None,
-    execution_level: str = "E1",
     resource_timeout: float = 8,
-    e2_smoke_plan: Path | None = None,
     allow_private_network: bool = False,
     audit_output_dir: Path | None = None,
+    output_purpose: str = "review",
 ) -> dict[str, Any]:
-    if paper_mode is None:
-        paper_mode = "no_paper"
-    if execution_level != AUTHORITATIVE_EXECUTION_LEVEL:
-        raise ValueError(
-            "authoritative materials review is fixed at E1-only; "
-            f"received execution level {execution_level!r}"
-        )
-    if e2_smoke_plan is not None:
-        raise ValueError(
-            "E2/E3/E4 execution plans are not part of the authoritative E1 workflow"
-        )
     root = locate_root(input_path)
+    output_dir = resolve_output_destination(
+        root, audit_output_dir, purpose=output_purpose
+    )
     sandbox_runtime.ensure_env()
-    if paper_mode == "auto":
-        paper_mode = "no_paper"
-        if agent_assessment_path is not None:
-            candidate = read_json(
-                agent_assessment_path.expanduser().resolve()
-            )
-            if (
-                isinstance(candidate, dict)
-                and isinstance(candidate.get("dimensions"), dict)
-                and candidate.get("paper_triggers")
-            ):
-                paper_mode = "paper_grounded"
-    preflight_hard_gate_codes: list[str] = []
-    preflight_qualification: dict[str, Any] | None = None
-    if paper_mode == "paper_grounded":
-        with tempfile.TemporaryDirectory(
-            prefix="materials_no_paper_preflight_"
-        ) as temporary:
-            preflight_dir = Path(temporary)
-            preflight_static = static_audit(
-                root, preflight_dir / "audit_static.json"
-            )
-            preflight_resources = probe_resources(
-                root,
-                preflight_dir / "resource_checks.json",
-                timeout=resource_timeout,
-                allow_private_network=allow_private_network,
-            )
-        preflight_hard_gate_codes = pre_paper_hard_gate_codes(
-            preflight_static, preflight_resources, None
+    skip_paper = False
+    agent_assessment: dict[str, Any] | None = None
+    paper_skip_reason: str | None = None
+    if agent_assessment_path is not None:
+        agent_assessment = validate_agent_assessment(
+            root,
+            agent_assessment_path.expanduser().resolve(),
         )
-        if agent_assessment_path is not None and not preflight_hard_gate_codes:
-            raw_assessment = read_json(
-                agent_assessment_path.expanduser().resolve()
-            )
-            if not isinstance(raw_assessment, dict):
-                raise ValueError("agent assessment must be an object")
-            preflight_qualification = validate_materials_qualification(
-                root, raw_assessment.get("materials_qualification")
-            )
-            preflight_hard_gate_codes = pre_paper_hard_gate_codes(
-                preflight_static,
-                preflight_resources,
-                preflight_qualification,
-            )
-        if preflight_hard_gate_codes:
-            paper_mode = "no_paper"
+        skip_paper = bool(agent_assessment.get("paper_skipped"))
+        if skip_paper:
+            paper_skip_reason = agent_assessment.get("paper_skip_reason")
     context = prepare_workspace(
         root,
-        paper_mode,
-        execution_level,
-        audit_output_dir=audit_output_dir,
+        output_dir,
+        skip_paper=skip_paper,
     )
     temp_dir = Path(context["audit_temp_dir"])
     static_result = static_audit(
@@ -876,7 +697,7 @@ def run_review(
     )
     execution_evidence = {
         "status": "NOT_ASSESSED",
-        "claim": "E1_CHECKER_ONLY",
+        "claim": EXECUTION_CLAIM,
         "scientific_reproduction": False,
         "environment": None,
         "environment_verified": False,
@@ -885,64 +706,14 @@ def run_review(
         "returncode": None,
         "stdout": "",
         "stderr": "",
-        "reason": "E1 executes the Harbor verifier entrypoint but not the scientific workflow.",
+        "reason": (
+            "Dual-lane review executes the Harbor verifier entrypoint but not "
+            "the scientific workflow."
+        ),
+        "review_lane": REVIEW_LANE,
     }
-    agent_assessment: dict[str, Any] | None = None
-    paper_skip_reason: str | None = None
-    hard_gate_codes = pre_paper_hard_gate_codes(
-        static_result, resource_result, preflight_qualification
-    )
-    if (
-        agent_assessment_path is not None
-        and preflight_qualification is None
-        and not preflight_hard_gate_codes
-        and not (paper_mode == "paper_grounded" and hard_gate_codes)
-    ):
-        raw_assessment = read_json(agent_assessment_path.expanduser().resolve())
-        if not isinstance(raw_assessment, dict):
-            raise ValueError("agent assessment must be an object")
-        preflight_qualification = validate_materials_qualification(
-            root, raw_assessment.get("materials_qualification")
-        )
-        hard_gate_codes = pre_paper_hard_gate_codes(
-            static_result, resource_result, preflight_qualification
-        )
-    if preflight_hard_gate_codes or (
-        paper_mode == "paper_grounded" and hard_gate_codes
-    ):
-        if preflight_qualification is not None:
-            agent_assessment = {
-                "materials_qualification": preflight_qualification,
-                "taxonomy": {
-                    "computation_task": [],
-                    "research_domain": [],
-                    "material_system": {
-                        "primary": None,
-                        "secondary": [],
-                    },
-                },
-                "taxonomy_source": None,
-                "taxonomy_evidence": [],
-            }
-        paper_skip_reason = (
-            "Paper-grounded review was skipped because the no-paper E1 "
-            "stage triggered a Hard Gate: "
-            + ", ".join(hard_gate_codes)
-            + "."
-        )
-    elif agent_assessment_path is not None:
-        agent_assessment = validate_agent_assessment(
-            root,
-            agent_assessment_path.expanduser().resolve(),
-            paper_mode,
-        )
-        if paper_mode == "paper_grounded":
-            record_paper_input_hashes(root, temp_dir)
-    elif paper_mode == "paper_grounded":
-        raise ValueError(
-            "paper_grounded mode requires --agent-assessment after the "
-            "no-paper gate passes"
-        )
+    if agent_assessment is not None and not skip_paper:
+        record_paper_input_hashes(root, temp_dir)
     external_bindings = bind_external_evidence(
         temp_dir,
         agent_assessment_path if agent_assessment is not None else None,
@@ -958,39 +729,38 @@ def run_review(
         paper_skip_reason=paper_skip_reason,
         external_bindings=external_bindings,
     )
-    output_root = Path(context["audit_output_root"])
-    return finalize_audit(
-        root,
-        output_dir=(
-            None
-            if output_root.resolve() == root.resolve()
-            else output_root
-        ),
-    )
+    return finalize_audit(root, output_dir=output_dir)
+
+
+def resolve_output_destination(
+    root: Path,
+    output_dir: Path | None,
+    *,
+    purpose: str,
+) -> Path:
+    """Resolve only the canonical initial-review or re-audit workspace."""
+    if purpose not in {"review", "reaudit"}:
+        raise ValueError(f"unsupported output purpose: {purpose}")
+    if output_dir is None:
+        if purpose != "review":
+            raise ValueError("re-audit output directory must be explicit")
+        return default_review_output_dir(root)
+    return require_external_output_dir(root, output_dir, purpose=purpose)
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description=(
+            "Dual-lane materials review "
+            f"(review_lane={REVIEW_LANE})."
+        )
+    )
     parser.add_argument("input", help="Harbor 题包 directory")
-    parser.add_argument(
-        "--paper-mode",
-        choices=["auto", "no_paper", "paper_grounded"],
-        default="auto",
-    )
-    parser.add_argument(
-        "--execution-level",
-        choices=[AUTHORITATIVE_EXECUTION_LEVEL],
-        default=AUTHORITATIVE_EXECUTION_LEVEL,
-    )
     parser.add_argument(
         "--resource-timeout",
         type=float,
         default=8,
         help="per-resource network timeout in seconds",
-    )
-    parser.add_argument(
-        "--e2-smoke-plan",
-        help="reserved for non-authoritative future execution levels",
     )
     parser.add_argument(
         "--allow-private-network",
@@ -1003,14 +773,26 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--attestation-output",
-        help="new immutable source-audit attestation path outside the Harbor 题包",
+        help="immutable source-audit attestation path outside the Harbor 题包",
     )
     parser.add_argument(
         "--audit-output-dir",
         help=(
             "external directory that owns benchmark_audit and "
-            "benchmark_audit_history; defaults to the Harbor 题包"
+            "benchmark_audit_history; defaults to "
+            "<topic>/review_outputs/<paper-id>/"
         ),
+    )
+    parser.add_argument(
+        "--output-purpose",
+        choices=("review", "reaudit"),
+        default="review",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--validate-output-policy-only",
+        action="store_true",
+        help=argparse.SUPPRESS,
     )
     return parser
 
@@ -1018,27 +800,34 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     arguments = build_parser().parse_args()
     try:
+        if arguments.validate_output_policy_only:
+            root = locate_root(Path(arguments.input))
+            output = resolve_output_destination(
+                root,
+                (
+                    Path(arguments.audit_output_dir)
+                    if arguments.audit_output_dir
+                    else None
+                ),
+                purpose=arguments.output_purpose,
+            )
+            print(json.dumps({"output_dir": str(output)}, ensure_ascii=False))
+            return 0
         result = run_review(
             Path(arguments.input),
-            paper_mode=arguments.paper_mode,
             agent_assessment_path=(
                 Path(arguments.agent_assessment)
                 if arguments.agent_assessment
                 else None
             ),
-            execution_level=arguments.execution_level,
             resource_timeout=arguments.resource_timeout,
-            e2_smoke_plan=(
-                Path(arguments.e2_smoke_plan)
-                if arguments.e2_smoke_plan
-                else None
-            ),
             allow_private_network=arguments.allow_private_network,
             audit_output_dir=(
                 Path(arguments.audit_output_dir)
                 if arguments.audit_output_dir
                 else None
             ),
+            output_purpose=arguments.output_purpose,
         )
         if arguments.attestation_output:
             result["audit_attestation"] = write_audit_attestation(

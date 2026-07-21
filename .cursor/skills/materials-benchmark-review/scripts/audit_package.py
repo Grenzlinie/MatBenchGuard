@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run deterministic E0 checks for one materials Harbor 题包."""
+"""Run deterministic checks for one materials Harbor 题包."""
 
 from __future__ import annotations
 
@@ -1263,10 +1263,9 @@ def gold_provenance_analysis(
     )
     return {
         "status": "NOT_ASSESSABLE",
-        "mode": "no_paper",
         "reason": (
-            "No independent Gold source is available within the no-paper "
-            "instruction/tests evidence boundary."
+            "The deterministic lane does not adjudicate independent Gold "
+            "provenance; the Agent lane handles that assessment."
         ),
         "outputs": outputs,
         "oracle_used": False,
@@ -1424,7 +1423,7 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
             "materials classification (C01) is decided by the Agent from the "
             "instruction structured fields; no keyword prescreen is applied",
             "resource reachability is not tested in this slice",
-            "paper fidelity is not tested in no-paper mode",
+            "paper fidelity is adjudicated separately by the Agent lane",
         ],
     }
     output.parent.mkdir(parents=True, exist_ok=True)

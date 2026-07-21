@@ -21,8 +21,8 @@ _Avoid_: 由 `manifest.discipline` 单独定义的材料题
 _Avoid_: 用 metadata、environment、resources 或 cluster 形成质量分
 
 **论文审查模式**:
-默认只看 `instruction.md`、`tests/` 和受限 Oracle。仅在四种情况读取 `paper/`：三者存在科学或数值矛盾；公开任务疑似缺少影响科学有效性或可答性的必要信息；Gold、容差或评分依据来源可疑；instruction 明确声称复现论文体系、条件、结果或特定数值。按 instruction 意图判定复现类型：明确逐项复现才是 `EXACT_REPRODUCTION`，新问题或新终点是 `SCIENTIFIC_EXTENSION`，其余默认 `METHOD_REIMPLEMENTATION`。
-_Avoid_: 每题默认读论文、模糊时默认 EXACT、把科学扩展强制匹配论文精确值
+双车道默认路径：确定性代码检查 + Agent 读 `paper/`。仅当材料资格已确立 `NON_MAT` 时可跳过论文。论文读取没有回退开关或两阶段绑定。按 instruction 意图判定复现类型：明确逐项复现才是 `EXACT_REPRODUCTION`，新问题或新终点是 `SCIENTIFIC_EXTENSION`，其余默认 `METHOD_REIMPLEMENTATION`。
+_Avoid_: 论文读取回退、模糊时默认 EXACT、把科学扩展强制匹配论文精确值
 
 **受限评测资产**:
 Auditor 和 Repairer 可读取的 `tests/grading_spec.json`、`tests/checker.py`、相关测试文件，以及 `solution/` 中专门用于 checker 验证的 Oracle；它们对解题 Agent 保持隐藏。Oracle 只能在隔离环境中生成 mock 输出并验证其能否通过 checker，不能把 Oracle 数值当作论文一致性、科学正确性或 Gold provenance 的证据，也不能向解题 Agent 或公开审查产物泄露。`solution/` 中与该目的无关的内容仍不进入质检和修复判断。
@@ -64,9 +64,9 @@ _Avoid_: metadata 参与加权、把临时环境故障直接判 REJECT
 对 `REJECT` 题包的非破坏性处置：保留原始题包和完整审查证据，将其移出可发布集合并放入隔离归档。
 _Avoid_: 物理删除、继续留在可发布 corpus
 
-**执行等级**:
-质检证据深度从静态审查 `E0`、动态攻击评分器 `E1`、最小科学流程启动 `E2`、缩小体系完整复现 `E3` 到全量复现 `E4` 逐级增加。每个审计单元至少完成 E1；风险触发时升到 E2，E3/E4 需要显式算力预算与审批。
-_Avoid_: 把 E1 视为科学流程已复现
+**审查路径**:
+材料题包使用单一双车道路径（deterministic code checks + Agent paper read）。不使用证据层级路由。审查与等深复审都执行 Harbor `tests/test.sh` 探针，但不声称科学工作流已复现。
+_Avoid_: 证据层级路由、把 checker 探针视为科学流程已复现
 
 **确定性修复**:
 有唯一、可测试且不改变核心科学契约的修复对应 `AUTO_FIX`；有 instruction/tests/solution 或按需 paper 证据支持的解释性修复对应 `ASSISTED_FIX`；证据不足或会重定义核心科学契约时对应 `ABANDON`。前两者都可由 Agent 在隔离副本自主应用、回归并同深度复审；禁止猜科学参数、泄露答案、降低阈值或重定义核心科学任务。

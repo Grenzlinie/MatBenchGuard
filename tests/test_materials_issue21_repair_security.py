@@ -19,6 +19,18 @@ from tests.test_materials_safe_repair import (
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+def external_audit_dir(package: Path) -> Path:
+    paper_id = (
+        package.name[len("paper-"):]
+        if package.name.startswith("paper-")
+        else package.name
+    )
+    path = package.parent / "review_outputs" / paper_id / "benchmark_audit"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 REPAIR_RUNNER = (
     REPO_ROOT
     / ".cursor"
@@ -40,7 +52,7 @@ def repair_module() -> Any:
 def bind_plan(package: Path, plan: dict[str, Any]) -> dict[str, Any]:
     module = repair_module()
     manifest = json.loads(
-        (package / "benchmark_audit/audit_manifest.json").read_text(
+        (external_audit_dir(package) / "audit_manifest.json").read_text(
             encoding="utf-8"
         )
     )
@@ -52,15 +64,14 @@ def bind_plan(package: Path, plan: dict[str, Any]) -> dict[str, Any]:
         "finding_status": "OPEN",
         "input_hashes": manifest["input_hashes"],
         "review_implementation": manifest.get("review_implementation", {}),
-        "paper_mode": "no_paper",
-        "execution_level": "E1",
+        "review_lane": "dual",
         "core_contract_digest": digest,
         "assessment_hashes": {},
     }
     for item in plan["evidence"]:
         if item["source"].startswith("benchmark_audit:"):
             item["source_hash"] = sha256_file(
-                package / "benchmark_audit/audit_report.json"
+                external_audit_dir(package) / "audit_report.json"
             )
         else:
             source_path = package / item["source"]
@@ -83,7 +94,7 @@ def evidence(
         "source": source,
         "quote": quote,
         "source_hash": (
-            sha256_file(package / "benchmark_audit/audit_report.json")
+            sha256_file(external_audit_dir(package) / "audit_report.json")
             if source.startswith("benchmark_audit:")
             else sha256_file(package / source)
         ),
@@ -133,8 +144,8 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
             checker.write_text(source, encoding="utf-8")
             proof = nested_return_proof(checker)
             report_text = "SCORER_RETURN_NOT_TOTAL\n"
-            (root / "benchmark_audit").mkdir()
-            (root / "benchmark_audit/audit_report.json").write_text(
+            (external_audit_dir(root)).mkdir(exist_ok=True)
+            (external_audit_dir(root) / "audit_report.json").write_text(
                 report_text, encoding="utf-8"
             )
             operation = {
@@ -159,7 +170,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
                         "source": "benchmark_audit:F-D3",
                         "quote": report_text.strip(),
                         "source_hash": sha256_file(
-                            root / "benchmark_audit/audit_report.json"
+                            external_audit_dir(root) / "audit_report.json"
                         ),
                     }
                 ],
@@ -291,9 +302,9 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(workspace)
             report["summary"]["co_tampered"] = True
-            report_path = package / "benchmark_audit/audit_report.json"
+            report_path = external_audit_dir(package) / "audit_report.json"
             write_plan(report_path, report)
-            manifest_path = package / "benchmark_audit/audit_manifest.json"
+            manifest_path = external_audit_dir(package) / "audit_manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["output_hashes"]["audit_report.json"] = sha256_file(report_path)
             write_plan(manifest_path, manifest)
@@ -315,9 +326,9 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
             package, report, finding_id, runner = initial_repair_context(workspace)
             plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
             report["summary"]["tampered"] = True
-            write_plan(package / "benchmark_audit/audit_report.json", report)
+            write_plan(external_audit_dir(package) / "audit_report.json", report)
             plan["evidence"][0]["source_hash"] = sha256_file(
-                package / "benchmark_audit/audit_report.json"
+                external_audit_dir(package) / "audit_report.json"
             )
             path = workspace / "tampered-audit.json"
             write_plan(path, plan)
@@ -333,7 +344,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(workspace)
-            manifest_path = package / "benchmark_audit/audit_manifest.json"
+            manifest_path = external_audit_dir(package) / "audit_manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["review_implementation"]["aggregate_hash"] = (
                 "sha256:" + "0" * 64
@@ -430,7 +441,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
                 Path(temporary)
             )
             report["findings"][0]["status"] = "RESOLVED"
-            (package / "benchmark_audit/audit_report.json").write_text(
+            (external_audit_dir(package) / "audit_report.json").write_text(
                 json.dumps(report), encoding="utf-8"
             )
             plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
@@ -594,7 +605,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
-                workspace, paper_mode="paper_grounded"
+                workspace, review_lane="dual"
             )
             paper = package / "paper/paper.md"
             paper.write_text(
@@ -603,7 +614,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
                 "published table.\n",
                 encoding="utf-8",
             )
-            manifest_path = package / "benchmark_audit/audit_manifest.json"
+            manifest_path = external_audit_dir(package) / "audit_manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["input_hashes"]["paper/paper.md"] = sha256_file(paper)
             write_plan(manifest_path, manifest)
@@ -703,14 +714,14 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
             self.assertIn("semantic", completed.stderr)
 
     def test_paper_evidence_must_bind_source_audit_hash(self) -> None:
-        # no_paper mode is gone: paper evidence is always admissible, but each
+        # Paper evidence is always admissible, but each
         # item must bind the exact paper/** file the source audit hashed.  Here
         # the paper file is dropped from the authoritative input hashes, so the
         # otherwise-valid paper-grounded edit is BLOCKED_EVIDENCE.
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(workspace)
-            manifest_path = package / "benchmark_audit/audit_manifest.json"
+            manifest_path = external_audit_dir(package) / "audit_manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["input_hashes"].pop("paper/paper.md", None)
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")

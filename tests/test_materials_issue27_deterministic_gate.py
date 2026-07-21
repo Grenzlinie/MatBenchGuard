@@ -7,10 +7,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.test_materials_benchmark_review_paper_grounded import (
+from tests.test_materials_benchmark_review_dual_lane import (
     assessment,
     copy_source_package,
-    no_paper_assessment,
+    dual_lane_assessment,
 )
 from tests.test_materials_disposition import (
     clear_external_resources,
@@ -19,6 +19,18 @@ from tests.test_materials_disposition import (
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+def external_audit_dir(package: Path) -> Path:
+    paper_id = (
+        package.name[len("paper-"):]
+        if package.name.startswith("paper-")
+        else package.name
+    )
+    path = package.parent / "review_outputs" / paper_id / "benchmark_audit"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 RUNNER = (
     REPO_ROOT
     / ".cursor"
@@ -37,10 +49,6 @@ def run_review(
             sys.executable,
             str(RUNNER),
             str(package),
-            "--paper-mode",
-            "paper_grounded",
-            "--execution-level",
-            "E1",
             "--agent-assessment",
             str(assessment_path),
         ],
@@ -54,7 +62,7 @@ def run_review(
 
 def write_assessment(path: Path) -> None:
     value = assessment()
-    value["materials_qualification"] = no_paper_assessment()[
+    value["materials_qualification"] = dual_lane_assessment()[
         "materials_qualification"
     ]
     value["dimensions"]["checker_fidelity"]["evidence"][0][
@@ -135,7 +143,7 @@ class MaterialsIssue27DeterministicGateTests(unittest.TestCase):
                 msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
             )
             report = json.loads(
-                (package / "benchmark_audit/audit_report.json").read_text(
+                (external_audit_dir(package) / "audit_report.json").read_text(
                     encoding="utf-8"
                 )
             )
@@ -167,7 +175,7 @@ class MaterialsIssue27DeterministicGateTests(unittest.TestCase):
             )
             disposition = json.loads(
                 (
-                    package / "benchmark_audit/disposition.json"
+                    external_audit_dir(package) / "disposition.json"
                 ).read_text(encoding="utf-8")
             )
             self.assertEqual(disposition["route"], "REPAIR_QUEUE")

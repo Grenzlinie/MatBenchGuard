@@ -91,7 +91,7 @@ scoring, or science change; Oracle values must never enter repair evidence.
    evidence links), then run the regressions against the candidate (pass-after).
    Each operation needs one exact operation-semantic regression assertion.
 4. Run the canonical Review CLI **exactly once** at the source audit's paper
-   mode and E1 execution level. Emit the before/after C01–C07 normalized
+   mode and dual-lane execution level. Emit the before/after C01–C07 normalized
    percentages and Δ(pp) from that single re-audit. No local score, finding
    heuristic, or regression result can publish a candidate.
 
@@ -102,7 +102,7 @@ The batch resolves to one of five states, mapped to the unified terminal fields
 
 | repair_state | when | disposition | publishable | package |
 |---|---|---|---|---|
-| `REPAIRED` | the one equal-depth E1 re-audit is PASS, D1–D6 is CLEAN, no Hard Gate exists, identity and allowed mutation scope are preserved, and every batch finding is resolved | `PASS` | `true` | atomically published |
+| `REPAIRED` | the one equal-depth dual-lane re-audit is PASS, D1–D6 is CLEAN, no Hard Gate exists, identity and allowed mutation scope are preserved, and every batch finding is resolved | `PASS` | `true` | atomically published |
 | `PARTIALLY_REPAIRED` | some findings resolved but re-audit not PASS, or some `BLOCKED_EVIDENCE`/`ABANDON` remain | `CONDITIONAL` | `false` | original preserved |
 | `ABANDONED` | nothing fixable, or re-audit still FATAL / hits a Hard Gate / needs a core-science change | `REJECT` | `false` | original preserved |
 | `ROLLED_BACK` | batch apply or regression failed | source verdict | `false` | restored unchanged |
@@ -111,7 +111,7 @@ The batch resolves to one of five states, mapped to the unified terminal fields
 **Publish invariant:** for a deterministic or assisted plan, atomic publication
 requires `PASS + total_score >= 80 + deterministic CLEAN + no Hard Gate + no
 unresolved HIGH/FATAL finding + identity preserved + allowed mutation scope +
-all target findings resolved`, with `reaudit_count=1` at E1.
+all target findings resolved`, with `reaudit_count=1` at dual-lane.
 Any residual deterministic blocker is a non-published
 `PARTIALLY_REPAIRED`/`ABANDONED`/`ROLLED_BACK`/
 `INFRASTRUCTURE_BLOCKED` result. Never publish a

@@ -26,7 +26,7 @@ Review 对每项检查产出稳定、机器可读的 `PASS / FAIL / BLOCKED / NO
 
 进入 Repair Queue 的报告携带确定性修复 schema，列出必须覆盖的全部 blocking findings。Repair 对有唯一机械答案的修改使用 `AUTO_FIX`；涉及权重选择、评分语义或新 scorer 实现的修改使用 `ASSISTED_FIX`；需要重定义核心科学任务的缺陷保持 Hard Gate 或 `ABANDON`。
 
-Repair 仅在一次等深 E1 重审同时满足总体 `PASS`、D1–D6 全部通过、无残留 blocking finding、无 Hard Gate、身份与修改范围保持有效时，才可原子发布。
+Repair 仅在一次等深双车道 重审同时满足总体 `PASS`、D1–D6 全部通过、无残留 blocking finding、无 Hard Gate、身份与修改范围保持有效时，才可原子发布。
 
 ## User Stories
 
@@ -54,7 +54,7 @@ Repair 仅在一次等深 E1 重审同时满足总体 `PASS`、D1–D6 全部通
 22. As a benchmark owner, I want an unrecoverable core-task scoring gap to remain a Hard Gate, so that Repair cannot redefine the benchmark to make it pass.
 23. As a benchmark owner, I want scores below 60 to remain REJECT even when deterministic defects exist, so that this change does not weaken the established rejection threshold.
 24. As a benchmark owner, I want temporary key evidence gaps to remain NOT_ASSESSABLE, so that missing evidence is not mislabeled as a repairable defect.
-25. As a benchmark owner, I want Repair to run exactly one equal-depth E1 re-audit, so that before/after evidence remains comparable.
+25. As a benchmark owner, I want Repair to run exactly one equal-depth dual-lane re-audit, so that before/after evidence remains comparable.
 26. As a benchmark owner, I want any remaining D1–D6 blocker to prevent atomic publication, so that partially repaired packages remain quarantined.
 27. As a benchmark owner, I want successful repair to imply both overall PASS and deterministic CLEAN, so that downstream certification can rely on one invariant.
 28. As a repository maintainer, I want existing non-deterministic repair plan 0.1 inputs to remain readable, so that historical repair bundles remain evidence archives.
@@ -108,7 +108,7 @@ Repair 仅在一次等深 E1 重审同时满足总体 `PASS`、D1–D6 全部通
 - Verify ASSISTED_FIX evidence precision for weight, scorer and scoring-contract changes.
 - Verify schema 0.1 compatibility and deterministic schema stale-binding rejection.
 - Verify `REPAIRED` implies the re-audit reports deterministic CLEAN.
-- Reuse existing disposition, E1 review, safe repair, batch repair, assisted repair and certification test patterns.
+- Reuse existing disposition, dual-lane review, safe repair, batch repair, assisted repair and certification test patterns.
 
 ## Out of Scope
 

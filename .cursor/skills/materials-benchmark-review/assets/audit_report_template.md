@@ -32,8 +32,8 @@ unresolved evidence gap; a report with any gap cannot be `PASS`.
 
 Record the authoritative classification, rationale, and instruction/tests quote
 for each required axis. Prescreen output alone is not authoritative evidence.
-For no-paper review, also record all four paper-trigger adjudications with
-package evidence.
+Paper is always read for A2/A4/A5 unless materials_qualification establishes
+NON_MAT.
 
 ## 6. Capability Alignment
 
@@ -79,8 +79,8 @@ explicit unknown read and score states.
 ## 11. Gold Standard Assessment
 
 Status: NOT_ASSESSED
-Reason: Gold provenance must be recorded from independent no-paper or
-paper-grounded evidence; Oracle outputs are not provenance.
+Reason: Gold provenance must be recorded from independent paper-grounded
+evidence; Oracle outputs are not provenance.
 
 ## 12. Execution Feasibility
 
@@ -101,7 +101,7 @@ Evidence semantics must match status: `supports_pass`, `supports_failure`,
 ## 14. Paper Consistency
 
 Status: NOT_ASSESSED
-Reason: No-paper mode does not assess paper fidelity.
+Reason: Paper fidelity has not yet been assessed on the dual-lane path.
 
 ## 15. Dimension Scores
 
@@ -127,7 +127,8 @@ records only solve/positive-mock status and never Oracle values.
 
 After a repair re-audit, `repair_delta` records before/after normalized scores
 and `delta_pp` per C01–C07 from the single equal-depth re-audit.
-The re-audit runs exactly once at E1 and is the sole post-repair authority.
+The re-audit runs exactly once at equal dual-lane depth and is the sole
+post-repair authority.
 Atomic publication additionally requires no Hard Gate, preserved identity,
 allowed mutation scope, and resolution of every target finding.
 

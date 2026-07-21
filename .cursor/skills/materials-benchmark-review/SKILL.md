@@ -1,12 +1,13 @@
 ---
 name: materials-benchmark-review
-description: Audit one materials-science Harbor package at E1 using instruction, tests, an isolated solution Oracle positive mock, and always-read paper evidence for A2/A4/A5, scored on the seven-dimension C01-C07 model.
+description: Audit one materials-science Harbor package on the dual-lane path using deterministic code checks plus Agent paper reads for A2/A4/A5, scored on the seven-dimension C01-C07 model.
 ---
 
 # Materials Benchmark Review
 
 Audit one `paper-{id}/` Harbor 题包 and publish the authoritative
-`benchmark_audit/` bundle inside it.
+`benchmark_audit/` bundle under the external sibling root
+`<topic>/review_outputs/<paper-id>/`.
 
 ## Quality evidence boundary
 Review only:
@@ -31,10 +32,10 @@ prescreen), the D1–D6 deterministic-core and Agent-quality tables with declare
 dimension→check mapping, and the unified terminal fields are in
 [references/checks-and-stages.md](references/checks-and-stages.md).
 
-Every authoritative E1 report emits the shared D1–D6 deterministic contract.
-Only proven OPEN repairable blockers enter its complete `REQUIRED` queue;
-advisory risks never block PASS. A PASS report is eligible for publication only
-when the contract is valid and `CLEAN`.
+Every authoritative dual-lane report emits the shared D1–D6 deterministic
+contract. Only proven OPEN repairable blockers enter its complete `REQUIRED`
+queue; advisory risks never block PASS. A PASS report is eligible for
+publication only when the contract is valid and `CLEAN`.
 
 Review persists two non-interchangeable lanes:
 
@@ -51,7 +52,7 @@ Review persists two non-interchangeable lanes:
 ## Narrow D1–D6 `AUTO_FIX` boundary
 Review classifies repairability against the frozen contract and does not mutate a package. `AUTO_FIX` is limited to unique source-bound restoration of existing D1–D6 contract/scoring wiring: output declaration/path synchronization, scorer registration/binding/return/final-reward connections, a standard Harbor entrypoint around one existing producer, or ratio-preserving normalization of finite positive declared weights.
 It must not introduce or choose Gold values, targets, tolerances, thresholds, formulas, scorer algorithms, fields, units, scientific parameters, or science semantics; fabricate a producer; make an ignored core output appear scored; or use Oracle/solution content or metadata as evidence. Semantic selection is `ASSISTED_FIX` only with type-matched evidence, otherwise `ABANDON`/`BLOCKED_EVIDENCE`; Oracle values remain absent from audit evidence.
-Read [references/harbor-contract.md](references/harbor-contract.md) and [references/no-paper-e1.md](references/no-paper-e1.md).
+Read [references/harbor-contract.md](references/harbor-contract.md) and [references/paper-grounded-audit.md](references/paper-grounded-audit.md).
 
 ## Contract-role mapping
 Do not treat every path under `/app/outputs` as a scored answer. Build and
@@ -130,10 +131,10 @@ in the package.
 
 ## Paper rule and A-layer
 
-There is no paper trigger switch. Paper-grounded E1 is the default path: `A2`,
-`A4`, and `A5` always read `paper/`; only a Stage 0 `NON_MAT` Hard Gate
-fail-fast skips it. The paper-grounded report binds the authoritative audit ID,
-source hashes, and Review implementation hash, and never claims the scientific
+Dual-lane review is the only path: `A2`, `A4`, and `A5` always read `paper/`;
+only a Stage 0 `NON_MAT` Hard Gate fail-fast skips it. The report binds the
+authoritative audit ID, source
+hashes, and Review implementation hash, and never claims the scientific
 workflow ran. Read
 [references/paper-grounded-audit.md](references/paper-grounded-audit.md) for the
 reproduction-intent classes and the A5 Gold-credibility checklist. Classify
@@ -142,17 +143,16 @@ intent as `EXACT_REPRODUCTION`, `METHOD_REIMPLEMENTATION`, or
 Equivalent software, versions, and solver-selected convergence parameters are
 allowed unless instruction fixes them or the checker secretly depends on them.
 
-## Run E1
-Write any taxonomy or paper assessment outside the package, then run
-paper-grounded E1 (the default path):
+## Run dual-lane review
+Write any taxonomy or paper assessment outside the package, then run:
 ```bash
 python scripts/run_review.py <Harbor题包目录> \
-  --paper-mode paper_grounded \
-  --execution-level E1 \
   --audit-output-dir <外部审计目录> \
   --agent-assessment <assessment.json> --attestation-output <external.json>
 ```
-`--audit-output-dir` keeps `benchmark_audit/` and its history outside the Harbor 题包.
+If `--audit-output-dir` is omitted, the CLI defaults to the sibling root
+`<topic>/review_outputs/<paper-id>/`. Low-level prepare/finalize APIs still
+require an explicit external path and reject package-local outputs.
 The optional attestation output is required before routing an audit into
 Repair. It is external, non-overwriting, read-only, and byte-binds audit and
 external-input hashes. Review provenance hashes the canonical dependency list
@@ -165,7 +165,7 @@ under the external audit workspace and are never a Harbor role, Gold fixture,
 or deterministic input. Legacy audits containing fixture hashes or lineage
 must be regenerated before they can be used as current evidence.
 
-Every E1 run records coverage for these probe classes:
+Every dual-lane run records coverage for these probe classes:
 
 - positive — isolated Oracle mock only;
 - negative — missing, empty, malformed, random, duplicate, sparse, and
@@ -186,14 +186,9 @@ operator precondition: if it is missing, abort the run with the build hint.
 Once the sandbox is ready, dependency-install failures and checker crashes are
 package findings, not `not-assessable` runtime limitations.
 
-These are exactly the five top-level classes. Task-family attacks are named
-negative/discrimination cases and nested subcoverage, never a sixth class.
-Each has explicit status/provenance. E1 executes `tests/test.sh`; if unavailable,
-direct probes are forbidden and runtime is `NOT_ASSESSABLE`. Review and repair
-re-audit are fixed at E1, with no E2 publication path. Repair invokes this
-Review CLI exactly once after mutation. That equal-depth re-audit alone
-controls the post-repair verdict and deterministic CLEAN state; local repair
-heuristics and regression results cannot publish a package.
+These five classes have explicit status/provenance. Dual-lane review runs
+`tests/test.sh` (direct probes forbidden if unavailable). Repair invokes this
+CLI once for equal-depth re-audit; only that re-audit can publish.
 
 ## Score and disposition
 Read [references/scoring-rubric.md](references/scoring-rubric.md). The Review

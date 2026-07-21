@@ -45,6 +45,12 @@ from artifact_schema import (
     RESOURCE_CHECKS_SCHEMA_VERSION,
     require_schema,
 )
+from review_path_policy import (
+    EXECUTION_CLAIM,
+    REVIEW_LANE,
+    management_purpose,
+    require_external_output_dir,
+)
 
 
 VERDICTS = {"PASS", "CONDITIONAL", "REJECT", "NOT_ASSESSABLE"}
@@ -270,7 +276,7 @@ V11_C05_CODES = {
     "ANSWER_LEAKAGE",
     "ORACLE_VALUE_LEAKED",
 }
-V11_C06_CODES = {"E2_SMOKE_FAILED"}
+V11_C06_CODES = set()
 V11_C07_CODES = {
     "ADVERSARIAL_OUTPUT_PASSES",
 }
@@ -518,9 +524,9 @@ def normalized_finding(
         )
         source["severity"] = "HIGH"
     affected_files = list(source.get("affected_files", []))
-    if not affected_files and phase == "E1":
+    if not affected_files and phase == "DETERMINISTIC":
         affected_files = ["tests/checker.py", "tests/grading_spec.json"]
-    elif not affected_files and phase == "E0":
+    elif not affected_files and phase == "STATIC":
         affected_files = ["instruction.md"]
     impact, repair, retest = repair_text(source, affected_files)
     hard_gate = any(
@@ -621,14 +627,13 @@ def dimension_scores(
     paper_result: dict[str, Any],
     contract_gaps: list[str] | None = None,
     materials_assessment: dict[str, Any] | None = None,
-    paper_trigger_adjudication: list[dict[str, Any]] | None = None,
     root: Path | None = None,
 ) -> list[dict[str, Any]]:
     unavailable: set[str] = set()
     contract_gaps = contract_gaps or []
     if {
         "authoritative_materials_qualification",
-        "triggered_paper_review",
+        "paper_assessment",
     } & set(contract_gaps):
         unavailable.add("scientific_validity")
     if paper_result["status"] == "NOT_ASSESSABLE":
@@ -774,13 +779,6 @@ def dimension_scores(
                         ],
                         "rationale": materials_assessment["rationale"],
                         "source_evidence": materials_assessment["evidence"],
-                    }
-                )
-            if paper_trigger_adjudication:
-                evidence.append(
-                    {
-                        "evidence_type": "paper_trigger_adjudication",
-                        "adjudication": paper_trigger_adjudication,
                     }
                 )
         elif dimension == "instruction_answerability":
@@ -1327,22 +1325,8 @@ def scoring_verdict_v11(
 def execution_findings(
     execution_evidence: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    if (
-        execution_evidence.get("claim") == "SMOKE_RUN"
-        and execution_evidence.get("status") == "FAIL"
-    ):
-        return [
-            {
-                "severity": "HIGH",
-                "code": "E2_SMOKE_FAILED",
-                "message": execution_evidence.get(
-                    "reason", "The E2 smoke failed."
-                ),
-                "test_type": "E2_SMOKE",
-                "evidence": execution_evidence,
-                "affected_files": [],
-            }
-        ]
+    """Dual-lane review does not run scientific smoke plans."""
+    del execution_evidence
     return []
 
 
@@ -1388,7 +1372,7 @@ def paper_consistency(
     if assessment is None or "dimensions" not in assessment:
         return {
             "status": "NOT_ASSESSED",
-            "reason": "No-paper mode does not assess paper fidelity.",
+            "reason": "Dual-lane paper fidelity was not assessed.",
             "triggers": [],
             "reproduction_type": None,
             "dimensions": {},
@@ -1412,7 +1396,7 @@ def paper_consistency(
             if status == "PASS"
             else "One or more paper-grounded dimensions require attention."
         ),
-        "triggers": assessment["paper_triggers"],
+        "triggers": [],
         "reproduction_type": assessment["reproduction_type"],
         "dimensions": assessment["dimensions"],
     }
@@ -1544,7 +1528,7 @@ def derive_qa_axes(
             "NOT_ASSESSABLE",
             [{"source": "instruction/tests", "fact": "No independent factual adjudication was supplied."}],
             base_location,
-            "E1 checks the public contract and does not independently verify scientific facts.",
+            "Dual-lane review checks the public contract and does not independently verify scientific facts without Agent paper assessment.",
         )
     elif paper_result.get("status") == "NOT_ASSESSABLE":
         factual = entry(
@@ -1759,14 +1743,7 @@ def markdown_summary(report: dict[str, Any]) -> str:
         f"Runtime provenance: {checker_runtime['runtime_provenance']}\n"
         f"Runtime status: {checker_runtime['status']}"
     )
-    if execution["claim"] == "SMOKE_RUN":
-        checker_assessment = (
-            "The real checker executed before the E2 smoke."
-        )
-        execution_assessment = (
-            f"Status: E2_SMOKE\nReason: {execution['reason']}"
-        )
-    elif (
+    if (
         report["checker_tests"]
         and checker_runtime["status"] == "ASSESSED"
     ):
@@ -1775,7 +1752,7 @@ def markdown_summary(report: dict[str, Any]) -> str:
             + checker_runtime_summary
         )
         execution_assessment = (
-            "Status: E1_ONLY\n"
+            "Status: DUAL_LANE_CHECKER_ONLY\n"
             "Reason: The checker ran, but the scientific workflow did not."
         )
     else:
@@ -1788,7 +1765,7 @@ def markdown_summary(report: dict[str, Any]) -> str:
             + checker_runtime_summary
         )
         execution_assessment = (
-            "Status: E1_NOT_ASSESSABLE\n"
+            "Status: DUAL_LANE_NOT_ASSESSABLE\n"
             "Reason: The scientific workflow did not run and verifier evidence was unavailable."
         )
     resource_lines = (
@@ -1827,14 +1804,6 @@ def markdown_summary(report: dict[str, Any]) -> str:
         f"- Classification: {qualification['classification']}\n"
         f"- Rationale: {qualification['rationale']}\n"
         f"- Evidence: {qualification['evidence']}"
-    )
-    adjudication_lines = (
-        "\n".join(
-            f"- {item['trigger']}: {item['status']} — {item['rationale']} "
-            f"(evidence={item['evidence']})"
-            for item in report.get("paper_trigger_adjudication", [])
-        )
-        or "No no-paper trigger adjudication was supplied."
     )
     contract = report["evidence_contract"]
     evidence_contract_lines = (
@@ -1902,16 +1871,8 @@ def markdown_summary(report: dict[str, Any]) -> str:
         else "Status: NOT_ASSESSED\n"
         "Reason: Gold provenance was not assessed."
     )
-    scope_mode = (
-        f"paper-grounded {configuration['execution_level']}"
-        if configuration["paper_mode"] == "paper_grounded"
-        else f"no-paper {configuration['execution_level']}"
-    )
-    next_step = (
-        "Use the fixed verdict and route for production disposition."
-        if configuration["paper_mode"] == "paper_grounded"
-        else "Continue survivors with the source-bound paper-grounded E1."
-    )
+    scope_mode = "dual-lane"
+    next_step = "Use the fixed verdict and route for production disposition."
     oracle_boundary = (
         "The solution Oracle ran only in an isolated positive-mock workspace; "
         "its values are neither reported nor used as scientific evidence."
@@ -1929,8 +1890,7 @@ def markdown_summary(report: dict[str, Any]) -> str:
 
 - Audit ID: {report['audit_id']}
 - Benchmark: {report['benchmark']['name']}
-- Paper mode: {configuration['paper_mode']}
-- Execution level: {configuration['execution_level']}
+- Review lane: {configuration['review_lane']}
 - Materials class: {summary['materials_class']}
 - Answer type: {summary['answer_type']}
 - Final verdict: {summary['final_verdict']}
@@ -1947,8 +1907,7 @@ def markdown_summary(report: dict[str, Any]) -> str:
 
 ## 3. Audit Configuration
 
-- Paper mode: {configuration['paper_mode']}
-- Execution level: {configuration['execution_level']}
+- Review lane: {configuration['review_lane']}
 
 ## 4. Final Verdict
 
@@ -1964,9 +1923,6 @@ def markdown_summary(report: dict[str, Any]) -> str:
 
 Taxonomy evidence:
 {taxonomy_evidence_lines}
-
-No-paper trigger adjudication:
-{adjudication_lines}
 
 ## 6. Capability Alignment
 
@@ -2144,8 +2100,7 @@ def write_disposition_artifacts(
         "hard_gates": report["hard_gates"],
         "route": route,
         "publishable": disposition["publishable"],
-        "paper_mode": report["configuration"]["paper_mode"],
-        "execution_level": report["configuration"]["execution_level"],
+        "review_lane": report["configuration"]["review_lane"],
         "taxonomy_labels": report["taxonomy_labels"],
         "finding_summary": {
             "total": len(report["findings"]),
@@ -2187,7 +2142,7 @@ def synthesize_report(
     }
     execution_evidence = execution_evidence or {
         "status": "NOT_ASSESSED",
-        "claim": "E1_CHECKER_ONLY",
+        "claim": EXECUTION_CLAIM,
         "scientific_reproduction": False,
         "environment": None,
         "environment_verified": False,
@@ -2197,6 +2152,7 @@ def synthesize_report(
         "stdout": "",
         "stderr": "",
         "reason": "Scientific workflow execution was not assessed.",
+        "review_lane": REVIEW_LANE,
     }
     materials_assessment = (
         agent_assessment.get("materials_qualification")
@@ -2221,7 +2177,7 @@ def synthesize_report(
                     ),
                     "affected_files": ["instruction.md"],
                 },
-                "E0",
+                "STATIC",
                 "MATERIALS_ADMISSION",
             )
         )
@@ -2238,7 +2194,7 @@ def synthesize_report(
                     ),
                     "affected_files": ["solution/solve.sh"],
                 },
-                "E0",
+                "STATIC",
                 "PACKAGE_STATIC",
             )
         )
@@ -2252,16 +2208,16 @@ def synthesize_report(
         )
     ]
     sources = materials_gate_sources + oracle_sources + [
-        (item, "E0", "PACKAGE_STATIC")
+        (item, "STATIC", "PACKAGE_STATIC")
         for item in static_issues
     ] + [
-        (item, "E1", "CHECKER_ROBUSTNESS")
+        (item, "DETERMINISTIC", "CHECKER_ROBUSTNESS")
         for item in checker_result["findings"]
     ] + [
         (item, "RESOURCE", "RESOURCE_USABILITY")
         for item in resource_result["findings"]
     ] + [
-        (item, "E2", "EXECUTION_FEASIBILITY")
+        (item, "EXECUTION", "EXECUTION_FEASIBILITY")
         for item in execution_findings(execution_evidence)
     ] + [
         (item, "PAPER", "PAPER_FIDELITY")
@@ -2330,39 +2286,21 @@ def synthesize_report(
         )
     ):
         contract_gaps.append("gold_provenance")
-    paper_trigger_adjudication = (
-        agent_assessment.get("paper_trigger_adjudication", [])
-        if agent_assessment is not None
-        else []
-    )
     if (
         paper_skip_reason is None
         and not paper_result.get("dimensions")
-        and {
-            item.get("trigger")
-            for item in paper_trigger_adjudication
-            if isinstance(item, dict)
-        }
-        != {
-            "SCIENTIFIC_CONFLICT",
-            "NECESSARY_INFORMATION_MISSING",
-            "GOLD_PROVENANCE_UNCERTAIN",
-            "EXPLICIT_REPRODUCTION_CLAIM",
-        }
+        and not (
+            materials_assessment is not None
+            and materials_assessment.get("classification") == "NON_MAT"
+        )
     ):
-        contract_gaps.append("paper_trigger_adjudication")
-    if any(
-        item.get("status") == "TRIGGERED"
-        for item in paper_trigger_adjudication
-    ) and not paper_result.get("dimensions"):
-        contract_gaps.append("triggered_paper_review")
+        contract_gaps.append("paper_assessment")
     dimensions = dimension_scores(
         checker_result,
         findings,
         paper_result,
         contract_gaps,
         materials_assessment,
-        paper_trigger_adjudication,
         root,
     )
     provisional_gaps = [
@@ -2427,17 +2365,7 @@ def synthesize_report(
         and score >= 60
         else "NOT_REQUIRED"
     )
-    audit_route = (
-        "PAPER_GROUNDED_E1"
-        if (
-            read_json(temp_dir / "audit_report.json")["configuration"][
-                "paper_mode"
-            ]
-            == "no_paper"
-            and not hard_gate
-        )
-        else route
-    )
+    audit_route = route
     report = read_json(temp_dir / "audit_report.json")
     report["summary"] = {
         "materials_class": materials_class,
@@ -2503,7 +2431,6 @@ def synthesize_report(
     report["execution_evidence"] = execution_evidence
     report["qa_axes"] = qa_axes
     report["paper_consistency"] = paper_result
-    report["paper_trigger_adjudication"] = paper_trigger_adjudication
     contract_map = json.loads(json.dumps(static_result.get(
         "contract_map",
         {
@@ -2567,7 +2494,6 @@ def synthesize_report(
     if isinstance(paper_gold, dict):
         report["gold_provenance"] = {
             **paper_gold,
-            "mode": "paper_grounded",
             "reason": paper_gold.get("rationale"),
             "outputs": contract_map.get("core_outputs", []),
             "oracle_used": False,
@@ -2583,8 +2509,7 @@ def synthesize_report(
             or contract_map.get("gold_provenance")
             or {
                 "status": "NOT_ASSESSABLE",
-                "mode": "no_paper",
-                "reason": "Gold provenance was not assessed.",
+                    "reason": "Gold provenance was not assessed.",
                 "oracle_used": False,
             }
         )
@@ -2704,15 +2629,10 @@ def synthesize_report(
         ),
         "tests_executed": [
             *[item["test_type"] for item in checker_result["tests"]],
-            *(
-                ["E2_SMOKE"]
-                if execution_evidence["claim"] == "SMOKE_RUN"
-                else []
-            ),
         ],
         "tests_skipped": [
             *(
-                ["checker dynamic probes due to an E0 FATAL gate"]
+                ["checker dynamic probes due to a static FATAL gate"]
                 if not checker_result["tests"]
                 else []
             ),
@@ -2722,11 +2642,7 @@ def synthesize_report(
                 or "dimensions" not in agent_assessment
                 else []
             ),
-            *(
-                ["scientific workflow execution"]
-                if execution_evidence["claim"] != "SMOKE_RUN"
-                else []
-            ),
+            "scientific workflow execution",
         ],
         "limitations": [
             *static_result["limitations"],
@@ -2841,9 +2757,7 @@ def synthesize_report(
     audit_manifest["deterministic_contract_digest"] = (
         deterministic_contract["contract_digest"]
     )
-    audit_manifest["execution_level"] = report["configuration"][
-        "execution_level"
-    ]
+    audit_manifest["review_lane"] = report["configuration"]["review_lane"]
     audit_manifest["solution_oracle_executed"] = checker_result[
         "solution_oracle"
     ].get("executed", False)
@@ -3514,17 +3428,17 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         raise ValueError("manifest canonical fields are missing or inconsistent")
     validate_qa_axes(report.get("qa_axes"))
     configuration = report.get("configuration", {})
-    if configuration.get("execution_level") != "E1":
-        raise ValueError("authoritative report execution level must be E1")
+    if configuration.get("review_lane") != REVIEW_LANE:
+        raise ValueError("authoritative report review_lane must be dual")
     execution = report.get("execution_evidence", {})
     if (
         not isinstance(execution, dict)
-        or execution.get("claim") != "E1_CHECKER_ONLY"
+        or execution.get("claim") != EXECUTION_CLAIM
         or execution.get("scientific_reproduction") is not False
         or execution.get("runtime_provenance")
         not in {"sandbox"}
     ):
-        raise ValueError("invalid E1 runtime provenance")
+        raise ValueError("invalid dual-lane runtime provenance")
     if summary["final_verdict"] not in VERDICTS:
         raise ValueError("invalid verdict")
     evidence_contract = report.get("evidence_contract")
@@ -3586,7 +3500,6 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
             "WARNING",
             "FAIL",
         }
-        or gold.get("mode") not in {"no_paper", "paper_grounded"}
         or gold.get("oracle_used") is not False
         or not isinstance(gold.get("provenance", {}), dict)
     ):
@@ -3681,15 +3594,7 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         raise ValueError("summary publishable flag does not match verdict")
     if summary.get("publication_route") != expected_route:
         raise ValueError("summary publication route does not match verdict")
-    expected_audit_route = (
-        "PAPER_GROUNDED_E1"
-        if (
-            report["configuration"]["paper_mode"] == "no_paper"
-            and not expected_gate_triggered
-        )
-        else expected_route
-    )
-    if summary.get("route") != expected_audit_route:
+    if summary.get("route") != expected_route:
         raise ValueError("summary route does not match audit sequence")
     if disposition.get("route") != expected_route:
         raise ValueError("disposition artifact does not match verdict")
@@ -3722,30 +3627,6 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
             raise ValueError(
                 "PASS lacks authoritative materials qualification"
             )
-        if report["configuration"]["paper_mode"] == "no_paper":
-            adjudication = report.get("paper_trigger_adjudication")
-            if (
-                not isinstance(adjudication, list)
-                or {
-                    item.get("trigger")
-                    for item in adjudication
-                    if isinstance(item, dict)
-                }
-                != {
-                    "SCIENTIFIC_CONFLICT",
-                    "NECESSARY_INFORMATION_MISSING",
-                    "GOLD_PROVENANCE_UNCERTAIN",
-                    "EXPLICIT_REPRODUCTION_CLAIM",
-                }
-                or any(
-                    item.get("status") != "NOT_TRIGGERED"
-                    or not item.get("evidence")
-                    for item in adjudication
-                )
-            ):
-                raise ValueError(
-                    "PASS lacks complete no-paper trigger adjudication"
-                )
         validate_pass_probe_coverage(checker.get("probe_coverage", {}))
     oracle = checker.get("solution_oracle", {})
     if oracle.get("scientific_evidence") is not False:
@@ -3819,18 +3700,14 @@ def finalize_audit(
     output_dir: Path | None = None,
 ) -> dict[str, Any]:
     resolved_root = root.expanduser().resolve()
-    output_root = (
-        output_dir.expanduser().resolve()
+    output_root = require_external_output_dir(
+        resolved_root,
+        output_dir,
+        label="audit output directory",
+        purpose=management_purpose(root, output_dir)
         if output_dir is not None
-        else resolved_root
+        else "review",
     )
-    if output_dir is not None and (
-        output_root == resolved_root
-        or output_root.is_relative_to(resolved_root)
-    ):
-        raise ValueError(
-            "audit output directory must remain outside the Harbor 题包"
-        )
     temp_dir = output_root / ".benchmark_audit_tmp"
     final_dir = output_root / "benchmark_audit"
     if not temp_dir.is_dir():

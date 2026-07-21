@@ -9,7 +9,8 @@ The audit unit is one `paper-{id}/` directory.
 - `solution/**` is privileged and may be copied into a disposable Oracle
   workspace only to generate one positive mock. Its values are never report
   evidence.
-- `paper/**` is read only after a confirmed paper trigger.
+- `paper/**` is always read by the Agent lane, except when an authoritative
+  `NON_MAT` classification has already ended the review.
 
 No other package role is quality evidence. `manifest.json`, `resources.json`,
 `steps.json`, `task.toml`, `environment/`, and directory labels cannot affect
@@ -50,7 +51,7 @@ Process evidence being absent from `output_contract` is not itself a defect.
 
 ## Checker runtime
 
-`tests/test.sh` is Harbor's verifier entrypoint. E1 invokes that entrypoint in
+`tests/test.sh` is Harbor's verifier entrypoint. Dual-lane review invokes that entrypoint in
 a disposable copy containing instruction and tests, without solution or paper.
 Paths for `/app/outputs`, `/tests`, and `/logs/verifier` are mounted at their
 canonical Docker paths without changing the source package.
@@ -93,5 +94,6 @@ environment, producer start, and execution. Only producer start/run sets
 ## Structural rules
 
 Quality-role paths cannot escape the package or route through symlinks.
-Input hashes cover instruction and tests only. Triggered paper hashes are
-added only after the no-paper gate. Solution hashes are never published.
+Input hashes cover instruction and tests only. Paper hashes are included on
+the dual-lane path unless an established `NON_MAT` skip applies. Solution
+hashes are never published.

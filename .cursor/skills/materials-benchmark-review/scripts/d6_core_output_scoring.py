@@ -1410,7 +1410,7 @@ def _refresh_aliases(chain: dict[str, Any]) -> None:
 def merge_runtime_evidence(
     trace: dict[str, Any], checker_result: dict[str, Any] | None
 ) -> dict[str, Any]:
-    """Merge E1 runtime observations into a previously static D6 trace."""
+    """Merge runtime observations into a previously static D6 trace."""
 
     if not isinstance(checker_result, dict):
         return trace
@@ -1472,7 +1472,7 @@ def merge_runtime_evidence(
                     chain["scorer_binding"] = PROVEN
                     chain["evidence"]["scorer_binding"] = _status_detail(
                         PROVEN,
-                        "Controlled E1 observations bind the direct checker "
+                        "Controlled observations bind the direct checker "
                         "component to the scalar reward.",
                         component_keys=sorted(
                             {
@@ -1509,7 +1509,7 @@ def merge_runtime_evidence(
             chain["content_read"] = PROVEN
             chain["evidence"]["content_read"] = _status_detail(
                 PROVEN,
-                "E1 content mutations changed the component/reward outcome.",
+                "Content mutations changed the component/reward outcome.",
                 source="runtime_content_sensitivity",
             )
     for chain in trace.get("core_outputs", []):
@@ -1545,7 +1545,7 @@ def merge_runtime_evidence(
     trace["runtime"] = {
         "tests_available": len(tests),
         "usable_test_count": sum(usable_runtime_result(item) for item in tests),
-        "source": "E1_checker_tests",
+        "source": "deterministic_checker_tests",
     }
     _refresh_trace_status(trace)
     return trace
