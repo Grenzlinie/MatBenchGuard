@@ -14,19 +14,13 @@ from tests.test_materials_benchmark_review_core import (
     SOURCE_PACKAGE,
     copy_source_package,
 )
+from tests.test_materials_benchmark_review_dual_lane import assessment, review_run_dir
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def external_audit_dir(package: Path) -> Path:
-    paper_id = (
-        package.name[len("paper-"):]
-        if package.name.startswith("paper-")
-        else package.name
-    )
-    path = package.parent / "review_outputs" / paper_id / "benchmark_audit"
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+    return review_run_dir(package) / "audit" / "benchmark_audit"
 
 
 RUNNER = (
@@ -68,14 +62,16 @@ class LocalResourceServer:
 
 
 def run_review(package: Path) -> subprocess.CompletedProcess[str]:
+    run = review_run_dir(package)
+    (run / "agent_assessment.json").write_text(
+        json.dumps(assessment(), ensure_ascii=False), encoding="utf-8"
+    )
     return subprocess.run(
         [
             sys.executable,
             str(RUNNER),
-            str(package),
-            "--allow-private-network",
-            "--resource-timeout",
-            "1",
+            "--run-dir",
+            str(run),
         ],
         cwd=REPO_ROOT,
         capture_output=True,
@@ -109,14 +105,16 @@ class MaterialsBenchmarkResourcesTests(unittest.TestCase):
             direct = checks["resources"][0]
             self.assertEqual(direct["declaration_source"], "instruction.md")
             self.assertTrue(direct["indispensable"])
-            self.assertEqual(direct["status"], "PERMANENT_UNAVAILABLE")
+            # The run-only CLI deliberately has no caller-controlled network
+            # escape hatch; local/private endpoints remain fail-closed.
+            self.assertEqual(direct["status"], "BLOCKED_PRIVATE_NETWORK")
             report = json.loads(
                 (audit_dir / "audit_report.json").read_text(encoding="utf-8")
             )
             gates = {
                 item["gate_id"]: item["status"] for item in report["gate_results"]
             }
-            self.assertEqual(gates["DIRECT_INPUT_AVAILABILITY"], "FAIL")
+            self.assertEqual(gates["DIRECT_INPUT_AVAILABILITY"], "NOT_ASSESSABLE")
 
     def test_resources_metadata_is_not_reviewed_or_scored(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

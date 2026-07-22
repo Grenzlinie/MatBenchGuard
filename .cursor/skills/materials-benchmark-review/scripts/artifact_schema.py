@@ -55,11 +55,21 @@ DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION = (
 )
 AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION = "materials-agent-quality/2.0"
 QUALITY_PROBE_RESULTS_SCHEMA_VERSION = "materials-quality-probe-results/2.0"
+REPAIR_FINDINGS_SCHEMA_VERSION = "materials-repair-findings/1.0"
 
 DETERMINISTIC_CONTRACT_SCHEMA_VERSION = "materials-deterministic-contract/1.0"
 DETERMINISTIC_REGISTRY_VERSION = "materials-deterministic-check-registry/1.0"
+# Archival-only: historical bundles may retain this plan schema, but active
+# Repair execution accepts only REPAIR_PLAN_SCHEMA_VERSION (2.0).
 DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION = (
     "materials-deterministic-repair-plan/1.0"
+)
+REPAIR_PLAN_SCHEMA_VERSION = "materials-repair-plan/2.0"
+AGENT_REPAIR_ASSESSMENT_SCHEMA_VERSION = (
+    "materials-agent-repair-assessment/1.0"
+)
+PUBLICATION_CLASSES = frozenset(
+    {"DIRECT_DETERMINISTIC", "REAUDIT_REQUIRED"}
 )
 
 SCORING_SCHEMA_VERSION = "materials-review-scoring/2.0"

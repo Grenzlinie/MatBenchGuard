@@ -3,8 +3,11 @@
 ## Stage flow (0 → 5)
 
 ```
-[Stage 0 Materials admissibility]  Agent reads Problem background / Approach /
-  Reproduction target and adjudicates; deterministic code does not infer it.
+[Stage 0 Materials admissibility]  Requires a validated paper Agent assessment
+  in the run (`agent_assessment.json`). Missing/invalid assessment pauses as
+  AGENT_ASSESSMENT_PENDING with no A0 or formal audit. Agent reads Problem
+  background / Approach / Reproduction target and adjudicates; deterministic
+  code does not infer it.
   ├─ NON_MAT ─────► fail-fast REJECT (C01 Hard Gate); paper is NOT read.
   └─ MAT_CORE / MAT_METHOD / MAT_WRAPPER / AMBIGUOUS → continue (Wrapper is a task).
 [Stage 1 Deterministic core lane]  machine D1–D6 contract plus code-defined
@@ -16,14 +19,25 @@
 [Stage 1b Contract-only Agent overlay]  only eligible unavailable D1–D6 checks
   may receive PASS; derive an additive effective contract.
 [Stage 2 Agent quality lane]  scientific justification and quality results.
+  Repairable Agent findings become first-class OPEN queue entries
+  (`lane: agent_quality`, `repair_lane` / `repair_scope`); never assign a
+  fabricated D1–D6 check. Normalized `repair_findings` are CLI-validated.
 [Stage 3 Score + disposition]  C01–C07 normalized + weighted total + Hard Gates +
   verdict + unified terminal fields.
-  ├─ PASS           → publishable=true only when effective D1–D6=CLEAN
-  ├─ CONDITIONAL    → repair
+  ├─ PASS           → publishable=true only when effective D1–D6=CLEAN and no
+  │                   OPEN repairable Agent-quality finding remains
+  ├─ CONDITIONAL    → repair (including D CLEAN + OPEN repairable Agent finding
+  │                   → REPAIR_QUEUE)
   ├─ REJECT         → abandon (total < 60 or a Hard Gate)
   └─ NOT_ASSESSABLE → re-audit after evidence is restored
 [Stage 4 Repair (CONDITIONAL only)]  AUTO_FIX / ASSISTED_FIX / ABANDON in isolation.
-[Stage 5 Re-audit + compare]  Re-run Review; emit before/after C01–C07 and delta.
+  Later Repair tickets bind an Agent repair assessment across the complete
+  dual-lane queue. Direct deterministic publication is limited to unique D
+  wiring; Agent checker-fairness / science / direct-input / paper-grounded
+  instruction repairs require equal-depth re-audit.
+[Stage 5 Re-audit + compare]  Re-run Review with the inherited paper assessment;
+  emit before/after C01–C07 and delta. Absence/invalid/stale inheritance pauses
+  as AGENT_ASSESSMENT_PENDING and does not consume a semantic attempt.
 ```
 
 Repair is never a second scoring authority. It runs the canonical Review CLI
@@ -32,7 +46,8 @@ finalizes in one invocation. If Review first returns
 `AGENT_CONTRACT_PENDING`, the prepared re-audit is resumed with the external
 contract assessment without rerunning its persisted probes; that completed
 re-audit is still the sole post-repair authority for verdict, D1–D6 state,
-Hard-Gate result, and target resolution.
+Hard-Gate result, and target resolution. Re-audit never silently falls back to
+deterministic-only Review when the paper assessment is missing.
 
 ## Classification reform (Agent-adjudicated)
 
@@ -65,6 +80,16 @@ Each D1–D6 check emits exactly one of `PASS`, `FAIL`, `BLOCKED`, or
 warnings and unproven reachability risks are advisory. The machine deterministic
 repair summary is `CLEAN`, `REQUIRED`, or `NOT_APPLICABLE`, and `REQUIRED`
 contains the complete source queue, never a selected subset.
+
+The complete Review OPEN repair queue also includes repairable Agent-quality
+findings as first-class entries (`lane: agent_quality`). They carry
+`repair_lane` / `repair_scope` rather than a fabricated `deterministic_check`.
+Allowed scopes include `DETERMINISTIC_WIRING`, `CHECKER_ROBUSTNESS`,
+`INSTRUCTION_CONTRACT`, `SCORING_SEMANTICS`, `DIRECT_INPUT_REFERENCE`, and
+`SCIENCE_SEMANTICS`. Machine D1–D6 statuses, evidence, and source bindings stay
+authoritative and are not altered by Agent-quality queue entries. When D1–D6 is
+`CLEAN` but an OPEN repairable Agent finding remains, disposition is still
+`CONDITIONAL` / `REPAIR_QUEUE`.
 
 Malformed, full-integration, partial, and all-wrong runtime cases are
 schema/step-derived code checks. The Agent does not author their files or
@@ -120,10 +145,10 @@ change a machine `FAIL`.
 Review persists `agent_contract/request.json` only when the machine summary is
 `NOT_APPLICABLE` and the assessment is not yet supplied. The request has schema
 `materials-agent-contract-request/1.0`, status `AGENT_CONTRACT_PENDING`, and
-hashes for the package, Review implementation, static/probe artifacts, and
-machine contract. A pending result is `NOT_ASSESSABLE`, not publishable, and
-includes `request_path`; resuming with `--agent-contract-assessment` validates
-those bindings and reuses the persisted probes.
+the run-local A0 ContentRoot. Static/probe hashes remain diagnostic provenance;
+Review implementation byte hashes are not freshness gates. A pending result is
+`NOT_ASSESSABLE`, not publishable, includes `request_path`, and resumes when
+the same Review Agent writes `agent_contract/assessment.json` in the run.
 
 ## Checker execution precondition
 
@@ -202,7 +227,9 @@ identify the contract used by the final gate. The publication route is separate:
 
 The effective deterministic state can turn an otherwise passing score into
 `CONDITIONAL` when it is `REQUIRED`, or into `NOT_ASSESSABLE` when it is not
-complete. Only a valid `CLEAN` state permits a scored `PASS` to remain PASS.
+complete. Only a valid `CLEAN` state permits a scored `PASS` to remain PASS,
+and only when no OPEN repairable Agent-quality finding remains in
+`repair_findings` / `repair_queue`.
 
 ## Unified terminal fields
 

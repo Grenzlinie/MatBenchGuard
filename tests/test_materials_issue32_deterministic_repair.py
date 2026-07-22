@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 import tempfile
@@ -242,6 +243,8 @@ def published_bundle(
         "reaudit_configuration": {"review_lane": "dual"},
         "reaudit_audit_id": "A2",
         "reaudit_count": 1,
+        "reaudit_performed": True,
+        "verification_mode": "EQUAL_DEPTH_REAUDIT",
         "reaudit_verdict": "PASS",
         "publication_route": "PUBLISH_CANDIDATE",
         "score": 90,
@@ -257,7 +260,7 @@ def published_bundle(
         "residual_blocking_finding_ids": [],
     }
     comparison.update(comparison_overrides or {})
-    history = {
+    attestation = {
         "audit_id": "A1",
         "package_identity": identity,
         "review_verdict": "PASS",
@@ -279,11 +282,18 @@ def published_bundle(
             "package_identity": identity,
         }
     ]
+    report = {
+        **attestation,
+        "schema_version": "0.1",
+    }
     return {
+        "repair_summary.md": "# Benchmark Repair Report\n",
+        "repair_plan.md": "# Repair Plan\n",
+        "repair_report.json": report,
         "repair_plan.json": plan,
-        "changes.json": [change],
-        "unresolved.json": [],
-        "regression_results.json": [
+        "changes.jsonl": [change],
+        "unresolved_findings.jsonl": [],
+        "regression_tests.json": [
             {
                 "specification": regression,
                 "before_passed": False,
@@ -291,14 +301,14 @@ def published_bundle(
             }
         ],
         "re_audit_comparison.json": comparison,
-        "patch.json": {
+        canonical_status.REPAIR_BUNDLE_PATCH_INDEX: {
             "schema_version": "0.1",
             "files": [change],
             "atomic_publish": True,
         },
-        "evidence.json": evidence,
+        canonical_status.REPAIR_BUNDLE_EVIDENCE_RECORDS: evidence,
+        "repair_manifest.json": attestation,
         "repair.log": "decision=AUTO_FIX status=REPAIRED",
-        "history.json": history,
     }
 
 
@@ -414,15 +424,20 @@ class MaterialsIssue32DeterministicRepairTests(unittest.TestCase):
             plan_path.write_text(
                 json.dumps(
                     {
-                        "schema_version": (
-                            deterministic_contract
-                            .DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION
-                        ),
+                        "schema_version": "materials-repair-plan/2.0",
                         "audit_id": "A1",
+                        "agent_repair_assessment": {
+                            "schema_version": (
+                                "materials-agent-repair-assessment/1.0"
+                            ),
+                            "path": str(Path(temporary) / "assessment.json"),
+                            "assessment_hash": "sha256:" + "a" * 64,
+                        },
                         "findings": [
                             {
                                 "finding_id": "F1",
                                 "deterministic_check": "D4",
+                                "lane": "deterministic_core",
                                 "repair_class": "ABANDON",
                                 "justification": "No admissible repair.",
                                 "operations": [],
@@ -434,7 +449,9 @@ class MaterialsIssue32DeterministicRepairTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            with self.assertRaisesRegex(ValueError, "source contract binding"):
+            with self.assertRaisesRegex(
+                ValueError, "deterministic_contract binding"
+            ):
                 run_repair.validate_external_plan(root, plan_path)
 
     def test_complete_d6_plan_may_explicitly_abandon(self) -> None:
@@ -483,9 +500,47 @@ class MaterialsIssue32DeterministicRepairTests(unittest.TestCase):
             (root / "tests").mkdir(parents=True)
             (root / "instruction.md").write_text("task\n", encoding="utf-8")
             (root / "tests/checker.py").write_text("pass\n", encoding="utf-8")
+            plan["schema_version"] = "materials-repair-plan/2.0"
             plan["repair_output_dir"] = str(
                 workspace / "review_outputs/fixture/repair"
             )
+            assessment = {
+                "schema_version": "materials-agent-repair-assessment/1.0",
+                "audit_id": "A1",
+                "a0_content_root": "sha256:" + "a" * 64,
+                "package_identity": {"directory_name": root.name},
+                "findings": [
+                    {
+                        "finding_id": "F6",
+                        "lane": "deterministic_core",
+                        "decision": "ABANDON",
+                        "agent_verdict": "ABANDON",
+                        "repair_scope": "DETERMINISTIC_WIRING",
+                        "core_science_change": False,
+                        "rationale": "No admissible implementation is available.",
+                        "evidence": [
+                            {
+                                "source_kind": "DETERMINISTIC_AUDIT",
+                                "exact_quote": "CORE_RUNTIME_ORACLE_REJECTED",
+                                "source_hash": "sha256:" + "b" * 64,
+                            }
+                        ],
+                        "approved_operation_ids": [],
+                    }
+                ],
+            }
+            assessment_path = workspace / "agent_repair_assessment.json"
+            assessment_path.write_text(
+                json.dumps(assessment), encoding="utf-8"
+            )
+            plan["agent_repair_assessment"] = {
+                "schema_version": "materials-agent-repair-assessment/1.0",
+                "path": str(assessment_path),
+                "assessment_hash": (
+                    "sha256:"
+                    + hashlib.sha256(assessment_path.read_bytes()).hexdigest()
+                ),
+            }
             before = run_repair.package_hashes(root)
             report = {
                 "audit_id": "A1",
@@ -498,6 +553,27 @@ class MaterialsIssue32DeterministicRepairTests(unittest.TestCase):
                         "title": "CORE_RUNTIME_ORACLE_REJECTED",
                     }
                 ],
+                "deterministic_contract": contract,
+                "agent_quality": {
+                    "assessment": {
+                        "materials_qualification": {
+                            "classification": "MAT",
+                            "rationale": "fixture",
+                            "evidence": [],
+                        }
+                    }
+                },
+                "repair_queue": {
+                    "open_finding_ids": ["F6"],
+                    "open_findings": [
+                        {
+                            "finding_id": "F6",
+                            "lane": "deterministic_core",
+                            "status": "OPEN",
+                            "repairable": True,
+                        }
+                    ],
+                },
             }
             with mock.patch.object(
                 run_repair,

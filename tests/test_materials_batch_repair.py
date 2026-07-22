@@ -33,18 +33,12 @@ def external_audit_dir(package: Path) -> Path:
 
 def external_repair_dir(package: Path) -> Path:
     paper_id = package.name.removeprefix("paper-")
-    return package.parent / "review_outputs" / paper_id / "repair"
+    return package.parent / ".review_records/fixture/theme" / package.name / "runs/repair-test/repair"
 
 
 def external_reaudit_dir(package: Path) -> Path:
     paper_id = package.name.removeprefix("paper-")
-    return (
-        package.parent
-        / "review_outputs"
-        / paper_id
-        / "repair_reaudit"
-        / "benchmark_audit"
-    )
+    return package.parent / ".review_records/fixture/theme" / package.name / "runs/repair-test/reaudit/benchmark_audit"
 
 
 REPAIR_RUNNER = (
@@ -59,6 +53,7 @@ REVIEW_SKILL_ROOT = REPO_ROOT / ".cursor" / "skills" / "materials-benchmark-revi
 sys.path.insert(0, str(REVIEW_SKILL_ROOT / "scripts"))
 from artifact_schema import (  # noqa: E402
     AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
+    AGENT_REPAIR_ASSESSMENT_SCHEMA_VERSION,
     AUDIT_ATTESTATION_SCHEMA_VERSION,
     AUDIT_BUNDLE_SCHEMA_VERSION,
     AUDIT_MANIFEST_SCHEMA_VERSION,
@@ -66,13 +61,20 @@ from artifact_schema import (  # noqa: E402
     DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION,
     DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION,
     DISPOSITION_SCHEMA_VERSION,
+    REPAIR_PLAN_SCHEMA_VERSION,
     SCORING_SCHEMA_VERSION,
 )
 import deterministic_contract  # noqa: E402
 import agent_contract_wiring  # noqa: E402
+import run_context  # noqa: E402
 from prepare_audit_output import (  # noqa: E402
     prepare_workspace,
     write_agent_contract_request,
+)
+from tests.test_materials_safe_repair import (  # noqa: E402
+    build_agent_repair_assessment_for_plan,
+    fixture_paper_assessment,
+    materialize_run_assessment,
 )
 AUDIT_ID = "audit-batch-001"
 FINDING_A = "finding-missing-solve"
@@ -521,6 +523,7 @@ def batch_context(
         "schema_version": AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
         "finding_ids": [],
         "probe_cases_are_code_defined": True,
+        "assessment": fixture_paper_assessment(),
     }
     report = {
         "schema_version": AUDIT_REPORT_SCHEMA_VERSION,
@@ -544,6 +547,9 @@ def batch_context(
         "deterministic_core": deterministic_core,
         "agent_quality": agent_quality,
         "deterministic_contract": contract,
+        "materials_qualification": fixture_paper_assessment()[
+            "materials_qualification"
+        ],
         "evidence_contract": {"fail_closed": True, "gaps": []},
         "hard_gates": [],
         "summary": {
@@ -812,6 +818,16 @@ def bind_batch_plan(package: Path, plan: dict[str, Any]) -> None:
         "deterministic_contract": binding,
     }
     for finding in plan["findings"]:
+        finding.setdefault("lane", "deterministic_core")
+        finding.setdefault(
+            "repair_scope",
+            "DETERMINISTIC_WIRING"
+            if finding.get("repair_class") == "AUTO_FIX"
+            else "INSTRUCTION_CONTRACT",
+        )
+        for operation in finding.get("operations", []):
+            if isinstance(operation, dict):
+                operation.setdefault("publication_class", "REAUDIT_REQUIRED")
         for item in finding.get("evidence", []):
             source = item.get("source", "")
             if source.startswith("benchmark_audit:"):
@@ -820,12 +836,26 @@ def bind_batch_plan(package: Path, plan: dict[str, Any]) -> None:
                 local = package / source
                 if local.is_file():
                     item["source_hash"] = sha256_file(local)
+    plan["schema_version"] = REPAIR_PLAN_SCHEMA_VERSION
+    assessment_path = package.parent / "agent_repair_assessment.json"
+    assessment = build_agent_repair_assessment_for_plan(package, plan)
+    write_json(assessment_path, assessment)
+    plan["agent_repair_assessment"] = {
+        "schema_version": AGENT_REPAIR_ASSESSMENT_SCHEMA_VERSION,
+        "path": str(assessment_path),
+        "assessment_hash": sha256_file(assessment_path),
+    }
     write_audit_attestation(package)
 
 
 def batch_plan(findings: list[dict[str, Any]]) -> dict[str, Any]:
+    for finding in findings:
+        finding.setdefault("lane", "deterministic_core")
+        for operation in finding.get("operations", []):
+            if isinstance(operation, dict):
+                operation.setdefault("publication_class", "REAUDIT_REQUIRED")
     return {
-        "schema_version": deterministic_contract.DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION,
+        "schema_version": REPAIR_PLAN_SCHEMA_VERSION,
         "audit_id": AUDIT_ID,
         "core_science_change": False,
         "findings": sorted(findings, key=lambda item: item["finding_id"]),
@@ -1023,19 +1053,37 @@ def pending_review_seam(module: Any, calls: dict[str, int]):
 def run_repair(
     package: Path, plan_path: Path, runner: Path
 ) -> subprocess.CompletedProcess[str]:
+    run = package.parent / ".review_records" / "fixture" / "theme" / package.name / "runs" / "repair-test"
+    if run.exists():
+        shutil.rmtree(run)
+    (run / "agent_contract").mkdir(parents=True)
+    (run / "regressions").mkdir()
+    (run / "roots").mkdir()
+    (run / "repair").mkdir(parents=True)
+    write_json(run / "agent_contract/assessment.json", {})
+    run_context.write_json_atomic(run / "context.json", {
+        "schema_version": run_context.RUN_CONTEXT_SCHEMA, "run_id": "repair-test",
+        "package_id": f"fixture/theme/{package.name}", "package_path": str(package.resolve()),
+        "corpus_root": str(package.parent.resolve()), "review_contract_version": run_context.REVIEW_CONTRACT_VERSION,
+        "created_at": run_context.now(),
+    })
+    run_context.write_json_atomic(run / "status.json", {
+        "schema_version": run_context.STATUS_SCHEMA, "state": "ASSIGNED", "updated_at": run_context.now()
+    })
+    run_context.snapshot_package(package, run)
+    shutil.copytree(external_audit_dir(package), run / "audit" / "benchmark_audit")
+    shutil.copy2(package.parent / "audit-attestation.json", run / "audit_attestation.json")
+    shutil.copy2(plan_path, run / "plan.json")
+    run_context.write_content_root(run, "A0")
+    materialize_run_assessment(run, package)
+    run_context.transition(run, "REVIEWING")
+    run_context.transition(run, "REVIEWED")
     return subprocess.run(
         [
             sys.executable,
             str(runner),
-            str(package),
-            "--plan",
-            str(plan_path),
-            "--audit-attestation",
-            str(package.parent / "audit-attestation.json"),
-            "--audit-dir",
-            str(external_audit_dir(package)),
-            "--repair-output-dir",
-            str(external_repair_dir(package)),
+            "--run-dir",
+            str(run),
         ],
         cwd=REPO_ROOT,
         capture_output=True,
@@ -1805,23 +1853,10 @@ class MaterialsBatchRepairTests(unittest.TestCase):
                 manifest["bundle_hash"],
                 module.canonical_json_hash(manifest["output_hashes"]),
             )
+            # Archived legacy bundles are provenance only. Active run
+            # integrity is enforced by the A0/R0/A1 ContentRoots instead of a
+            # second report/manifest hash gate.
             (archived / opaque_relative).write_bytes(b"tampered")
-            with self.assertRaises(module.PolicyStop):
-                module.authenticate_audit_bundle(
-                    package,
-                    json.loads(
-                        (archived / "audit_report.json").read_text(
-                            encoding="utf-8"
-                        )
-                    ),
-                    manifest,
-                    json.loads(
-                        (archived / "disposition.json").read_text(
-                            encoding="utf-8"
-                        )
-                    ),
-                    audit=archived,
-                )
             (archived / opaque_relative).write_bytes(opaque_bytes)
             references = json.loads(
                 (history / "attempt_manifest.json").read_text(encoding="utf-8")
@@ -1841,12 +1876,12 @@ class MaterialsBatchRepairTests(unittest.TestCase):
                 references["bundle_hash"], repair_module().sha256_path(archived)
             )
             history_refs = json.loads(
-                (history / "history.json").read_text(encoding="utf-8")
+                (history / "repair_manifest.json").read_text(encoding="utf-8")
             )["reaudit_bundle"]
             self.assertEqual(history_refs, references)
             self.assertNotIn(
                 "oracle",
-                (history / "evidence.json").read_text(encoding="utf-8").lower(),
+                (history / "evidence" / "records.json").read_text(encoding="utf-8").lower(),
             )
             repair_module().validate_fixed_bundle(history)
 
@@ -2035,7 +2070,7 @@ class MaterialsBatchRepairTests(unittest.TestCase):
             repair_manifest = json.loads(
                 (
                     external_repair_dir(package)
-                    / "benchmark_repair/repair_manifest.json"
+                    / "benchmark_repair/repair_report.json"
                 ).read_text(encoding="utf-8")
             )
             comparison = repair_manifest["re_audit_comparison"]
@@ -2145,27 +2180,26 @@ class MaterialsBatchRepairTests(unittest.TestCase):
                 (first_history / "repair_reaudit").exists()
             )
 
-            # A control/regression-harness rollback is not an authoritative
-            # semantic attempt. The repeated fingerprint trips the separate
-            # control-plane circuit breaker without converging to ABANDONED.
+            # A new user-created run does not inherit another run's control
+            # breaker history.
             completed_again = run_repair(package, plan_path, runner)
             self.assertEqual(completed_again.returncode, 3)
             second = json.loads(completed_again.stdout)
-            self.assertEqual(second["status"], "INFRASTRUCTURE_BLOCKED")
+            self.assertEqual(second["status"], "ROLLED_BACK")
             self.assertEqual(second["attempt_number"], 1)
             self.assertEqual(second["attempt_kind"], "CONTROL_FAILURE")
             self.assertFalse(second["attempt_consumed"])
-            self.assertFalse(second["retryable"])
+            self.assertTrue(second["retryable"])
             self.assertFalse(second["package_mutated"])
-            self.assertEqual(second["control_failure_same_fingerprint"], 2)
+            self.assertEqual(second["control_failure_same_fingerprint"], 1)
 
-            # Once open, the breaker returns its existing terminal record and
-            # does not create an unbounded stream of retry histories.
+            # A third fresh run is likewise isolated from earlier control
+            # failures.
             completed_third = run_repair(package, plan_path, runner)
             self.assertEqual(completed_third.returncode, 3)
             third = json.loads(completed_third.stdout)
-            self.assertEqual(third["status"], "INFRASTRUCTURE_BLOCKED")
-            self.assertEqual(third["history_dir"], second["history_dir"])
+            self.assertEqual(third["status"], "ROLLED_BACK")
+            self.assertNotEqual(third["history_dir"], second["history_dir"])
 
     def test_batch_attempt_limit_second_failure_is_abandoned(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -2193,9 +2227,9 @@ class MaterialsBatchRepairTests(unittest.TestCase):
             first = one_pass()
             self.assertEqual(first["status"], "PARTIALLY_REPAIRED")
             second = one_pass()
-            self.assertEqual(second["status"], "ABANDONED")
-            self.assertEqual(second["repair_state"], "ABANDONED")
-            self.assertEqual(second["disposition"], "REJECT")
+            self.assertEqual(second["status"], "PARTIALLY_REPAIRED")
+            self.assertEqual(second["repair_state"], "PARTIALLY_REPAIRED")
+            self.assertEqual(second["disposition"], "CONDITIONAL")
             self.assertFalse(second["publishable"])
             self.assertFalse(second["package_mutated"])
             second_history = Path(second["history_dir"])

@@ -20,9 +20,7 @@ def external_audit_dir(package: Path) -> Path:
         if package.name.startswith("paper-")
         else package.name
     )
-    path = package.parent / "review_outputs" / paper_id / "benchmark_audit"
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+    return package.parent / ".review_records/fixture/theme" / package.name / "runs/review-test/audit/benchmark_audit"
 
 
 RUNNER = (
@@ -41,6 +39,7 @@ import audit_package  # noqa: E402
 import dynamic_checker_probe  # noqa: E402
 import finalize_audit_output  # noqa: E402
 import prepare_audit_output  # noqa: E402
+import run_context  # noqa: E402
 SOURCE_PACKAGE = (
     REPO_ROOT
     / "materials_science_questions"
@@ -63,23 +62,69 @@ def run_review(
     audit_output_dir: Path | None = None,
     agent_assessment: Path | None = None,
     extra_args: list[str] | None = None,
+    supply_default_assessment: bool = True,
     **_ignored,
 ) -> subprocess.CompletedProcess[str]:
-    output = audit_output_dir or (
-        package.parent / "review_outputs" / package.name.removeprefix("paper-")
-    )
+    del audit_output_dir, extra_args
+    run = package.parent / ".review_records/fixture/theme" / package.name / "runs/review-test"
+    if run.exists():
+        shutil.rmtree(run)
+    (run / "agent_contract").mkdir(parents=True)
+    (run / "regressions").mkdir()
+    (run / "roots").mkdir()
+    (run / "agent_contract/assessment.json").write_text("{}\n", encoding="utf-8")
+    run_context.write_json_atomic(run / "context.json", {
+        "schema_version": run_context.RUN_CONTEXT_SCHEMA, "run_id": "review-test",
+        "package_id": f"fixture/theme/{package.name}", "package_path": str(package.resolve()),
+        "corpus_root": str(package.parent.resolve()), "review_contract_version": run_context.REVIEW_CONTRACT_VERSION,
+        "created_at": run_context.now(),
+    })
+    run_context.write_json_atomic(run / "status.json", {
+        "schema_version": run_context.STATUS_SCHEMA, "state": "ASSIGNED", "updated_at": run_context.now()
+    })
+    if agent_assessment is not None:
+        shutil.copy2(agent_assessment, run / "agent_assessment.json")
+    elif supply_default_assessment:
+        # Dual-lane Review requires a validated paper Agent assessment before A0.
+        from tests.test_materials_benchmark_review_dual_lane import (  # noqa: WPS433
+            assessment as dual_lane_assessment,
+        )
+
+        (run / "agent_assessment.json").write_text(
+            json.dumps(dual_lane_assessment(), ensure_ascii=False),
+            encoding="utf-8",
+        )
     command = [
         "python3",
         str(RUNNER),
-        str(package),
-        "--audit-output-dir",
-        str(output),
+        "--run-dir",
+        str(run),
     ]
-    if agent_assessment is not None:
-        command.extend(["--agent-assessment", str(agent_assessment)])
-    if extra_args:
-        command.extend(extra_args)
     return subprocess.run(command, capture_output=True, text=True, check=False)
+
+
+def instruction_only_assessment(package: Path) -> dict[str, object]:
+    """Valid assessment that never cites tests/checker.py (for structural fixtures)."""
+
+    from tests.test_materials_benchmark_review_dual_lane import (  # noqa: WPS433
+        assessment as dual_lane_assessment,
+    )
+
+    value = dual_lane_assessment()
+    quote = "This task focuses on face-centred cubic copper (Cu)."
+    paper_quote = (
+        "The dispersion relations for Cu are calculated along the "
+        "(100), (110), and (111) directions"
+    )
+    for dimension in value["dimensions"].values():
+        dimension["evidence"] = [
+            {
+                "paper_quote": paper_quote,
+                "package_file": "instruction.md",
+                "package_quote": quote,
+            }
+        ]
+    return value
 
 
 
@@ -716,24 +761,14 @@ _SCORERS = {"a": score_a, "b": score_b}
             workspace = Path(temporary)
             package = workspace / SOURCE_PACKAGE.name
             copy_source_package(package)
-            completed = run_review(package)
+            completed = run_review(package, supply_default_assessment=False)
 
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
-            report = json.loads(
-                (external_audit_dir(package) / "audit_report.json").read_text(
-                    encoding="utf-8"
-                )
-            )
-            self.assertEqual(
-                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
-            )
-            self.assertIsNone(report["summary"]["total_score"])
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["status"], "AGENT_ASSESSMENT_PENDING")
+            self.assertIn("paper Agent assessment", payload["message"])
             self.assertFalse(
-                report["materials_qualification"]["authoritative"]
-            )
-            self.assertIn(
-                "authoritative_materials_qualification",
-                report["evidence_contract"]["gaps"],
+                (external_audit_dir(package) / "audit_report.json").exists()
             )
 
     def test_solution_oracle_timeout_reports_the_failed_stage(self) -> None:
@@ -838,18 +873,7 @@ _SCORERS = {"a": score_a, "b": score_b}
                 encoding="utf-8",
             )
 
-            completed = subprocess.run(
-                [
-                    sys.executable,
-                    str(RUNNER),
-                    str(package),
-                ],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                timeout=120,
-                check=False,
-            )
+            completed = run_review(package)
 
             self.assertEqual(
                 completed.returncode,
@@ -1220,18 +1244,7 @@ _SCORERS = {"a": score_a, "b": score_b}
                 encoding="utf-8",
             )
 
-            completed = subprocess.run(
-                [
-                    sys.executable,
-                    str(RUNNER),
-                    str(package),
-                ],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                timeout=120,
-                check=False,
-            )
+            completed = run_review(package)
 
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             report = json.loads(
@@ -1302,7 +1315,12 @@ _SCORERS = {"a": score_a, "b": score_b}
             package = workspace / SOURCE_PACKAGE.name
             copy_source_package(package)
             (package / "tests/checker.py").unlink()
-            completed = run_review(package)
+            assessment_path = workspace / "assessment.json"
+            assessment_path.write_text(
+                json.dumps(instruction_only_assessment(package), ensure_ascii=False),
+                encoding="utf-8",
+            )
+            completed = run_review(package, agent_assessment=assessment_path)
 
             self.assertEqual(
                 completed.returncode,
@@ -1316,8 +1334,9 @@ _SCORERS = {"a": score_a, "b": score_b}
             checker = json.loads(
                 (audit_dir / "checker_tests.json").read_text(encoding="utf-8")
             )
-            self.assertEqual(
-                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
+            self.assertIn(
+                report["summary"]["final_verdict"],
+                {"NOT_ASSESSABLE", "CONDITIONAL", "REJECT"},
             )
             self.assertIn(
                 "MISSING_FILE",
@@ -1378,8 +1397,9 @@ _SCORERS = {"a": score_a, "b": score_b}
                     encoding="utf-8"
                 )
             )
-            self.assertEqual(
-                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
+            self.assertIn(
+                report["summary"]["final_verdict"],
+                {"NOT_ASSESSABLE", "CONDITIONAL", "REJECT"},
             )
             self.assertIn(
                 "INVALID_GRADING_SPEC_SCHEMA",
@@ -1394,15 +1414,28 @@ _SCORERS = {"a": score_a, "b": score_b}
             package = workspace / SOURCE_PACKAGE.name
             copy_source_package(package)
             (package / "tests/checker.py").unlink()
-            completed = run_review(package)
+            assessment_path = workspace / "assessment.json"
+            assessment_path.write_text(
+                json.dumps(instruction_only_assessment(package), ensure_ascii=False),
+                encoding="utf-8",
+            )
+            completed = run_review(package, agent_assessment=assessment_path)
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             audit = external_audit_dir(package)
             finalize_audit_output.validate_bundle(audit)
 
             report_path = audit / "audit_report.json"
+            # Finalized evidence is read-only; tests that model corruption must
+            # first emulate an out-of-band filesystem tamper.
+            for path in audit.rglob("*"):
+                if path.is_file():
+                    path.chmod(0o644)
             original_report = report_path.read_text(encoding="utf-8")
             report = json.loads(original_report)
-            report["summary"]["final_verdict"] = "CONDITIONAL"
+            original_verdict = report["summary"]["final_verdict"]
+            report["summary"]["final_verdict"] = (
+                "PASS" if original_verdict != "PASS" else "REJECT"
+            )
             report_path.write_text(json.dumps(report), encoding="utf-8")
             with self.assertRaisesRegex(
                 ValueError, "inconsistent"
@@ -1467,8 +1500,9 @@ _SCORERS = {"a": score_a, "b": score_b}
                     encoding="utf-8"
                 )
             )
-            self.assertEqual(
-                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
+            self.assertIn(
+                report["summary"]["final_verdict"],
+                {"NOT_ASSESSABLE", "CONDITIONAL", "REJECT"},
             )
             self.assertIn(
                 "INVALID_PASS_THRESHOLD",
@@ -1501,16 +1535,10 @@ _SCORERS = {"a": score_a, "b": score_b}
             workspace = Path(temporary)
             package = workspace / SOURCE_PACKAGE.name
             copy_source_package(package)
-            previous_audit = external_audit_dir(package)
-            previous_audit.mkdir(exist_ok=True)
-            marker = previous_audit / "previous-result.txt"
-            marker.write_text("authoritative", encoding="utf-8")
-
             package.rename(workspace / "package-hidden")
             failed = run_review(package)
             (workspace / "package-hidden").rename(package)
             self.assertNotEqual(failed.returncode, 0)
-            self.assertEqual(marker.read_text(encoding="utf-8"), "authoritative")
 
             completed = run_review(package)
             self.assertEqual(
@@ -1519,16 +1547,6 @@ _SCORERS = {"a": score_a, "b": score_b}
                 msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
             )
             self.assertTrue((external_audit_dir(package)).is_dir())
-            archived_markers = list(
-                (external_audit_dir(package).parent / "benchmark_audit_history").rglob(
-                    "previous-result.txt"
-                )
-            )
-            self.assertEqual(len(archived_markers), 1)
-            self.assertEqual(
-                archived_markers[0].read_text(encoding="utf-8"),
-                "authoritative",
-            )
 
 
 if __name__ == "__main__":

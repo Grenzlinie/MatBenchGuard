@@ -23,7 +23,6 @@ from prepare_audit_output import (
 from audit_integrity import validate_finalized_audit_bundle
 from canonical_status import canonical_fields
 from deterministic_contract import (
-    annotate_findings,
     apply_deterministic_gate,
     deterministic_repair_summary,
     evaluate_deterministic_contract,
@@ -36,6 +35,14 @@ from agent_contract_wiring import (
     validate_effective_contract,
 )
 from d6_core_output_scoring import merge_runtime_evidence
+from repair_findings import (
+    agent_sources_from_repair_findings,
+    annotate_repair_metadata,
+    apply_agent_quality_repair_gate,
+    build_agent_repair_findings,
+    build_complete_open_repair_queue,
+    validate_repair_findings,
+)
 from artifact_schema import (
     AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
     AUDIT_MANIFEST_SCHEMA_VERSION,
@@ -47,6 +54,7 @@ from artifact_schema import (
     DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION,
     DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION,
     QUALITY_PROBE_RESULTS_SCHEMA_VERSION,
+    REPAIR_FINDINGS_SCHEMA_VERSION,
     AGENT_ASSESSMENT_SCHEMA_VERSION,
     CHECKER_TESTS_SCHEMA_VERSION,
     RESOURCE_CHECKS_SCHEMA_VERSION,
@@ -278,6 +286,13 @@ V11_C04_CODES = {
     "CORE_RUNTIME_ORACLE_REJECTED",
     "CORE_RUNTIME_MALFORMED_INPUT_PASSES",
     "CORE_RUNTIME_ORDERING_VIOLATION",
+    "CHECKER_NONFINITE_BYPASS",
+    "CHECKER_DUPLICATE_COUNTING",
+    "CHECKER_DIRECTION_INVERSION",
+    "CHECKER_ORDER_SENSITIVITY",
+    "CHECKER_MISSING_OUTPUT_ENFORCEMENT",
+    "CHECKER_INEFFECTIVE_REWARD_LINKAGE",
+    "CHECKER_GAMING_SUBMISSION",
 }
 V11_C05_CODES = {
     "SOLUTION_BOUNDARY_VIOLATION",
@@ -557,6 +572,10 @@ def normalized_finding(
             "evidence": source.get("evidence", {}),
         }
     )
+    if "repairable" in source:
+        repairable = bool(source["repairable"]) and not hard_gate
+    else:
+        repairable = not hard_gate
     return {
         "finding_id": finding_id,
         "severity": source["severity"],
@@ -574,14 +593,16 @@ def normalized_finding(
         "evidence": source.get("evidence", {}),
         "impact": impact,
         "failure_scenario": source.get("test_type", source["code"]),
-        "repairable": not hard_gate,
+        "repairable": repairable,
         "minimal_repair": repair,
         "retest": retest,
         "required_fix": repair,
         "verification_after_fix": retest,
         "confidence": "HIGH",
         "judgment_type": (
-            "AGENT_JUDGMENT" if lane == "agent_quality" else "CODE_PROVEN"
+            "AGENT_JUDGMENT"
+            if lane in {"agent_quality", "quality_results"}
+            else "CODE_PROVEN"
         ),
         "deduction_group": deduction_group,
     }
@@ -2254,6 +2275,11 @@ def synthesize_report(
             == "MATERIALS_ADMISSIBILITY_REQUIRES_ADJUDICATION"
         )
     ]
+    authored_repair_findings: list[dict[str, Any]] = []
+    if agent_assessment is not None and "repair_findings" in agent_assessment:
+        authored_repair_findings = validate_repair_findings(
+            root, agent_assessment.get("repair_findings")
+        )
     sources = materials_gate_sources + oracle_sources + [
         (item, "STATIC", "PACKAGE_STATIC")
         for item in static_issues
@@ -2269,18 +2295,46 @@ def synthesize_report(
     ] + [
         (item, "PAPER", "PAPER_FIDELITY")
         for item in paper_assessment_findings(agent_assessment)
-    ]
+    ] + agent_sources_from_repair_findings(authored_repair_findings)
     findings = [
         normalized_finding(
             root,
             source,
-            f"FINDING-{index:03d}",
+            (
+                source["finding_id"]
+                if isinstance(source.get("finding_id"), str)
+                and source["finding_id"].strip()
+                else f"FINDING-{index:03d}"
+            ),
             phase,
             category,
         )
         for index, (source, phase, category) in enumerate(sources, start=1)
     ]
-    findings = annotate_findings(findings)
+    findings = annotate_repair_metadata(findings)
+    # Preserve Agent-authored scopes / lane on matching titles.
+    authored_by_title = {
+        item["title"]: item for item in authored_repair_findings
+    }
+    for item in findings:
+        authored = authored_by_title.get(item.get("title"))
+        if authored is None:
+            continue
+        item["finding_id"] = authored["finding_id"]
+        item["repair_scope"] = authored["repair_scope"]
+        item["repair_lane"] = "agent_quality"
+        item["lane"] = "agent_quality"
+        item["dimension"] = authored["dimension"]
+        item["deterministic_check"] = None
+        item["repairable"] = authored.get("repairable", True)
+        item["judgment_type"] = "AGENT_JUDGMENT"
+        if authored.get("evidence"):
+            item["evidence"] = {
+                **(item.get("evidence") or {}),
+                "citations": authored["evidence"],
+                "repair_scope": authored["repair_scope"],
+                "dimension": authored["dimension"],
+            }
     contract_map_for_d6 = static_result.get("contract_map", {})
     checker_analysis_for_d6 = (
         contract_map_for_d6.get("checker_analysis", {})
@@ -2414,12 +2468,22 @@ def synthesize_report(
         evidence_gaps=evidence_gaps,
         contract=gate_contract,
     )
+    agent_reason = None
+    verdict, agent_reason = apply_agent_quality_repair_gate(
+        verdict=verdict,
+        score=score,
+        hard_gate=hard_gate,
+        evidence_gaps=evidence_gaps,
+        findings=findings,
+    )
     effective_status = gate_contract["repair_summary"]["state"]
     deterministic_required = (
         effective_status == "REQUIRED"
     )
     if deterministic_reason is not None:
         reason = deterministic_reason
+    if agent_reason is not None:
+        reason = agent_reason
     route = ROUTES[verdict]
     repair_state = (
         "DETERMINISTIC_REPAIR_REQUIRED"
@@ -2769,6 +2833,10 @@ def synthesize_report(
         for item in findings
         if item.get("lane") in {"agent_quality", "quality_results"}
     ]
+    agent_repair_findings = build_agent_repair_findings(findings)
+    complete_repair_queue = build_complete_open_repair_queue(
+        gate_contract, findings
+    )
     def strip_quality_bindings(value: Any) -> Any:
         if isinstance(value, dict):
             return {
@@ -2821,6 +2889,8 @@ def synthesize_report(
             },
         ),
         "finding_ids": [item["finding_id"] for item in quality_findings],
+        "repair_findings": agent_repair_findings,
+        "repair_findings_schema_version": REPAIR_FINDINGS_SCHEMA_VERSION,
         "probe_cases_are_code_defined": True,
         "agent_scientific_scope": [
             "Gold",
@@ -2834,6 +2904,8 @@ def synthesize_report(
     }
     report["deterministic_core"] = deterministic_core
     report["agent_quality"] = agent_quality
+    report["repair_findings"] = agent_repair_findings
+    report["repair_queue"] = complete_repair_queue
     (temp_dir / "audit_report.json").write_text(
         json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
     )
@@ -3802,10 +3874,52 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         f"FINDING-{index:03d}"
         for index in range(1, len(findings) + 1)
     ]
-    if [item.get("finding_id") for item in findings] != expected_ids:
+    finding_ids = [item.get("finding_id") for item in findings]
+    if len(finding_ids) != len(set(finding_ids)) or not all(
+        isinstance(item, str) and bool(item.strip()) for item in finding_ids
+    ):
+        raise ValueError("finding IDs must be unique non-empty strings")
+    if all(
+        isinstance(item, str) and item.startswith("FINDING-")
+        for item in finding_ids
+    ) and finding_ids != expected_ids:
         raise ValueError("finding IDs are not consecutive")
     if report.get("findings") != findings:
         raise ValueError("findings JSONL content differs from report")
+    repair_findings = report.get("repair_findings")
+    if not isinstance(repair_findings, list):
+        raise ValueError("report repair_findings must be a list")
+    agent_quality = report.get("agent_quality")
+    if not isinstance(agent_quality, dict):
+        raise ValueError("report agent_quality must be an object")
+    if agent_quality.get("repair_findings") != repair_findings:
+        raise ValueError(
+            "agent_quality.repair_findings must match report.repair_findings"
+        )
+    for item in repair_findings:
+        if not isinstance(item, dict):
+            raise ValueError("repair_findings entries must be objects")
+        if item.get("lane") != "agent_quality":
+            raise ValueError("repair_findings must use lane agent_quality")
+        if item.get("deterministic_check") is not None:
+            raise ValueError(
+                "repair_findings must not fabricate deterministic_check"
+            )
+        if item.get("repair_scope") not in {
+            "DETERMINISTIC_WIRING",
+            "CHECKER_ROBUSTNESS",
+            "INSTRUCTION_CONTRACT",
+            "SCORING_SEMANTICS",
+            "DIRECT_INPUT_REFERENCE",
+            "SCIENCE_SEMANTICS",
+            "UNIQUE_SCORING_WIRING",
+        }:
+            raise ValueError("repair_findings has invalid repair_scope")
+    queue = report.get("repair_queue")
+    if not isinstance(queue, dict):
+        raise ValueError("report repair_queue must be an object")
+    if queue.get("schema_version") != REPAIR_FINDINGS_SCHEMA_VERSION:
+        raise ValueError("repair_queue schema_version mismatch")
     for item in findings:
         if not isinstance(item.get("affected_locations"), list) or not all(
             isinstance(location, dict)

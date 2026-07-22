@@ -57,9 +57,11 @@ Review side). The publication route is derived from the verdict
 `REJECT → QUARANTINE`, `NOT_ASSESSABLE → EVIDENCE_PENDING`).
 
 - `PASS`: authoritative total ≥ 80, no failed Hard Gate, no null key dimension,
-  no unresolved repairable `HIGH`, and deterministic D1–D6 is `CLEAN`;
+  no unresolved repairable `HIGH`, no OPEN repairable Agent-quality finding, and
+  deterministic D1–D6 is `CLEAN`;
 - `CONDITIONAL`: total 60–79 (no failed gate / null key dimension), or any
-  unresolved repairable `HIGH`;
+  unresolved repairable `HIGH`, or any OPEN repairable Agent-quality finding
+  (including when D1–D6 is `CLEAN` → `REPAIR_QUEUE`);
 - `REJECT`: any failed Hard Gate, or total < 60;
 - `NOT_ASSESSABLE`: a key dimension is null (temporary required evidence
   unavailable) and no Hard Gate forces rejection.
@@ -230,15 +232,28 @@ checker-core Hard Gate `PASS`.
 
 ## Deterministic repair publication
 
-The source audit's deterministic contract is the repair plan's schema authority.
-New deterministic plans bind the contract schema version, registry version,
-contract digest, source audit identity, and the complete set of
+The source audit's deterministic contract is the repair plan's schema authority
+for D1–D6 blockers. New deterministic plans bind the contract schema version,
+registry version, contract digest, source audit identity, and the complete set of
 `required_finding_ids`. An omitted OPEN blocking D1–D6 finding, unknown check
 target, stale digest/schema, or stale source binding fails closed.
 
-Repair runs fail-before and pass-after causal regressions, then invokes the
-equal-depth dual-lane Review CLI exactly once. Only that re-audit may establish the
-post-repair verdict and D1–D6 state. Atomic publication requires all of:
+The dual-lane `repair_queue` / `repair_findings` additionally lists OPEN
+repairable Agent-quality findings (`lane: agent_quality`, with `repair_scope`).
+Later Repair tickets require an Agent repair assessment over that complete
+cross-lane queue. Publication class:
+
+- `DIRECT_DETERMINISTIC` (future narrow path): unique source-bound D wiring only
+  (`DETERMINISTIC_WIRING` / `UNIQUE_SCORING_WIRING`, `AUTO_FIX`, no Agent-quality
+  / checker-semantics / direct-input / science change);
+- `REAUDIT_REQUIRED`: any Agent-quality finding, checker robustness/fairness,
+  scoring-semantics change, direct-input repair, or paper-grounded instruction /
+  science change.
+
+Repair runs fail-before and pass-after causal regressions, then — except for the
+narrow direct path above — invokes the equal-depth dual-lane Review CLI exactly
+once. Only that re-audit may establish the post-repair verdict and D1–D6 state.
+Atomic publication requires all of:
 
 `PASS + effective deterministic CLEAN + no Hard Gate + preserved identity + allowed
 mutation scope + every target finding resolved`.

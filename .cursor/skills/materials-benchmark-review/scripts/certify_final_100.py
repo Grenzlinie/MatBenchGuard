@@ -20,7 +20,12 @@ from typing import Any
 sys.dont_write_bytecode = True
 
 from canonical_status import (  # noqa: E402
+    REPAIR_BUNDLE_DIRS,
+    REPAIR_BUNDLE_EVIDENCE_RECORDS,
     REPAIR_BUNDLE_FILES,
+    REPAIR_BUNDLE_LOG_RELATIVE,
+    REPAIR_BUNDLE_MANIFEST_NAME,
+    REPAIR_BUNDLE_PATCH_INDEX,
     require_canonical_fields,
     validate_repair_bundle_semantics,
 )
@@ -592,14 +597,74 @@ def validate_repair(
     ]
     if missing:
         raise CertificationError(f"repair bundle is incomplete: {missing}")
-    values: dict[str, Any] = {}
-    for name in REPAIR_BUNDLE_FILES:
-        path = bundle_dir / name
-        reject_symlink_components(path, boundary=bundle_dir)
-        if name.endswith(".json"):
-            values[name] = read_json(path, f"repair bundle {name}")
-    repair_log = (bundle_dir / "repair.log").read_text(encoding="utf-8")
-    values["repair.log"] = repair_log
+    missing_dirs = [
+        name
+        for name in REPAIR_BUNDLE_DIRS
+        if not (bundle_dir / name).is_dir()
+    ]
+    if missing_dirs:
+        raise CertificationError(
+            f"repair bundle directories are incomplete: {missing_dirs}"
+        )
+    for name in (*REPAIR_BUNDLE_FILES, REPAIR_BUNDLE_LOG_RELATIVE,
+                 REPAIR_BUNDLE_PATCH_INDEX, REPAIR_BUNDLE_EVIDENCE_RECORDS):
+        reject_symlink_components(bundle_dir / name, boundary=bundle_dir)
+    def _read_jsonl(path: Path) -> list[Any]:
+        rows: list[Any] = []
+        for line_no, line in enumerate(
+            path.read_text(encoding="utf-8").splitlines(), 1
+        ):
+            if not line.strip():
+                continue
+            value = json.loads(line)
+            if not isinstance(value, dict):
+                raise CertificationError(
+                    f"repair bundle {path.name}:{line_no} is not an object"
+                )
+            rows.append(value)
+        return rows
+
+    values: dict[str, Any] = {
+        "repair_summary.md": (bundle_dir / "repair_summary.md").read_text(
+            encoding="utf-8"
+        ),
+        "repair_plan.md": (bundle_dir / "repair_plan.md").read_text(
+            encoding="utf-8"
+        ),
+        "repair_report.json": read_json(
+            bundle_dir / "repair_report.json", "repair bundle repair_report.json"
+        ),
+        "repair_plan.json": read_json(
+            bundle_dir / "repair_plan.json", "repair bundle repair_plan.json"
+        ),
+        "changes.jsonl": _read_jsonl(bundle_dir / "changes.jsonl"),
+        "unresolved_findings.jsonl": _read_jsonl(
+            bundle_dir / "unresolved_findings.jsonl"
+        ),
+        "regression_tests.json": read_json(
+            bundle_dir / "regression_tests.json",
+            "repair bundle regression_tests.json",
+        ),
+        "re_audit_comparison.json": read_json(
+            bundle_dir / "re_audit_comparison.json",
+            "repair bundle re_audit_comparison.json",
+        ),
+        REPAIR_BUNDLE_PATCH_INDEX: read_json(
+            bundle_dir / REPAIR_BUNDLE_PATCH_INDEX,
+            f"repair bundle {REPAIR_BUNDLE_PATCH_INDEX}",
+        ),
+        REPAIR_BUNDLE_EVIDENCE_RECORDS: read_json(
+            bundle_dir / REPAIR_BUNDLE_EVIDENCE_RECORDS,
+            f"repair bundle {REPAIR_BUNDLE_EVIDENCE_RECORDS}",
+        ),
+        "repair_manifest.json": read_json(
+            bundle_dir / REPAIR_BUNDLE_MANIFEST_NAME,
+            "repair bundle repair_manifest.json",
+        ),
+    }
+    repair_log = (bundle_dir / REPAIR_BUNDLE_LOG_RELATIVE).read_text(
+        encoding="utf-8"
+    )
     try:
         semantic_fields = validate_repair_bundle_semantics(
             values,
@@ -609,7 +674,7 @@ def validate_repair(
         raise CertificationError(f"repair bundle semantic schema: {exc}") from exc
     if semantic_fields != fields:
         raise CertificationError("repair bundle canonical fields are stale")
-    history = values["history.json"]
+    attestation = values["repair_manifest.json"]
     plan = values["repair_plan.json"]
     comparison = values["re_audit_comparison.json"]
     package_identity = plan.get("package_identity", {})
@@ -625,7 +690,7 @@ def validate_repair(
         repair_manifest.get("finding_id") != plan.get("finding_id")
         or repair_manifest.get("package_identity")
         != plan.get("package_identity")
-        or history.get("audit_id") != source_audit_id
+        or attestation.get("audit_id") != source_audit_id
         or repair.get("source_audit_id") != source_audit_id
         or repair.get("finding_id") != plan.get("finding_id")
         or repair.get("package_identity") != plan.get("package_identity")
@@ -634,26 +699,33 @@ def validate_repair(
         raise CertificationError(
             "repair manifest/index audit/finding/package identity is stale"
         )
-    if history.get("bundle_complete") is not True:
-        raise CertificationError("repair history does not attest completeness")
-    if history.get("bundle_files") != list(REPAIR_BUNDLE_FILES):
-        raise CertificationError("repair history bundle schema is stale")
-    if history.get("repair_status", repair_status) != repair_status:
-        raise CertificationError("repair history status is stale")
-    history_fields = validate_canonical(history, context="repair history")
-    if history_fields != fields:
-        raise CertificationError("repair history canonical fields are stale")
-    bundle_hashes = history.get("bundle_hashes")
-    if not isinstance(bundle_hashes, dict) or set(bundle_hashes) != {
-        name for name in REPAIR_BUNDLE_FILES if name != "history.json"
-    }:
-        raise CertificationError("repair bundle hashes are absent")
+    if attestation.get("bundle_complete") is not True:
+        raise CertificationError("repair manifest does not attest completeness")
+    if attestation.get("bundle_files") != list(REPAIR_BUNDLE_FILES):
+        raise CertificationError("repair manifest bundle schema is stale")
+    if attestation.get("repair_status", repair_status) != repair_status:
+        raise CertificationError("repair manifest status is stale")
+    attestation_fields = validate_canonical(
+        attestation, context="repair manifest attestation"
+    )
+    if attestation_fields != fields:
+        raise CertificationError("repair manifest canonical fields are stale")
+    bundle_hashes = attestation.get("bundle_hashes")
+    if not isinstance(bundle_hashes, dict) or REPAIR_BUNDLE_MANIFEST_NAME in bundle_hashes:
+        raise CertificationError("repair bundle hashes are absent or self-referential")
     for name, expected in sorted(bundle_hashes.items()):
-        if file_hash(bundle_dir / name) != expected:
+        target = bundle_dir / name
+        if not target.is_file():
+            raise CertificationError(f"repair bundle member is absent: {name}")
+        if file_hash(target) != expected:
             raise CertificationError(f"repair bundle bytes are stale: {name}")
-    if history.get("bundle_digest") != canonical_json_hash(bundle_hashes):
+    if attestation.get("bundle_digest") != canonical_json_hash(bundle_hashes):
         raise CertificationError("repair bundle digest is stale")
-    if repair_status == "REPAIRED":
+    direct = comparison.get("reaudit_performed") is False or (
+        isinstance(comparison.get("verification_mode"), str)
+        and comparison.get("verification_mode").upper() == "DIRECT_DETERMINISTIC"
+    )
+    if repair_status == "REPAIRED" and not direct:
         reaudit_path = resolve_external(
             repair.get("reaudit_report_path"),
             base=batch,

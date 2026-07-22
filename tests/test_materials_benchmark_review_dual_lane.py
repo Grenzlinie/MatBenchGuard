@@ -10,15 +10,41 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-def external_audit_dir(package: Path) -> Path:
-    paper_id = (
-        package.name[len("paper-"):]
-        if package.name.startswith("paper-")
-        else package.name
+REVIEW_SCRIPTS = REPO_ROOT / ".cursor/skills/materials-benchmark-review/scripts"
+sys.path.insert(0, str(REVIEW_SCRIPTS))
+import run_context  # noqa: E402
+
+
+def review_run_dir(package: Path) -> Path:
+    """Build an isolated public-CLI run for a fixture package."""
+    run = package.parent / ".review_records" / package.name / "runs" / "test"
+    if run.exists():
+        return run
+    (run / "agent_contract").mkdir(parents=True)
+    (run / "agent_contract/assessment.json").write_text("{}\n", encoding="utf-8")
+    (run / "regressions").mkdir()
+    (run / "roots").mkdir()
+    run_context.write_json_atomic(
+        run / "context.json",
+        {
+            "schema_version": run_context.RUN_CONTEXT_SCHEMA,
+            "run_id": "test",
+            "package_id": f"fixture/theme/{package.name}",
+            "package_path": str(package.resolve()),
+            "corpus_root": str(package.parent.resolve()),
+            "review_contract_version": run_context.REVIEW_CONTRACT_VERSION,
+            "created_at": run_context.now(),
+        },
     )
-    path = package.parent / "review_outputs" / paper_id / "benchmark_audit"
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+    run_context.write_json_atomic(
+        run / "status.json",
+        {"schema_version": run_context.STATUS_SCHEMA, "state": "ASSIGNED", "updated_at": run_context.now()},
+    )
+    return run
+
+
+def external_audit_dir(package: Path) -> Path:
+    return review_run_dir(package) / "audit" / "benchmark_audit"
 
 
 RUNNER = (
@@ -264,21 +290,47 @@ def run_dual_lane(
     extra_args: list[str] | None = None,
     **_ignored,
 ) -> subprocess.CompletedProcess[str]:
-    output = audit_output_dir or (
-        package.parent / "review_outputs" / package.name.removeprefix("paper-")
-    )
+    del audit_output_dir, extra_args
+    if assessment_path.resolve().is_relative_to(package.resolve()):
+        # Keep the public fixture helper honest: the CLI receives a run-local
+        # copy only after enforcing the external-evidence boundary.
+        return subprocess.CompletedProcess([], 2, "", "agent assessment must be outside the Harbor 题包")
+    existing = package.parent / ".review_records" / package.name / "runs" / "test"
+    if existing.exists():
+        shutil.rmtree(existing)
+    run = review_run_dir(package)
+    shutil.copy2(assessment_path, run / "agent_assessment.json")
     command = [
         "python3",
         str(RUNNER),
-        str(package),
-        "--audit-output-dir",
-        str(output),
-        "--agent-assessment",
-        str(assessment_path),
+        "--run-dir",
+        str(run),
     ]
-    if extra_args:
-        command.extend(extra_args)
     return subprocess.run(command, capture_output=True, text=True, check=False)
+
+
+def assert_assessment_pending(
+    test: unittest.TestCase,
+    completed: subprocess.CompletedProcess[str],
+    *,
+    needle: str,
+    package: Path,
+) -> None:
+    """Invalid paper assessments pause the same run without a formal audit."""
+
+    test.assertEqual(
+        completed.returncode,
+        0,
+        msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
+    )
+    payload = json.loads(completed.stdout)
+    test.assertEqual(payload.get("status"), "AGENT_ASSESSMENT_PENDING")
+    test.assertIn(needle, payload.get("message", ""))
+    test.assertFalse((external_audit_dir(package) / "audit_report.json").exists())
+    run = review_run_dir(package)
+    status = json.loads((run / "status.json").read_text(encoding="utf-8"))
+    test.assertEqual(status["state"], "AGENT_ASSESSMENT_PENDING")
+    test.assertFalse((run / "roots/A0.json").exists())
 
 
 
@@ -416,9 +468,42 @@ class MaterialsBenchmarkDualLaneTests(unittest.TestCase):
             self.assertEqual(
                 report["summary"]["final_verdict"], "CONDITIONAL"
             )
+            self.assertEqual(
+                report["summary"]["publication_route"], "REPAIR_QUEUE"
+            )
             self.assertIn(
                 "PAPER_DATA_FIDELITY_WARNING",
                 {finding["title"] for finding in report["findings"]},
+            )
+            self.assertTrue(report.get("repair_findings"))
+            self.assertEqual(
+                report["agent_quality"].get("repair_findings"),
+                report["repair_findings"],
+            )
+            paper_queue = [
+                item
+                for item in report["repair_findings"]
+                if item["title"] == "PAPER_DATA_FIDELITY_WARNING"
+            ]
+            self.assertEqual(len(paper_queue), 1)
+            self.assertEqual(paper_queue[0]["lane"], "agent_quality")
+            self.assertIsNone(paper_queue[0].get("deterministic_check"))
+            self.assertEqual(
+                paper_queue[0]["repair_scope"], "SCIENCE_SEMANTICS"
+            )
+            self.assertEqual(
+                report["deterministic_contract"]["repair_summary"]["state"],
+                report["repair_queue"]["deterministic_state"],
+            )
+            self.assertFalse(
+                any(
+                    (package / name).exists()
+                    for name in (
+                        "benchmark_audit",
+                        ".benchmark_audit_tmp",
+                        "audit_report.json",
+                    )
+                )
             )
             manifest = json.loads(
                 (audit_dir / "audit_manifest.json").read_text(encoding="utf-8")
@@ -460,11 +545,12 @@ class MaterialsBenchmarkDualLaneTests(unittest.TestCase):
 
             completed = run_dual_lane(package, assessment_path)
 
-            self.assertNotEqual(completed.returncode, 0)
-            self.assertIn(
-                "unknown computation_task labels", completed.stderr
+            assert_assessment_pending(
+                self,
+                completed,
+                needle="unknown computation_task labels",
+                package=package,
             )
-            self.assertFalse((external_audit_dir(package) / "audit_report.json").exists())
 
     def test_paper_grounded_review_requires_evidence_for_every_taxonomy_label(
         self,
@@ -487,12 +573,12 @@ class MaterialsBenchmarkDualLaneTests(unittest.TestCase):
 
             completed = run_dual_lane(package, assessment_path)
 
-            self.assertNotEqual(completed.returncode, 0)
-            self.assertIn(
-                "missing taxonomy evidence for computation_task",
-                completed.stderr,
+            assert_assessment_pending(
+                self,
+                completed,
+                needle="missing taxonomy evidence for computation_task",
+                package=package,
             )
-            self.assertFalse((external_audit_dir(package) / "audit_report.json").exists())
 
     def test_paper_evidence_cannot_use_paper_as_the_package_side(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -511,12 +597,12 @@ class MaterialsBenchmarkDualLaneTests(unittest.TestCase):
 
             completed = run_dual_lane(package, assessment_path)
 
-            self.assertNotEqual(completed.returncode, 0)
-            self.assertIn(
-                "unsupported package evidence file",
-                completed.stderr,
+            assert_assessment_pending(
+                self,
+                completed,
+                needle="unsupported package evidence file",
+                package=package,
             )
-            self.assertFalse((external_audit_dir(package) / "audit_report.json").exists())
 
     def test_agent_assessment_cannot_come_from_solution(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -556,10 +642,11 @@ class MaterialsBenchmarkDualLaneTests(unittest.TestCase):
 
             completed = run_dual_lane(package, assessment_path)
 
-            self.assertNotEqual(completed.returncode, 0)
-            self.assertIn(
-                "paper role routes through a symlink",
-                completed.stderr,
+            assert_assessment_pending(
+                self,
+                completed,
+                needle="paper role routes through a symlink",
+                package=package,
             )
             self.assertFalse((external_audit_dir(package) / "audit_report.json").exists())
 
@@ -669,12 +756,12 @@ class MaterialsBenchmarkDualLaneTests(unittest.TestCase):
 
             completed = run_dual_lane(package, assessment_path)
 
-            self.assertNotEqual(completed.returncode, 0)
-            self.assertIn(
-                "checker_fidelity requires at least one evidence item",
-                completed.stderr,
+            assert_assessment_pending(
+                self,
+                completed,
+                needle="checker_fidelity requires at least one evidence item",
+                package=package,
             )
-            self.assertFalse((external_audit_dir(package) / "audit_report.json").exists())
 
     def test_failed_paper_dimension_is_scored_without_inventing_hard_gate(
         self,
@@ -843,10 +930,11 @@ class MaterialsBenchmarkDualLaneTests(unittest.TestCase):
 
             completed = run_dual_lane(package, assessment_path)
 
-            self.assertNotEqual(completed.returncode, 0)
-            self.assertIn(
-                "NOT_ASSESSABLE requires an empty evidence list",
-                completed.stderr,
+            assert_assessment_pending(
+                self,
+                completed,
+                needle="NOT_ASSESSABLE requires an empty evidence list",
+                package=package,
             )
 
 

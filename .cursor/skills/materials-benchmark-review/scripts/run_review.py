@@ -25,6 +25,7 @@ from finalize_audit_output import (
     synthesize_report,
 )
 from prepare_audit_output import (
+    AGENT_ASSESSMENT_PENDING,
     AGENT_CONTRACT_PENDING,
     AGENT_CONTRACT_REQUEST_RELATIVE_PATH,
     QUALITY_EVIDENCE_ROLES,
@@ -54,6 +55,18 @@ from review_path_policy import (
 )
 from review_lock import ReviewOutputLock
 import sandbox_runtime
+from run_context import (
+    PackageRunLock,
+    RunContextError,
+    load_context,
+    now,
+    snapshot_package,
+    status,
+    transition,
+    complete,
+    write_content_root,
+    write_json_atomic,
+)
 
 
 PAPER_DIMENSIONS = {
@@ -464,6 +477,12 @@ def validate_agent_assessment(root: Path, path: Path) -> dict[str, Any]:
         return normalized
     normalized.update(validate_paper_dimensions(root, assessment))
     normalized["paper_skipped"] = False
+    if "repair_findings" in assessment:
+        from repair_findings import validate_repair_findings
+
+        normalized["repair_findings"] = validate_repair_findings(
+            root, assessment.get("repair_findings")
+        )
     return normalized
 
 
@@ -695,6 +714,52 @@ def _pending_result(
     }
 
 
+def _assessment_pending_result(
+    root: Path,
+    *,
+    output_dir: Path | None = None,
+    message: str,
+    assessment_path: Path | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "benchmark_root": str(root),
+        "status": AGENT_ASSESSMENT_PENDING,
+        "review_status": AGENT_ASSESSMENT_PENDING,
+        "verdict": "NOT_ASSESSABLE",
+        "publishable": False,
+        "deterministic_status": "NOT_APPLICABLE",
+        "message": message,
+    }
+    if output_dir is not None:
+        payload["audit_output_dir"] = str(output_dir)
+    if assessment_path is not None:
+        payload["assessment_path"] = str(assessment_path)
+    return payload
+
+
+def try_load_agent_assessment(
+    root: Path,
+    assessment_path: Path | None,
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Return (assessment, error). Missing/invalid yields an error string."""
+
+    if assessment_path is None:
+        return None, "paper Agent assessment is required before dual-lane Review"
+    resolved = assessment_path.expanduser().resolve()
+    if not resolved.is_file():
+        return None, f"paper Agent assessment is missing: {resolved}"
+    try:
+        return validate_agent_assessment(root, resolved), None
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        return None, f"paper Agent assessment is invalid: {exc}"
+
+
+def assessment_required_for_purpose(output_purpose: str) -> bool:
+    """Equal-depth re-audit always requires an inherited paper assessment."""
+
+    return output_purpose == "reaudit"
+
+
 def agent_contract_pending_eligible(
     machine_contract: dict[str, Any],
     report: dict[str, Any],
@@ -735,7 +800,15 @@ def agent_contract_pending_eligible(
     for finding in report.get("findings", []):
         if not isinstance(finding, dict):
             continue
-        if finding.get("lane") != "deterministic_core":
+        lane = finding.get("lane")
+        if lane in {"agent_quality", "quality_results"}:
+            # Agent-quality defects are real Review outcomes; they keep
+            # AGENT_CONTRACT_PENDING as the narrow unavailable-machine-contract
+            # overlay only.
+            if finding.get("status", "OPEN") == "OPEN":
+                return False
+            continue
+        if lane != "deterministic_core":
             continue
         evidence = finding.get("evidence")
         if isinstance(evidence, dict) and (
@@ -763,6 +836,8 @@ def _run_review_locked(
     run_id: str | None = None,
     lock: ReviewOutputLock | None = None,
     attestation_output_path: Path | None = None,
+    *,
+    require_agent_assessment: bool | None = None,
 ) -> dict[str, Any]:
     root = locate_root(input_path)
     output_dir = resolve_output_destination(
@@ -773,14 +848,40 @@ def _run_review_locked(
     agent_assessment: dict[str, Any] | None = None
     agent_contract_assessment: dict[str, Any] | None = None
     paper_skip_reason: str | None = None
+    must_require_assessment = (
+        assessment_required_for_purpose(output_purpose)
+        if require_agent_assessment is None
+        else require_agent_assessment
+    )
     if agent_assessment_path is not None:
-        agent_assessment = validate_agent_assessment(
+        agent_assessment, assessment_error = try_load_agent_assessment(
             root,
             agent_assessment_path.expanduser().resolve(),
         )
+        if agent_assessment is None:
+            if must_require_assessment:
+                return _assessment_pending_result(
+                    root,
+                    output_dir=output_dir,
+                    message=assessment_error
+                    or "paper Agent assessment is invalid",
+                    assessment_path=agent_assessment_path,
+                )
+            raise ValueError(
+                assessment_error or "paper Agent assessment is invalid"
+            )
         skip_paper = bool(agent_assessment.get("paper_skipped"))
         if skip_paper:
             paper_skip_reason = agent_assessment.get("paper_skip_reason")
+    elif must_require_assessment:
+        return _assessment_pending_result(
+            root,
+            output_dir=output_dir,
+            message=(
+                "equal-depth re-audit requires the inherited paper Agent "
+                "assessment; deterministic-only fallback is not permitted"
+            ),
+        )
     request_path = output_dir / AGENT_CONTRACT_REQUEST_RELATIVE_PATH
     existing_request = request_path.is_file()
     pending_request: dict[str, Any] | None = None
@@ -814,6 +915,15 @@ def _run_review_locked(
                         paper_skip_reason = stored_assessment.get(
                             "paper_skip_reason"
                         )
+            if must_require_assessment and agent_assessment is None:
+                return _assessment_pending_result(
+                    root,
+                    output_dir=output_dir,
+                    message=(
+                        "equal-depth re-audit is paused: inherited paper "
+                        "Agent assessment is absent from the prepared workspace"
+                    ),
+                )
         context = read_json(temp_dir / "audit_context.json")
         if context.get("skip_paper") is not skip_paper:
             raise ValueError("agent contract request paper mode is stale")
@@ -962,6 +1072,8 @@ def run_review(
     audit_output_dir: Path | None = None,
     output_purpose: str = "review",
     attestation_output_path: Path | None = None,
+    *,
+    require_agent_assessment: bool | None = None,
 ) -> dict[str, Any]:
     root = locate_root(input_path)
     output_dir = resolve_output_destination(
@@ -981,11 +1093,119 @@ def run_review(
                 run_id=run_id,
                 lock=lock,
                 attestation_output_path=attestation_output_path,
+                require_agent_assessment=require_agent_assessment,
             )
         except Exception:
             own_temp = output_dir / ".benchmark_audit_tmp" / run_id
             if own_temp.is_dir() and not own_temp.is_symlink():
                 shutil.rmtree(own_temp)
+            raise
+
+
+def run_review_context(run_dir: Path) -> dict[str, Any]:
+    """Run Review using the immutable package/run relationship in context.json."""
+
+    run_dir = run_dir.expanduser().resolve()
+    context = load_context(run_dir)
+    package = Path(context["package_path"])
+    assessment = run_dir / "agent_assessment.json"
+    contract_assessment = run_dir / "agent_contract" / "assessment.json"
+    with PackageRunLock(run_dir):
+        current = status(run_dir)
+        if current["state"] not in {
+            "ASSIGNED",
+            "AGENT_ASSESSMENT_PENDING",
+            "AGENT_CONTRACT_PENDING",
+            "REVIEWING",
+        }:
+            raise RunContextError(
+                f"Review cannot start from state {current['state']}"
+            )
+        loaded_assessment, assessment_error = try_load_agent_assessment(
+            package,
+            assessment if assessment.is_file() else None,
+        )
+        if loaded_assessment is None:
+            pending = _assessment_pending_result(
+                package,
+                output_dir=run_dir / "audit",
+                message=assessment_error
+                or "paper Agent assessment is required before dual-lane Review",
+                assessment_path=assessment,
+            )
+            if current["state"] == "ASSIGNED":
+                transition(
+                    run_dir,
+                    "AGENT_ASSESSMENT_PENDING",
+                    review_result=pending,
+                )
+            elif current["state"] == "AGENT_ASSESSMENT_PENDING":
+                # Idempotent pause: keep diagnostics, never freeze A0/formal audit.
+                write_json_atomic(
+                    run_dir / "status.json",
+                    {
+                        **current,
+                        "review_result": pending,
+                        "updated_at": now(),
+                    },
+                )
+            else:
+                # Never continue a contract overlay or mid-review without paper assessment.
+                transition(
+                    run_dir,
+                    "AGENT_ASSESSMENT_PENDING",
+                    review_result=pending,
+                )
+            return pending
+        if current["state"] in {
+            "ASSIGNED",
+            "AGENT_ASSESSMENT_PENDING",
+            "AGENT_CONTRACT_PENDING",
+        }:
+            transition(run_dir, "REVIEWING")
+        try:
+            if not (run_dir / "snapshot").exists():
+                snapshot_package(package, run_dir)
+            supplied_contract_assessment = None
+            if contract_assessment.is_file():
+                candidate = read_json(contract_assessment)
+                if candidate:
+                    supplied_contract_assessment = contract_assessment
+            result = run_review(
+                package,
+                agent_assessment_path=assessment,
+                agent_contract_assessment_path=supplied_contract_assessment,
+                audit_output_dir=run_dir / "audit",
+                output_purpose="run",
+                attestation_output_path=run_dir / "audit_attestation.json",
+                require_agent_assessment=True,
+            )
+            if result.get("status") == AGENT_ASSESSMENT_PENDING:
+                transition(
+                    run_dir,
+                    "AGENT_ASSESSMENT_PENDING",
+                    review_result=result,
+                )
+                return result
+            if result.get("status") == AGENT_CONTRACT_PENDING:
+                request = run_dir / "audit" / AGENT_CONTRACT_REQUEST_RELATIVE_PATH
+                if request.is_file():
+                    shutil.copy2(request, run_dir / AGENT_CONTRACT_REQUEST_RELATIVE_PATH)
+                transition(run_dir, "AGENT_CONTRACT_PENDING", review_result=result)
+                return result
+            write_content_root(run_dir, "A0")
+            transition(run_dir, "REVIEWED", review_result=result)
+            summary = result.get("summary", {})
+            verdict = result.get("review_verdict") or (
+                summary.get("final_verdict") if isinstance(summary, dict) else None
+            )
+            if verdict == "PASS":
+                complete(run_dir, outcome="NOT_REQUIRED", repair_status="NOT_REQUIRED")
+            elif verdict == "REJECT":
+                complete(run_dir, outcome="ABANDONED", repair_status="ABANDONED")
+            return result
+        except Exception as exc:
+            transition(run_dir, "FAILED", error=str(exc))
             raise
 
 
@@ -996,8 +1216,13 @@ def resolve_output_destination(
     purpose: str,
 ) -> Path:
     """Resolve only the canonical initial-review or re-audit workspace."""
-    if purpose not in {"review", "reaudit"}:
+    if purpose not in {"review", "reaudit", "run"}:
         raise ValueError(f"unsupported output purpose: {purpose}")
+    if purpose == "run":
+        resolved = output_dir.expanduser().resolve() if output_dir else None
+        if resolved is None or resolved == root or resolved.is_relative_to(root):
+            raise ValueError("run audit output must remain outside the Harbor package")
+        return resolved
     if output_dir is None:
         if purpose != "review":
             raise ValueError("re-audit output directory must be explicit")
@@ -1012,51 +1237,10 @@ def build_parser() -> argparse.ArgumentParser:
             f"(review_lane={REVIEW_LANE})."
         )
     )
-    parser.add_argument("input", help="Harbor 题包 directory")
     parser.add_argument(
-        "--resource-timeout",
-        type=float,
-        default=8,
-        help="per-resource network timeout in seconds",
-    )
-    parser.add_argument(
-        "--allow-private-network",
-        action="store_true",
-        help="allow private/loopback resource URLs in a controlled test environment",
-    )
-    parser.add_argument(
-        "--agent-assessment",
-        help="Agent-authored paper fidelity and taxonomy assessment JSON",
-    )
-    parser.add_argument(
-        "--agent-contract-assessment",
-        help=(
-            "External D1-D6 contract-wiring adjudication JSON; resumes a "
-            "pending preparation without rerunning deterministic probes"
-        ),
-    )
-    parser.add_argument(
-        "--attestation-output",
-        help="immutable source-audit attestation path outside the Harbor 题包",
-    )
-    parser.add_argument(
-        "--audit-output-dir",
-        help=(
-            "external directory that owns benchmark_audit and "
-            "benchmark_audit_history; defaults to "
-            "<topic>/review_outputs/<paper-id>/"
-        ),
-    )
-    parser.add_argument(
-        "--output-purpose",
-        choices=("review", "reaudit"),
-        default="review",
-        help=argparse.SUPPRESS,
-    )
-    parser.add_argument(
-        "--validate-output-policy-only",
-        action="store_true",
-        help=argparse.SUPPRESS,
+        "--run-dir",
+        required=True,
+        help="the sole public run context for a review lifecycle",
     )
     return parser
 
@@ -1064,45 +1248,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     arguments = build_parser().parse_args()
     try:
-        if arguments.validate_output_policy_only:
-            root = locate_root(Path(arguments.input))
-            output = resolve_output_destination(
-                root,
-                (
-                    Path(arguments.audit_output_dir)
-                    if arguments.audit_output_dir
-                    else None
-                ),
-                purpose=arguments.output_purpose,
-            )
-            print(json.dumps({"output_dir": str(output)}, ensure_ascii=False))
-            return 0
-        result = run_review(
-            Path(arguments.input),
-            agent_assessment_path=(
-                Path(arguments.agent_assessment)
-                if arguments.agent_assessment
-                else None
-            ),
-            agent_contract_assessment_path=(
-                Path(arguments.agent_contract_assessment)
-                if arguments.agent_contract_assessment
-                else None
-            ),
-            resource_timeout=arguments.resource_timeout,
-            allow_private_network=arguments.allow_private_network,
-            audit_output_dir=(
-                Path(arguments.audit_output_dir)
-                if arguments.audit_output_dir
-                else None
-            ),
-            output_purpose=arguments.output_purpose,
-            attestation_output_path=(
-                Path(arguments.attestation_output)
-                if arguments.attestation_output
-                else None
-            ),
-        )
+        result = run_review_context(Path(arguments.run_dir))
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     except Exception as exc:  # noqa: BLE001

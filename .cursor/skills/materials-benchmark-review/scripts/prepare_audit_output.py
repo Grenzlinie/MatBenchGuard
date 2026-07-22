@@ -72,6 +72,7 @@ PRUNED_DIRS = {
     "review_outputs",
     "review_records",
     "repair_history",
+    "benchmark_repair_history",
     "__MACOSX",
 }
 HASH_NAMES = {
@@ -82,6 +83,7 @@ REVIEW_IMPLEMENTATION_FILES_MANIFEST = (
 )
 AGENT_CONTRACT_REQUEST_RELATIVE_PATH = "agent_contract/request.json"
 AGENT_CONTRACT_PENDING = "AGENT_CONTRACT_PENDING"
+AGENT_ASSESSMENT_PENDING = "AGENT_ASSESSMENT_PENDING"
 
 
 def skill_root() -> Path:
@@ -218,6 +220,7 @@ def write_agent_contract_request(
         "audit_id": manifest.get("audit_id"),
         "audit_temp_dir": str(temp_dir.resolve()),
         "review_lane": REVIEW_LANE,
+        "review_contract_version": "materials-review-contract/1",
         "package_hashes": package_hashes,
         "package_hash": canonical_mapping_hash(package_hashes),
         "core_contract_digest": manifest.get("core_contract_digest"),

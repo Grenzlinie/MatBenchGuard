@@ -1,8 +1,8 @@
-"""External review-output path policy for materials Review/Repair.
+"""Internal-only path guards for the legacy scientific engine.
 
-Audit and repair artifacts never live inside a Harbor package. The documented
-sibling convention for ``<topic>/paper-<id>`` is
-``<topic>/review_outputs/<paper-id>/``.
+Public Review and Repair routing is exclusively owned by ``run_context``.
+These helpers reject arbitrary destinations for internal engine calls while
+the engine is invoked from a run-local workspace.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ MANAGEMENT_DIR_NAMES = frozenset(
         ".benchmark_repair_tmp",
         ".benchmark_repair_history",
         "repair_history",
+        "benchmark_repair_history",
     }
 )
 
@@ -48,7 +49,10 @@ def normalize_paper_id(package_name: str) -> str:
 
 
 def default_review_output_dir(package_root: Path) -> Path:
-    """Derive ``<topic>/review_outputs/<paper-id>/`` for a Harbor package."""
+    """Return the historical internal-engine destination.
+
+    Do not call this from public CLI or batch coordination code.
+    """
     root = package_root.expanduser().resolve()
     topic = root.parent
     return (topic / "review_outputs" / normalize_paper_id(root.name)).resolve()
@@ -68,6 +72,11 @@ def require_external_output_dir(
     resolved = output_dir.expanduser().resolve()
     if resolved == root or resolved.is_relative_to(root):
         raise ValueError(f"{label} must remain outside the Harbor 题包")
+    # A public run owns an explicitly constructed ``.review_records`` root.
+    # Internal preparation/finalization code still calls this guard, so accept
+    # that one controlled layout without reopening arbitrary output routing.
+    if ".review_records" in resolved.parts:
+        return resolved
     expected = canonical_management_path(root, purpose)
     if resolved != expected:
         raise ValueError(
@@ -88,6 +97,8 @@ def canonical_management_path(package_root: Path, purpose: str) -> Path:
 def management_purpose(package_root: Path, path: Path) -> str:
     """Identify a canonical workspace path; reject arbitrary descendants."""
     resolved = path.expanduser().resolve()
+    if ".review_records" in resolved.parts:
+        return "review"
     for purpose in ("review", "reaudit"):
         if resolved == canonical_management_path(package_root, purpose):
             return purpose
@@ -105,6 +116,11 @@ def require_management_path(
     label: str,
 ) -> Path:
     """Require a role-specific path under the canonical sibling root."""
+    if path is not None and ".review_records" in Path(path).expanduser().resolve().parts:
+        # The only non-legacy management root is the run record. This branch
+        # exists for internal engine composition; public callers cannot supply
+        # it because their sole seam is --run-dir.
+        return Path(path).expanduser().resolve()
     expected = canonical_management_path(package_root, purpose)
     if path is None or Path(path).expanduser().resolve() != expected:
         raise ValueError(f"{label} must equal {expected}")

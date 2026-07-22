@@ -30,8 +30,9 @@ source; whether measurement uncertainty is acknowledged; whether Gold is
 independent of the evaluated method; and whether tolerances have scientific
 basis.
 
-## External outputs
+## Run outputs
 
-Persist the audit under
-`<topic>/review_outputs/<paper-id>/benchmark_audit/`. Never write audit
-artifacts inside the Harbor package.
+Persist audit evidence in the main-Agent-created run under
+`.review_records/<cluster>/<theme>/<paper>/runs/<run-id>/audit/`. Never write
+audit artifacts inside the Harbor package. A0 is the run's single content root
+for the frozen snapshot and audit evidence.

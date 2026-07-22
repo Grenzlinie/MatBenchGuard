@@ -958,7 +958,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
             history = Path(json.loads(completed.stdout)["history_dir"])
             module = repair_module()
             module.validate_fixed_bundle(history)
-            (history / "history.json").unlink()
+            (history / "repair_manifest.json").unlink()
             with self.assertRaises(ValueError):
                 module.validate_fixed_bundle(history)
 

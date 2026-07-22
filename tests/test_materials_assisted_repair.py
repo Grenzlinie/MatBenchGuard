@@ -15,6 +15,7 @@ from tests.test_materials_safe_repair import (
     safe_plan,
     sha256_file,
     write_audit_attestation,
+    write_json,
     write_plan,
 )
 
@@ -131,7 +132,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
                 (package / "instruction.md").read_text(encoding="utf-8"),
             )
             manifest = json.loads(
-                ((external_repair_dir(package) / "benchmark_repair") / "repair_manifest.json").read_text(
+                ((external_repair_dir(package) / "benchmark_repair") / "repair_report.json").read_text(
                     encoding="utf-8"
                 )
             )
@@ -260,7 +261,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
             manifest["core_contract_digest"] = repair_module().core_contract_digest(
                 package
             )
-            write_plan(audit_manifest, manifest)
+            write_json(audit_manifest, manifest)
             write_audit_attestation(package)
             plan = workspace / "assisted-plan.json"
             value = assisted_plan(report["audit_id"], finding_id)
@@ -356,7 +357,9 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
             ]
             self.assertEqual(
                 [item["status"] for item in results],
-                ["ROLLED_BACK", "INFRASTRUCTURE_BLOCKED", "INFRASTRUCTURE_BLOCKED"],
+                # Each invocation creates a fresh run. Control-breaker history
+                # is intentionally not shared across user-created runs.
+                ["ROLLED_BACK", "ROLLED_BACK", "ROLLED_BACK"],
             )
             self.assertEqual(
                 sha256_file(package / "instruction.md"), instruction_before
@@ -375,10 +378,8 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
                 ),
                 key=lambda item: item["attempt_number"],
             )
-            self.assertCountEqual(
-                [item["status"] for item in attempts],
-                ["ROLLED_BACK", "INFRASTRUCTURE_BLOCKED"],
-            )
+            # History is run-local, so each newly-created run has one attempt.
+            self.assertEqual([item["status"] for item in attempts], ["ROLLED_BACK"])
             for path in history_root.glob("*/attempt_manifest.json"):
                 attempt = json.loads(path.read_text(encoding="utf-8"))
                 if attempt["root_cause"] == results[0]["root_cause"]:

@@ -18,7 +18,11 @@ from d5_package_completeness import (
     repair_class_for_finding as d5_repair_class_for_finding,
 )
 from d3_d4_checker import expected_repair_class
-from artifact_schema import EFFECTIVE_DETERMINISTIC_CONTRACT_SCHEMA_VERSION
+from artifact_schema import (
+    EFFECTIVE_DETERMINISTIC_CONTRACT_SCHEMA_VERSION,
+    PUBLICATION_CLASSES,
+    REPAIR_PLAN_SCHEMA_VERSION,
+)
 
 
 DETERMINISTIC_SCHEMA_VERSION = "materials-deterministic-contract/1.0"
@@ -29,6 +33,9 @@ DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION = (
 DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES = frozenset(
     {DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION, "0.2"}
 )
+# Active executable plans use materials-repair-plan/2.0; 1.0/0.2/0.1 are
+# archival-only evidence and must not enter Repair mutation.
+EXECUTABLE_REPAIR_PLAN_SCHEMA_VERSION = REPAIR_PLAN_SCHEMA_VERSION
 LEGACY_REPAIR_PLAN_SCHEMA_VERSION = "0.1"
 CHECK_STATUSES = frozenset({"PASS", "FAIL", "BLOCKED", "NOT_ASSESSABLE"})
 REPAIR_SUMMARY_STATES = frozenset({"CLEAN", "REQUIRED", "NOT_APPLICABLE"})
@@ -790,9 +797,31 @@ def is_deterministic_repair_plan(plan: Any) -> bool:
     """Return whether a plan opts into the fail-closed D1-D6 protocol."""
 
     return isinstance(plan, dict) and (
-        plan.get("schema_version") in DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES
+        plan.get("schema_version")
+        in {
+            *DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES,
+            EXECUTABLE_REPAIR_PLAN_SCHEMA_VERSION,
+        }
         or isinstance(plan.get("deterministic_contract"), dict)
     )
+
+
+def is_executable_repair_plan(plan: Any) -> bool:
+    """Return whether a plan may enter active Repair execution."""
+
+    return (
+        isinstance(plan, dict)
+        and plan.get("schema_version") == EXECUTABLE_REPAIR_PLAN_SCHEMA_VERSION
+    )
+
+
+def is_archival_repair_plan(plan: Any) -> bool:
+    """Return whether a plan schema is history/bundle evidence only."""
+
+    return isinstance(plan, dict) and plan.get("schema_version") in {
+        *DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES,
+        LEGACY_REPAIR_PLAN_SCHEMA_VERSION,
+    }
 
 
 def apply_deterministic_gate(
@@ -876,7 +905,11 @@ def apply_deterministic_gate(
 def validate_deterministic_plan_binding(
     report: dict[str, Any], plan: dict[str, Any]
 ) -> None:
-    """Validate an explicitly deterministic repair plan against Review."""
+    """Validate D-queue ownership for archival or D-only plan slices.
+
+    Active executable plans should call ``validate_repair_plan_binding`` so the
+    full dual-lane OPEN queue is enforced.
+    """
 
     binding = plan.get("deterministic_contract")
     if binding is None:
@@ -909,9 +942,15 @@ def validate_deterministic_plan_binding(
     if not isinstance(planned, list):
         raise ValueError("deterministic repair plan must be a batch")
     expected_ids = [item["finding_id"] for item in expected]
-    planned_ids = [
-        item.get("finding_id") for item in planned if isinstance(item, dict)
-    ]
+    d_planned: list[dict[str, Any]] = []
+    for item in planned:
+        if not isinstance(item, dict):
+            raise ValueError("deterministic plan finding must be an object")
+        lane = item.get("lane") or item.get("repair_lane")
+        if lane == "agent_quality":
+            continue
+        d_planned.append(item)
+    planned_ids = [item.get("finding_id") for item in d_planned]
     if not all(isinstance(item, str) and item for item in planned_ids):
         raise ValueError("deterministic plan finding IDs are invalid")
     if (
@@ -922,9 +961,7 @@ def validate_deterministic_plan_binding(
             "deterministic repair plan must cover the complete source queue"
         )
     expected_by_id = {item["finding_id"]: item for item in expected}
-    for item in planned:
-        if not isinstance(item, dict):
-            raise ValueError("deterministic plan finding must be an object")
+    for item in d_planned:
         source = expected_by_id.get(item.get("finding_id"))
         if source is None:
             raise ValueError("deterministic plan finding is not in source queue")
@@ -933,11 +970,8 @@ def validate_deterministic_plan_binding(
             raise ValueError("deterministic repair target check is unknown")
         if check_id != source["check_id"]:
             raise ValueError("deterministic finding ownership is stale")
-        allowed_classes = {source["repair_class"], "ABANDON"}
-        if source["check_id"] == "D5":
-            # D5 may discover that an AUTO_FIX candidate lacks a unique
-            # implementation at plan time and escalate to assisted repair.
-            allowed_classes.add("ASSISTED_FIX")
+        # Agent-reviewed D findings may escalate to ASSISTED_FIX with evidence.
+        allowed_classes = {source["repair_class"], "ABANDON", "ASSISTED_FIX"}
         if item.get("repair_class") not in allowed_classes:
             raise ValueError("deterministic repair class is stale")
         if item.get("finding_code", item.get("title")) not in {
@@ -945,3 +979,119 @@ def validate_deterministic_plan_binding(
             None,
         }:
             raise ValueError("deterministic finding code is stale")
+
+def validate_repair_plan_binding(
+    report: dict[str, Any], plan: dict[str, Any]
+) -> None:
+    """Lane-aware binding for materials-repair-plan/2.0 against the OPEN queue."""
+
+    if plan.get("schema_version") != EXECUTABLE_REPAIR_PLAN_SCHEMA_VERSION:
+        raise ValueError(
+            "active Repair requires schema_version "
+            f"{EXECUTABLE_REPAIR_PLAN_SCHEMA_VERSION}"
+        )
+    from agent_repair_assessment import source_open_repair_queue
+    from repair_findings import is_agent_quality_lane
+
+    planned = plan.get("findings")
+    if not isinstance(planned, list):
+        raise ValueError("repair plan must be a complete batch")
+    planned_ids = [
+        item.get("finding_id") for item in planned if isinstance(item, dict)
+    ]
+    if not all(isinstance(item, str) and item for item in planned_ids):
+        raise ValueError("repair plan finding IDs are invalid")
+    if len(planned_ids) != len(set(planned_ids)):
+        raise ValueError("repair plan finding IDs are invalid")
+
+    queue = source_open_repair_queue(report)
+    expected_ids = list(queue.get("open_finding_ids") or [])
+    if planned_ids != sorted(expected_ids):
+        missing = sorted(set(expected_ids) - set(planned_ids))
+        extra = sorted(set(planned_ids) - set(expected_ids))
+        raise ValueError(
+            "repair plan must cover the complete dual-lane OPEN queue"
+            + (f"; missing={missing}" if missing else "")
+            + (f"; extra={extra}" if extra else "")
+        )
+
+    d_required = (
+        report.get("deterministic_contract", {})
+        .get("repair_summary", {})
+        .get("required_finding_ids", [])
+    )
+    if d_required:
+        validate_deterministic_plan_binding(report, plan)
+
+    queue_by_id = {
+        item["finding_id"]: item
+        for item in queue.get("open_findings", [])
+        if isinstance(item, dict) and isinstance(item.get("finding_id"), str)
+    }
+    report_findings = {
+        item.get("finding_id"): item
+        for item in report.get("findings", [])
+        if isinstance(item, dict) and isinstance(item.get("finding_id"), str)
+    }
+    assessment_binding = plan.get("agent_repair_assessment")
+    if not isinstance(assessment_binding, dict):
+        raise ValueError("repair plan requires agent_repair_assessment binding")
+    if (
+        assessment_binding.get("schema_version")
+        != "materials-agent-repair-assessment/1.0"
+    ):
+        raise ValueError("repair plan assessment schema_version is invalid")
+    assessment_hash = assessment_binding.get("assessment_hash")
+    if (
+        not isinstance(assessment_hash, str)
+        or not assessment_hash.startswith("sha256:")
+    ):
+        raise ValueError("repair plan requires agent_repair_assessment hash")
+
+    for item in planned:
+        if not isinstance(item, dict):
+            raise ValueError("repair plan finding must be an object")
+        finding_id = item["finding_id"]
+        source = queue_by_id.get(finding_id) or report_findings.get(finding_id)
+        if source is None:
+            raise ValueError(f"repair plan finding is not in OPEN queue: {finding_id}")
+        lane = item.get("lane") or item.get("repair_lane")
+        source_lane = source.get("lane") or source.get("repair_lane")
+        agent_finding = (
+            is_agent_quality_lane(source)
+            or source_lane == "agent_quality"
+            or lane == "agent_quality"
+        )
+        if agent_finding:
+            if lane != "agent_quality":
+                raise ValueError(
+                    f"Agent-quality finding must declare lane=agent_quality: "
+                    f"{finding_id}"
+                )
+            if item.get("deterministic_check") is not None:
+                raise ValueError(
+                    "Agent quality findings may not claim D1-D6 ownership"
+                )
+            if item.get("repair_class") == "AUTO_FIX":
+                raise ValueError(
+                    "Agent quality findings may not become deterministic AUTO_FIX"
+                )
+        else:
+            if lane not in {None, "deterministic_core"}:
+                raise ValueError(
+                    f"D finding must use lane=deterministic_core: {finding_id}"
+                )
+            if item.get("deterministic_check") not in CHECK_IDS:
+                raise ValueError("deterministic repair target check is unknown")
+        operations = item.get("operations") or []
+        if not isinstance(operations, list):
+            raise ValueError("repair plan operations must be a list")
+        for operation in operations:
+            if not isinstance(operation, dict):
+                raise ValueError("repair plan operation must be an object")
+            publication_class = operation.get("publication_class")
+            if publication_class not in PUBLICATION_CLASSES:
+                raise ValueError(
+                    "every executable operation requires publication_class "
+                    f"in {sorted(PUBLICATION_CLASSES)}"
+                )

@@ -20,6 +20,12 @@ assignment-lock dispatcher. Track corpus review status in
 with `python tools/init_corpus_review_tracking.py` (use `--merge` to preserve
 human-updated fields while resyncing packages).
 
-Audit and repair artifacts must stay outside Harbor packages. For
-`<topic>/paper-<id>`, the default sibling management root is
-`<topic>/review_outputs/<paper-id>/`.
+Audit and repair artifacts must stay outside Harbor packages.
+
+The active workflow uses one private lifecycle per explicitly assigned package:
+`.review_records/<cluster>/<theme>/<paper>/runs/<run-id>/`.
+The main Agent creates it with `tools/create_materials_review_run.py`, writes
+the assignment ledger and updates `corpus_review_tracking.json` only after all
+runs reach a terminal state. Workers receive only `--run-dir`; they never
+select packages, write the ledger/tracking, or combine audit/plan paths from
+another run. Operational records are local and ignored by Git.

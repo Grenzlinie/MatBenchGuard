@@ -23,12 +23,14 @@ MANAGEMENT_DIR_NAMES = frozenset(
     {
         "review_outputs",
         "review_records",
+        ".review_records",
         "benchmark_audit",
         "benchmark_audit_history",
         ".benchmark_audit_tmp",
         ".benchmark_repair_tmp",
         ".benchmark_repair_history",
         "repair_history",
+        "benchmark_repair_history",
     }
 )
 IGNORED_FILE_NAMES = frozenset({"corpus_review_tracking.json"})

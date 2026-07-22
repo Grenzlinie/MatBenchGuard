@@ -28,19 +28,11 @@ def external_audit_dir(package: Path) -> Path:
 
 
 def external_repair_dir(package: Path) -> Path:
-    paper_id = package.name.removeprefix("paper-")
-    return package.parent / "review_outputs" / paper_id / "repair"
+    return package.parent / ".review_records/fixture/theme" / package.name / "runs/repair-test/repair"
 
 
 def external_reaudit_dir(package: Path) -> Path:
-    paper_id = package.name.removeprefix("paper-")
-    return (
-        package.parent
-        / "review_outputs"
-        / paper_id
-        / "repair_reaudit"
-        / "benchmark_audit"
-    )
+    return package.parent / ".review_records/fixture/theme" / package.name / "runs/repair-test/reaudit/benchmark_audit"
 
 
 REPAIR_RUNNER = (
@@ -57,6 +49,7 @@ REVIEW_SKILL_ROOT = (
 sys.path.insert(0, str(REVIEW_SKILL_ROOT / "scripts"))
 from artifact_schema import (  # noqa: E402
     AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
+    AGENT_REPAIR_ASSESSMENT_SCHEMA_VERSION,
     AUDIT_ATTESTATION_SCHEMA_VERSION,
     AUDIT_BUNDLE_SCHEMA_VERSION,
     AUDIT_MANIFEST_SCHEMA_VERSION,
@@ -64,11 +57,171 @@ from artifact_schema import (  # noqa: E402
     DETERMINISTIC_CORE_ARTIFACT_SCHEMA_VERSION,
     DETERMINISTIC_PROBE_RESULTS_SCHEMA_VERSION,
     DISPOSITION_SCHEMA_VERSION,
+    REPAIR_PLAN_SCHEMA_VERSION,
     SCORING_SCHEMA_VERSION,
 )
 import deterministic_contract  # noqa: E402
+import run_context  # noqa: E402
 AUDIT_ID = "audit-source-001"
 FINDING_ID = "finding-missing-solve"
+
+
+def fixture_paper_assessment() -> dict[str, Any]:
+    return {
+        "materials_qualification": {
+            "classification": "MAT",
+            "rationale": "Fixture package is materials-science grounded.",
+            "evidence": [
+                {
+                    "source": "paper/paper.md",
+                    "exact_quote": (
+                        "The published method computes the evidence-backed quantity."
+                    ),
+                }
+            ],
+        },
+        "paper_skipped": False,
+    }
+
+
+def build_agent_repair_assessment_for_plan(
+    package: Path,
+    plan: dict[str, Any],
+    *,
+    a0_content_root: str | None = None,
+) -> dict[str, Any]:
+    findings = []
+    for item in plan.get("findings", []):
+        if not isinstance(item, dict):
+            continue
+        decision = item.get("repair_class", "ABANDON")
+        approved = [
+            operation["id"]
+            for operation in item.get("operations", [])
+            if isinstance(operation, dict) and isinstance(operation.get("id"), str)
+        ]
+        evidence = []
+        for entry in item.get("evidence", []):
+            if not isinstance(entry, dict):
+                continue
+            source = entry.get("source", "benchmark_audit")
+            quote = entry.get("exact_quote") or entry.get("quote") or "fixture"
+            source_hash = entry.get("source_hash")
+            if not isinstance(source_hash, str):
+                if isinstance(source, str) and not source.startswith(
+                    "benchmark_audit"
+                ):
+                    local = package / source
+                    source_hash = (
+                        sha256_file(local)
+                        if local.is_file()
+                        else "sha256:" + "a" * 64
+                    )
+                else:
+                    audit_report = (
+                        external_audit_dir(package) / "audit_report.json"
+                    )
+                    source_hash = (
+                        sha256_file(audit_report)
+                        if audit_report.is_file()
+                        else "sha256:" + "a" * 64
+                    )
+            evidence.append(
+                {
+                    "source_kind": entry.get(
+                        "source_kind",
+                        "PACKAGE_PAPER"
+                        if decision == "ASSISTED_FIX"
+                        else "DETERMINISTIC_AUDIT",
+                    ),
+                    "exact_quote": quote,
+                    "source_hash": source_hash,
+                }
+            )
+        if decision == "ABANDON":
+            approved = []
+            verdict = "ABANDON"
+        else:
+            verdict = "APPROVE_REPAIR"
+            if not evidence:
+                evidence = [
+                    {
+                        "source_kind": (
+                            "PACKAGE_PAPER"
+                            if decision == "ASSISTED_FIX"
+                            else "DETERMINISTIC_AUDIT"
+                        ),
+                        "exact_quote": item.get("finding_code")
+                        or item.get("justification")
+                        or "fixture",
+                        "source_hash": "sha256:" + "c" * 64,
+                    }
+                ]
+        findings.append(
+            {
+                "finding_id": item["finding_id"],
+                "lane": item.get("lane") or "deterministic_core",
+                "decision": decision,
+                "agent_verdict": verdict,
+                "repair_scope": item.get("repair_scope")
+                or (
+                    "DETERMINISTIC_WIRING"
+                    if decision == "AUTO_FIX"
+                    else "INSTRUCTION_CONTRACT"
+                ),
+                "core_science_change": False,
+                "rationale": item.get("justification") or "fixture assessment",
+                "evidence": evidence,
+                "approved_operation_ids": approved,
+            }
+        )
+    return {
+        "schema_version": AGENT_REPAIR_ASSESSMENT_SCHEMA_VERSION,
+        "audit_id": plan["audit_id"],
+        "a0_content_root": a0_content_root or ("sha256:" + "d" * 64),
+        "package_identity": {"directory_name": package.name},
+        "findings": sorted(findings, key=lambda row: row["finding_id"]),
+    }
+
+
+def _ensure_plan_assessment_binding(package: Path, value: dict[str, Any]) -> None:
+    assessment_path = package.parent / "agent_repair_assessment.json"
+    assessment = build_agent_repair_assessment_for_plan(package, value)
+    write_json(assessment_path, assessment)
+    value["agent_repair_assessment"] = {
+        "schema_version": AGENT_REPAIR_ASSESSMENT_SCHEMA_VERSION,
+        "path": str(assessment_path),
+        "assessment_hash": sha256_file(assessment_path),
+    }
+
+
+def materialize_run_assessment(run: Path, package: Path) -> None:
+    """Rewrite assessment with the run A0 hash and refresh plan binding."""
+
+    plan_path = run / "plan.json"
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    a0 = json.loads((run / "roots" / "A0.json").read_text(encoding="utf-8"))[
+        "content_root"
+    ]
+    assessment = build_agent_repair_assessment_for_plan(
+        package, plan, a0_content_root=a0
+    )
+    assessment_path = run / "repair" / "agent_repair_assessment.json"
+    write_json(assessment_path, assessment)
+    plan["schema_version"] = REPAIR_PLAN_SCHEMA_VERSION
+    plan["agent_repair_assessment"] = {
+        "schema_version": AGENT_REPAIR_ASSESSMENT_SCHEMA_VERSION,
+        "path": str(assessment_path),
+        "assessment_hash": sha256_file(assessment_path),
+    }
+    for finding in plan.get("findings", []):
+        if not isinstance(finding, dict):
+            continue
+        finding.setdefault("lane", "deterministic_core")
+        for operation in finding.get("operations", []):
+            if isinstance(operation, dict):
+                operation.setdefault("publication_class", "REAUDIT_REQUIRED")
+    write_json(plan_path, plan)
 
 
 def write_json(path: Path, value: Any) -> None:
@@ -160,7 +313,10 @@ def bind_plan_to_package(package: Path, value: dict[str, Any]) -> None:
     contract = report.get("deterministic_contract")
     if (
         value.get("schema_version")
-        == deterministic_contract.DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION
+        in {
+            deterministic_contract.DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION,
+            REPAIR_PLAN_SCHEMA_VERSION,
+        }
         and isinstance(contract, dict)
     ):
         binding = {
@@ -177,7 +333,7 @@ def bind_plan_to_package(package: Path, value: dict[str, Any]) -> None:
         "source_audit",
         {
             "audit_id": value["audit_id"],
-            "finding_id": value["finding_id"],
+            "finding_id": value.get("finding_id"),
             "finding_status": "OPEN",
             "input_hashes": manifest.get("input_hashes", {}),
             "review_implementation": manifest.get("review_implementation", {}),
@@ -204,6 +360,13 @@ def bind_plan_to_package(package: Path, value: dict[str, Any]) -> None:
         value["findings"][0]["evidence"] = json.loads(
             json.dumps(value.get("evidence", []))
         )
+        for finding in value["findings"]:
+            finding.setdefault("lane", "deterministic_core")
+            for operation in finding.get("operations", []):
+                if isinstance(operation, dict):
+                    operation.setdefault("publication_class", "REAUDIT_REQUIRED")
+    value["schema_version"] = REPAIR_PLAN_SCHEMA_VERSION
+    _ensure_plan_assessment_binding(package, value)
 
 
 def install_repair_harness(workspace: Path) -> Path:
@@ -560,6 +723,7 @@ def initial_repair_context(
         "schema_version": AGENT_QUALITY_ARTIFACT_SCHEMA_VERSION,
         "finding_ids": [],
         "probe_cases_are_code_defined": True,
+        "assessment": fixture_paper_assessment(),
     }
     report = {
         "schema_version": AUDIT_REPORT_SCHEMA_VERSION,
@@ -584,6 +748,9 @@ def initial_repair_context(
         "deterministic_core": deterministic_core,
         "agent_quality": agent_quality,
         "deterministic_contract": contract,
+        "materials_qualification": fixture_paper_assessment()[
+            "materials_qualification"
+        ],
         "evidence_contract": {"fail_closed": True, "gaps": []},
         "hard_gates": [],
     }
@@ -694,16 +861,26 @@ def current_single_finding_plan(plan: dict[str, Any]) -> dict[str, Any]:
             "deterministic_check": "D5",
             "finding_code": "SOLUTION_ORACLE_MISSING",
             "core_science_change": False,
+            "lane": "deterministic_core",
+            "repair_scope": (
+                "DETERMINISTIC_WIRING"
+                if plan.get("repair_class") == "AUTO_FIX"
+                else "INSTRUCTION_CONTRACT"
+            ),
         }
     )
+    for operation in finding.get("operations", []):
+        if isinstance(operation, dict):
+            operation.setdefault("publication_class", "REAUDIT_REQUIRED")
     plan["findings"] = [finding]
     plan["deterministic_contract"] = {}
+    plan["schema_version"] = REPAIR_PLAN_SCHEMA_VERSION
     return plan
 
 
 def safe_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
     return current_single_finding_plan({
-        "schema_version": deterministic_contract.DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION,
+        "schema_version": REPAIR_PLAN_SCHEMA_VERSION,
         "audit_id": audit_id,
         "finding_id": finding_id,
         "repair_class": "AUTO_FIX",
@@ -724,6 +901,7 @@ def safe_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
                 "content": "#!/bin/sh\nexec python3 solution/producer.py\n",
                 "executable": True,
                 "evidence_ids": ["audit-finding"],
+                "publication_class": "DIRECT_DETERMINISTIC",
             }
         ],
         "regression_tests": [
@@ -755,57 +933,77 @@ def safe_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
 
 
 def write_plan(path: Path, value: dict[str, Any]) -> None:
-    if (
-        value.get("schema_version")
-        == deterministic_contract.DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION
-        and isinstance(value.get("findings"), list)
-        and value["findings"]
-    ):
-        # Keep mutation-focused tests readable while ensuring the serialized
-        # executable plan is always a complete current-schema batch.
-        finding = value["findings"][0]
-        for key in (
-            "finding_id",
-            "repair_class",
-            "justification",
-            "core_science_change",
-            "evidence",
-            "operations",
-            "regression_tests",
-        ):
-            if key in value:
-                finding[key] = json.loads(json.dumps(value[key]))
-    packages = [
-        candidate
-        for candidate in path.parent.iterdir()
-        if candidate.is_dir()
-        and (external_audit_dir(candidate) / "audit_report.json").is_file()
-    ]
-    if (
-        len(packages) == 1
-        and value.get("schema_version")
-        == deterministic_contract.DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION
-    ):
-        bind_plan_to_package(packages[0], value)
+    is_repair_plan = value.get("schema_version") in {
+        REPAIR_PLAN_SCHEMA_VERSION,
+        deterministic_contract.DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION,
+    } or isinstance(value.get("findings"), list)
+    if is_repair_plan:
+        value["schema_version"] = REPAIR_PLAN_SCHEMA_VERSION
+        if isinstance(value.get("findings"), list) and value["findings"]:
+            finding = value["findings"][0]
+            for key in (
+                "finding_id",
+                "repair_class",
+                "justification",
+                "core_science_change",
+                "evidence",
+                "operations",
+                "regression_tests",
+            ):
+                if key in value:
+                    finding[key] = json.loads(json.dumps(value[key]))
+            finding.setdefault("lane", "deterministic_core")
+            for operation in finding.get("operations", []):
+                if isinstance(operation, dict):
+                    operation.setdefault("publication_class", "REAUDIT_REQUIRED")
+        packages = [
+            candidate
+            for candidate in path.parent.iterdir()
+            if candidate.is_dir()
+            and (external_audit_dir(candidate) / "audit_report.json").is_file()
+        ]
+        if len(packages) == 1:
+            bind_plan_to_package(packages[0], value)
     write_json(path, value)
 
 
 def run_repair(
     package: Path, plan: Path, runner: Path
 ) -> subprocess.CompletedProcess[str]:
+    run = package.parent / ".review_records" / "fixture" / "theme" / package.name / "runs" / "repair-test"
+    if run.exists():
+        shutil.rmtree(run)
+    (run / "agent_contract").mkdir(parents=True)
+    (run / "regressions").mkdir()
+    (run / "roots").mkdir()
+    (run / "repair").mkdir(parents=True)
+    write_json(run / "agent_contract/assessment.json", {})
+    run_context.write_json_atomic(run / "context.json", {
+        "schema_version": run_context.RUN_CONTEXT_SCHEMA,
+        "run_id": "repair-test",
+        "package_id": f"fixture/theme/{package.name}",
+        "package_path": str(package.resolve()),
+        "corpus_root": str(package.parent.resolve()),
+        "review_contract_version": run_context.REVIEW_CONTRACT_VERSION,
+        "created_at": run_context.now(),
+    })
+    run_context.write_json_atomic(run / "status.json", {
+        "schema_version": run_context.STATUS_SCHEMA, "state": "ASSIGNED", "updated_at": run_context.now()
+    })
+    run_context.snapshot_package(package, run)
+    shutil.copytree(external_audit_dir(package), run / "audit" / "benchmark_audit")
+    shutil.copy2(package.parent / "audit-attestation.json", run / "audit_attestation.json")
+    shutil.copy2(plan, run / "plan.json")
+    run_context.write_content_root(run, "A0")
+    materialize_run_assessment(run, package)
+    run_context.transition(run, "REVIEWING")
+    run_context.transition(run, "REVIEWED")
     return subprocess.run(
         [
             sys.executable,
             str(runner),
-            str(package),
-            "--plan",
-            str(plan),
-            "--audit-attestation",
-            str(package.parent / "audit-attestation.json"),
-            "--audit-dir",
-            str(external_audit_dir(package)),
-            "--repair-output-dir",
-            str(external_repair_dir(package)),
+            "--run-dir",
+            str(run),
         ],
         cwd=REPO_ROOT,
         capture_output=True,
@@ -816,85 +1014,17 @@ def run_repair(
 
 
 class MaterialsSafeRepairTests(unittest.TestCase):
-    def test_equal_depth_review_uses_real_cli_path_policy(self) -> None:
-        module = repair_module()
-        real_subprocess_run = subprocess.run
-        with tempfile.TemporaryDirectory() as temporary_name:
-            package = Path(temporary_name) / "theme/paper-42"
-            package.mkdir(parents=True)
-            (package / "instruction.md").write_text("materials task\n")
-            (package / "tests").mkdir()
-            captured: list[str] = []
-
-            def validate_then_materialize(command, **kwargs):
-                del kwargs
-                captured[:] = command
-                validated = real_subprocess_run(
-                    [*command, "--validate-output-policy-only"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-                if validated.returncode == 0:
-                    output = Path(
-                        command[command.index("--audit-output-dir") + 1]
-                    )
-                    write_json(
-                        output / "benchmark_audit/audit_report.json",
-                        {"configuration": {"review_lane": "dual"}},
-                    )
-                return validated
-
-            with mock.patch.object(
-                module.subprocess, "run", side_effect=validate_then_materialize
-            ):
-                result = module.run_equal_depth_review(
-                    package,
-                    {"configuration": {"review_lane": "dual"}},
-                    {"assessment_hashes": {}},
-                    {},
-                )
-
-            expected = (
-                package.parent
-                / "review_outputs/42/repair_reaudit"
-            ).resolve()
-            self.assertEqual(result["configuration"]["review_lane"], "dual")
-            self.assertEqual(
-                Path(captured[captured.index("--audit-output-dir") + 1]),
-                expected,
-            )
-            self.assertEqual(
-                captured[captured.index("--output-purpose") + 1],
-                "reaudit",
-            )
-            self.assertFalse((package / "benchmark_audit").exists())
-
-            normal_review = captured[:]
-            purpose_index = normal_review.index("--output-purpose")
-            del normal_review[purpose_index : purpose_index + 2]
-            rejected = real_subprocess_run(
-                [*normal_review, "--validate-output-policy-only"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            self.assertEqual(rejected.returncode, 2)
-
-            runner = captured[:]
-            for invalid in (
-                package / "benchmark_audit",
-                package.parent / "wrong/review_outputs/42/repair_reaudit",
-            ):
-                runner[runner.index("--audit-output-dir") + 1] = str(invalid)
-                rejected = real_subprocess_run(
-                    [*runner, "--validate-output-policy-only"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-                self.assertEqual(rejected.returncode, 2)
-                self.assertIn("must", rejected.stderr)
+    def test_equal_depth_review_uses_internal_engine_not_public_cli(self) -> None:
+        source = REPAIR_RUNNER.read_text(encoding="utf-8")
+        start = source.index("def run_equal_depth_review(")
+        end = source.index("\ndef ", start + 5)
+        body = source[start:end]
+        self.assertIn("run_review_engine(", body)
+        review_source = (REVIEW_SKILL_ROOT / "scripts/run_review.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('parser.add_argument(\n        "--run-dir"', review_source)
+        self.assertNotIn('"--audit-output-dir"', review_source)
 
     def test_repair_paths_are_canonical_theme_siblings(self) -> None:
         module = repair_module()
@@ -1018,7 +1148,7 @@ class MaterialsSafeRepairTests(unittest.TestCase):
             )
             result = json.loads(completed.stdout)
             repair_manifest = json.loads(
-                ((external_repair_dir(package) / "benchmark_repair") / "repair_manifest.json").read_text(
+                ((external_repair_dir(package) / "benchmark_repair") / "repair_report.json").read_text(
                     encoding="utf-8"
                 )
             )
@@ -1038,9 +1168,17 @@ class MaterialsSafeRepairTests(unittest.TestCase):
                     for item in repair_manifest["regression_tests"]
                 )
             )
+            comparison = repair_manifest["re_audit_comparison"]
             self.assertEqual(
-                repair_manifest["reaudit"]["review_lane"], "dual"
+                comparison.get("verification_mode"), "DIRECT_DETERMINISTIC"
             )
+            self.assertIs(comparison.get("reaudit_performed"), False)
+            self.assertFalse(result.get("attempt_consumed", True))
+            self.assertEqual(result.get("verification_mode"), "DIRECT_DETERMINISTIC")
+            self.assertEqual(
+                repair_manifest.get("attempt_kind"), "DIRECT_DETERMINISTIC"
+            )
+            self.assertFalse(repair_manifest.get("attempt_consumed", True))
             self.assertTrue((package / "solution/solve.sh").is_file())
             self.assertEqual(sha256_file(package / "manifest.json"), manifest_before)
             self.assertEqual(sha256_file(package / "paper/paper.md"), paper_before)
@@ -1050,46 +1188,9 @@ class MaterialsSafeRepairTests(unittest.TestCase):
             self.assertTrue((history / "original").is_dir())
             self.assertTrue((history / "repair_plan.json").is_file())
             self.assertTrue((history / "attempt_manifest.json").is_file())
-            canonical_audit = external_reaudit_dir(package)
-            retained_audit = history / "repair_reaudit/benchmark_audit"
-            self.assertTrue(canonical_audit.is_dir())
-            self.assertTrue(retained_audit.is_dir())
-            for audit in (canonical_audit, retained_audit):
-                audit_manifest = json.loads(
-                    (audit / "audit_manifest.json").read_text(
-                        encoding="utf-8"
-                    )
-                )
-                self.assertEqual(
-                    audit_manifest["bundle_hash"],
-                    repair_module().canonical_json_hash(
-                        audit_manifest["output_hashes"]
-                    ),
-                )
-                for relative, expected in audit_manifest[
-                    "output_hashes"
-                ].items():
-                    self.assertEqual(
-                        sha256_file(audit / relative),
-                        expected,
-                    )
-            self.assertEqual(
-                repair_module().sha256_path(canonical_audit),
-                repair_module().sha256_path(retained_audit),
-            )
-            reaudit_refs = repair_manifest["reaudit_bundle"]
-            self.assertEqual(
-                reaudit_refs["report_hash"],
-                sha256_file(retained_audit / "audit_report.json"),
-            )
-            self.assertEqual(
-                reaudit_refs["manifest_hash"],
-                sha256_file(retained_audit / "audit_manifest.json"),
-            )
-            self.assertEqual(
-                reaudit_refs["bundle_hash"],
-                repair_module().sha256_path(retained_audit),
-            )
+            # Direct publish must not invoke equal-depth Review.
+            self.assertFalse(external_reaudit_dir(package).is_dir())
+            self.assertFalse((history / "repair_reaudit").exists())
             attempt = json.loads(
                 (history / "attempt_manifest.json").read_text(
                     encoding="utf-8"
@@ -1101,10 +1202,17 @@ class MaterialsSafeRepairTests(unittest.TestCase):
             self.assertEqual(
                 attempt["publishability"], "PUBLISH_CANDIDATE"
             )
+            self.assertFalse(attempt.get("attempt_consumed", True))
+            self.assertEqual(
+                attempt.get("verification_mode"), "DIRECT_DETERMINISTIC"
+            )
             repair_module().validate_fixed_bundle(
                 external_repair_dir(package) / "benchmark_repair"
             )
             repair_module().validate_fixed_bundle(history)
+            # Harbor package must stay free of generated repair artifacts.
+            self.assertFalse((package / "benchmark_repair").exists())
+            self.assertFalse((package / "benchmark_audit").exists())
 
     def test_legacy_reaudit_still_listing_target_blocks_publish(self) -> None:
         # Item 4 regression: the legacy single-finding path must read the
@@ -1119,7 +1227,17 @@ class MaterialsSafeRepairTests(unittest.TestCase):
                 malformed_probe_payload=True,
             )
             plan = workspace / "repair-plan.json"
-            write_plan(plan, safe_plan(report["audit_id"], finding_id))
+            plan_payload = safe_plan(report["audit_id"], finding_id)
+            for operation in plan_payload.get("operations", []):
+                if isinstance(operation, dict):
+                    operation["publication_class"] = "REAUDIT_REQUIRED"
+            for finding in plan_payload.get("findings", []):
+                if not isinstance(finding, dict):
+                    continue
+                for operation in finding.get("operations", []):
+                    if isinstance(operation, dict):
+                        operation["publication_class"] = "REAUDIT_REQUIRED"
+            write_plan(plan, plan_payload)
 
             completed = run_repair(package, plan, runner)
 
@@ -1172,7 +1290,7 @@ class MaterialsSafeRepairTests(unittest.TestCase):
             )
             self.assertIn(
                 "oracle",
-                (history / "evidence.json").read_text(encoding="utf-8").lower(),
+                (history / "evidence" / "records.json").read_text(encoding="utf-8").lower(),
             )
             repair_module().validate_fixed_bundle(history)
 
@@ -1212,8 +1330,10 @@ class MaterialsSafeRepairTests(unittest.TestCase):
 
             completed = run_repair(package, plan, runner)
 
-            self.assertEqual(completed.returncode, 2)
-            self.assertIn("stale audit", completed.stderr)
+            # A0 is created after the user creates a run, so this edit is
+            # included in the newly frozen snapshot rather than treated as a
+            # stale external audit.
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             self.assertFalse((package / "benchmark_repair").exists())
 
     def test_repair_reaudit_rejects_non_dual_source_audit(self) -> None:
@@ -1236,10 +1356,7 @@ class MaterialsSafeRepairTests(unittest.TestCase):
             completed = run_repair(package, plan, runner)
 
             self.assertEqual(completed.returncode, 2)
-            self.assertIn(
-                "source-audit attestation does not bind the authoritative bytes",
-                completed.stderr,
-            )
+            self.assertIn("review_lane='dual'", completed.stderr)
             self.assertFalse((package / "benchmark_repair").exists())
 
 

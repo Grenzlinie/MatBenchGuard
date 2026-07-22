@@ -18,6 +18,7 @@ from deterministic_contract import (
     LEGACY_REPAIR_PLAN_SCHEMA_VERSION,
     DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION,
 )
+from artifact_schema import REPAIR_PLAN_SCHEMA_VERSION
 
 
 REVIEW_VERDICTS = frozenset(
@@ -44,17 +45,30 @@ REPAIR_STATUSES = frozenset(
 )
 # A repair that atomically publishes the fixed package.
 SUCCESS_REPAIR_STATUSES = frozenset({"REPAIRED"})
+# Canonical run-local deliverables under repair/benchmark_repair/ (and the
+# matching history archive). Legacy names changes.json, patch.json,
+# repair.log, and history.json are not deliverables.
+# Ticket 05 owns this layout; ticket 04 only adds verification_mode fields.
 REPAIR_BUNDLE_FILES = (
+    "repair_summary.md",
+    "repair_report.json",
+    "repair_plan.md",
     "repair_plan.json",
-    "changes.json",
-    "unresolved.json",
-    "regression_results.json",
+    "changes.jsonl",
+    "unresolved_findings.jsonl",
+    "regression_tests.json",
     "re_audit_comparison.json",
-    "patch.json",
-    "evidence.json",
-    "repair.log",
-    "history.json",
+    "repair_manifest.json",
 )
+REPAIR_BUNDLE_DIRS = (
+    "patches",
+    "evidence",
+    "logs",
+)
+REPAIR_BUNDLE_MANIFEST_NAME = "repair_manifest.json"
+REPAIR_BUNDLE_LOG_RELATIVE = "logs/repair.log"
+REPAIR_BUNDLE_PATCH_INDEX = "patches/operations.json"
+REPAIR_BUNDLE_EVIDENCE_RECORDS = "evidence/records.json"
 
 VERDICT_TO_PUBLISHABILITY = {
     "PASS": "PUBLISH_CANDIDATE",
@@ -175,6 +189,16 @@ def require_canonical_fields(
     return validated
 
 
+
+def _comparison_is_direct_deterministic(comparison: dict[str, Any]) -> bool:
+    """True when publication used the direct-deterministic path."""
+
+    if comparison.get("reaudit_performed") is False:
+        return True
+    mode = comparison.get("verification_mode")
+    return isinstance(mode, str) and mode.upper() == "DIRECT_DETERMINISTIC"
+
+
 def validate_repair_bundle_semantics(
     values: dict[str, Any],
     *,
@@ -182,18 +206,47 @@ def validate_repair_bundle_semantics(
 ) -> dict[str, str]:
     """Validate the fixed repair bundle's cross-file semantic schema."""
 
-    missing = [name for name in REPAIR_BUNDLE_FILES if name not in values]
+    required_semantic = (
+        "repair_report.json",
+        "repair_plan.json",
+        "changes.jsonl",
+        "unresolved_findings.jsonl",
+        "regression_tests.json",
+        "re_audit_comparison.json",
+        REPAIR_BUNDLE_PATCH_INDEX,
+        REPAIR_BUNDLE_EVIDENCE_RECORDS,
+        "repair_manifest.json",
+        "repair_summary.md",
+        "repair_plan.md",
+    )
+    missing = [name for name in required_semantic if name not in values]
     if missing:
         raise ValueError(f"repair bundle semantic files are missing: {missing}")
-    history = values["history.json"]
-    fields = require_canonical_fields(history)
+    summary = values["repair_summary.md"]
+    plan_md = values["repair_plan.md"]
+    if not isinstance(summary, str) or not summary.strip():
+        raise ValueError("repair_summary.md must be non-empty")
+    if not isinstance(plan_md, str) or not plan_md.strip():
+        raise ValueError("repair_plan.md must be non-empty")
+    report = values["repair_report.json"]
+    manifest = values["repair_manifest.json"]
+    if not isinstance(report, dict) or not report:
+        raise ValueError("repair_report.json must be a non-empty object")
+    if not isinstance(manifest, dict) or not manifest:
+        raise ValueError("repair_manifest.json must be a non-empty object")
+    fields = require_canonical_fields(report)
+    require_canonical_fields(
+        manifest,
+        expected_repair_decision=fields["repair_decision"],
+        expected_repair_status=fields["repair_status"],
+    )
     plan = values["repair_plan.json"]
-    changes = values["changes.json"]
-    unresolved = values["unresolved.json"]
-    regressions = values["regression_results.json"]
+    changes = values["changes.jsonl"]
+    unresolved = values["unresolved_findings.jsonl"]
+    regressions = values["regression_tests.json"]
     comparison = values["re_audit_comparison.json"]
-    patch = values["patch.json"]
-    evidence = values["evidence.json"]
+    patch = values[REPAIR_BUNDLE_PATCH_INDEX]
+    evidence = values[REPAIR_BUNDLE_EVIDENCE_RECORDS]
     if not isinstance(plan, dict) or not plan:
         raise ValueError("repair_plan.json must be a non-empty object")
     require_canonical_fields(
@@ -204,10 +257,15 @@ def validate_repair_bundle_semantics(
     if plan.get("schema_version") not in (
         {LEGACY_REPAIR_PLAN_SCHEMA_VERSION}
         | set(DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES)
+        | {REPAIR_PLAN_SCHEMA_VERSION}
     ):
         raise ValueError("repair_plan.json schema_version is invalid")
     if (
-        plan.get("schema_version") == DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION
+        plan.get("schema_version")
+        in {
+            DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION,
+            REPAIR_PLAN_SCHEMA_VERSION,
+        }
         and not isinstance(plan.get("findings"), list)
     ):
         raise ValueError("deterministic repair plan must be a complete batch")
@@ -303,9 +361,9 @@ def validate_repair_bundle_semantics(
         and bool(item["evidence_ids"])
         for item in changes
     ):
-        raise ValueError("changes.json semantic schema is invalid")
+        raise ValueError("changes.jsonl semantic schema is invalid")
     if published and not changes:
-        raise ValueError("changes.json is empty for a published repair")
+        raise ValueError("changes.jsonl is empty for a published repair")
     change_ids = [item["operation_id"] for item in changes]
     patch_files = patch.get("files") if isinstance(patch, dict) else None
     patch_ids = (
@@ -351,7 +409,7 @@ def validate_repair_bundle_semantics(
     ):
         raise ValueError("regression_results.json semantic schema is invalid")
     if published and not regressions:
-        raise ValueError("regression_results.json is empty for a published repair")
+        raise ValueError("regression_tests.json is empty for a published repair")
     planned_regressions = plan_regressions
     planned_regression_ids = [
         item.get("id")
@@ -392,18 +450,12 @@ def validate_repair_bundle_semantics(
             raise ValueError("regression causal operation IDs are invalid")
     if not isinstance(comparison, dict):
         raise ValueError("re_audit_comparison.json must be an object")
-    if published and (
-        comparison.get("target_resolved") is not True
-        or not isinstance(comparison.get("reaudit_audit_id"), str)
-        or not comparison["reaudit_audit_id"].strip()
-        or not isinstance(comparison.get("source_finding"), dict)
-        or not isinstance(comparison.get("source_configuration"), dict)
-        or not isinstance(comparison.get("reaudit_configuration"), dict)
-    ):
-        raise ValueError("re_audit_comparison.json semantic schema is invalid")
     deterministic_plan = (
         plan.get("schema_version")
-        in DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES
+        in (
+            set(DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES)
+            | {REPAIR_PLAN_SCHEMA_VERSION}
+        )
         or isinstance(plan.get("deterministic_contract"), dict)
     )
     if published and deterministic_plan:
@@ -415,7 +467,6 @@ def validate_repair_bundle_semantics(
             or not isinstance(binding.get("contract_digest"), str)
             or not binding["contract_digest"].startswith("sha256:")
             or not isinstance(binding.get("required_finding_ids"), list)
-            or not binding["required_finding_ids"]
             or not all(
                 isinstance(item, str) and item for item in binding["required_finding_ids"]
             )
@@ -424,11 +475,27 @@ def validate_repair_bundle_semantics(
         ):
             raise ValueError("published deterministic plan binding is incomplete")
         planned_findings = plan.get("findings")
-        if not isinstance(planned_findings, list) or [
+        if not isinstance(planned_findings, list):
+            raise ValueError("published deterministic plan queue is incomplete")
+        planned_ids = [
             item.get("finding_id")
             for item in planned_findings
             if isinstance(item, dict)
-        ] != sorted(binding["required_finding_ids"]):
+        ]
+        d_ids = list(binding["required_finding_ids"])
+        if plan.get("schema_version") == REPAIR_PLAN_SCHEMA_VERSION:
+            d_planned = [
+                item.get("finding_id")
+                for item in planned_findings
+                if isinstance(item, dict)
+                and (item.get("lane") or item.get("repair_lane"))
+                != "agent_quality"
+            ]
+            if sorted(x for x in d_planned if isinstance(x, str)) != sorted(d_ids):
+                raise ValueError("published deterministic plan queue is incomplete")
+        elif planned_ids != sorted(d_ids):
+            raise ValueError("published deterministic plan queue is incomplete")
+        if not planned_ids:
             raise ValueError("published deterministic plan queue is incomplete")
         source_audit = plan.get("source_audit")
         if not isinstance(source_audit, dict):
@@ -438,7 +505,43 @@ def validate_repair_bundle_semantics(
             or source_audit.get("deterministic_contract") != binding
         ):
             raise ValueError("published deterministic source binding is stale")
-    if published:
+        if plan.get("schema_version") == REPAIR_PLAN_SCHEMA_VERSION:
+            assessment = plan.get("agent_repair_assessment")
+            if (
+                not isinstance(assessment, dict)
+                or assessment.get("schema_version")
+                != "materials-agent-repair-assessment/1.0"
+                or not isinstance(assessment.get("assessment_hash"), str)
+                or not assessment["assessment_hash"].startswith("sha256:")
+            ):
+                raise ValueError(
+                    "published repair plan lacks agent_repair_assessment binding"
+                )
+    direct_deterministic = _comparison_is_direct_deterministic(comparison)
+    if published and not direct_deterministic and (
+        comparison.get("target_resolved") is not True
+        or not isinstance(comparison.get("reaudit_audit_id"), str)
+        or not comparison["reaudit_audit_id"].strip()
+        or not isinstance(comparison.get("source_finding"), dict)
+        or not isinstance(comparison.get("source_configuration"), dict)
+        or not isinstance(comparison.get("reaudit_configuration"), dict)
+    ):
+        raise ValueError("re_audit_comparison.json semantic schema is invalid")
+    if published and direct_deterministic:
+        reason = comparison.get("reaudit_skipped_reason") or comparison.get(
+            "reason"
+        )
+        if not isinstance(reason, str) or not reason.strip():
+            raise ValueError(
+                "direct deterministic comparison requires an explicit reason"
+            )
+        if comparison.get("reaudit_performed") is not False:
+            raise ValueError(
+                "direct deterministic comparison must set reaudit_performed=false"
+            )
+        if comparison.get("target_resolved") is not True:
+            raise ValueError("re_audit_comparison.json semantic schema is invalid")
+    if published and not direct_deterministic:
         required_comparison = {
             "reaudit_count": 1,
             "reaudit_verdict": "PASS",
@@ -476,12 +579,27 @@ def validate_repair_bundle_semantics(
             raise ValueError(
                 "published repair lacks a finite authoritative score >= 80"
             )
+    elif published and direct_deterministic:
+        required_direct = {
+            "publication_route": "PUBLISH_CANDIDATE",
+            "identity_preserved": True,
+            "mutation_scope_allowed": True,
+            "target_resolved": True,
+            "residual_blocking_finding_ids": [],
+        }
+        if any(
+            comparison.get(key) != expected
+            for key, expected in required_direct.items()
+        ):
+            raise ValueError(
+                "published repair does not satisfy the atomic publication invariant"
+            )
     if not isinstance(patch, dict) or (
         patch.get("schema_version") != "0.1"
         or patch.get("files") != changes
         or patch.get("atomic_publish") is not published
     ):
-        raise ValueError("patch.json semantic schema is invalid")
+        raise ValueError("patches/operations.json semantic schema is invalid")
     if not isinstance(evidence, list) or not evidence or not all(
         isinstance(item, dict)
         and isinstance(item.get("id", item.get("evidence_id")), str)
@@ -490,7 +608,7 @@ def validate_repair_bundle_semantics(
         and bool(item["source"].strip())
         for item in evidence
     ):
-        raise ValueError("evidence.json semantic schema is invalid")
+        raise ValueError("evidence/records.json semantic schema is invalid")
     evidence_ids = [
         item.get("id", item.get("evidence_id")) for item in evidence
     ]
@@ -518,13 +636,15 @@ def validate_repair_bundle_semantics(
     package_identity = plan.get("package_identity")
     if not isinstance(package_identity, dict) or not package_identity:
         raise ValueError("repair package identity is absent")
-    identity_values = [history]
+    identity_values = [report, manifest]
     identity_values.extend(evidence)
     identity_values.extend(unresolved)
-    if published:
+    if published and not direct_deterministic:
         identity_values.extend(
             [comparison, comparison.get("source_finding", {})]
         )
+    elif published and isinstance(comparison.get("source_finding"), dict):
+        identity_values.extend([comparison, comparison["source_finding"]])
     for item in identity_values:
         # Batch bundles bind identity on audit_id + package_identity because a
         # single batch resolves many findings.
@@ -536,25 +656,23 @@ def validate_repair_bundle_semantics(
             raise ValueError(
                 "repair audit/finding/package identities are inconsistent"
             )
-    if not isinstance(history, dict) or not history:
-        raise ValueError("history.json must be a non-empty object")
     if (
-        history.get("bundle_complete") is not True
-        or history.get("bundle_files") != list(REPAIR_BUNDLE_FILES)
-        or not isinstance(history.get("root_cause"), str)
-        or not history["root_cause"].strip()
-        or not isinstance(history.get("attempt_number"), int)
-        or isinstance(history.get("attempt_number"), bool)
-        or history["attempt_number"] < 0
-        or history.get("decision") != fields["repair_decision"]
+        manifest.get("bundle_complete") is not True
+        or manifest.get("bundle_files") != list(REPAIR_BUNDLE_FILES)
+        or not isinstance(manifest.get("root_cause"), str)
+        or not manifest["root_cause"].strip()
+        or not isinstance(manifest.get("attempt_number"), int)
+        or isinstance(manifest.get("attempt_number"), bool)
+        or manifest["attempt_number"] < 0
+        or manifest.get("decision") != fields["repair_decision"]
         or (
             published
-            and history.get("status") not in SUCCESS_REPAIR_STATUSES
+            and manifest.get("status") not in SUCCESS_REPAIR_STATUSES
         )
     ):
-        raise ValueError("history.json semantic schema is invalid")
+        raise ValueError("repair_manifest.json semantic schema is invalid")
     if not isinstance(repair_log, str) or not repair_log.strip():
-        raise ValueError("repair.log must be non-empty")
+        raise ValueError("logs/repair.log must be non-empty")
     if (
         f"decision={fields['repair_decision']}" not in repair_log
         or (
@@ -562,5 +680,6 @@ def validate_repair_bundle_semantics(
             and f"repair_status={fields['repair_status']}" not in repair_log
         )
     ):
-        raise ValueError("repair.log lifecycle is inconsistent")
+        raise ValueError("logs/repair.log lifecycle is inconsistent")
     return fields
+

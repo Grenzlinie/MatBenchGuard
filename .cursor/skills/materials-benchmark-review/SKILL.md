@@ -5,9 +5,9 @@ description: Audit one materials-science Harbor package on the dual-lane path us
 
 # Materials Benchmark Review
 
-Audit one `paper-{id}/` Harbor package and write its authoritative
-`benchmark_audit/` bundle under the external sibling root
-`<topic>/review_outputs/<paper-id>/`.
+Audit one `paper-{id}/` Harbor package from a main-Agent-created run context.
+All artifacts are private to
+`.review_records/<cluster>/<theme>/<paper>/runs/<run-id>/`.
 
 ## Scope and safety
 
@@ -46,6 +46,25 @@ finding IDs, complete repair queue, and `contract_digest`. Each check is
 `REQUIRED`, or `NOT_APPLICABLE`. Only proven OPEN repairable blockers enter the
 complete `REQUIRED` queue; advisory risks do not block PASS.
 
+Repairable Agent-quality / A-lane findings are first-class OPEN queue entries
+alongside D1-D6. They keep `lane: agent_quality` and never fabricate a D check.
+Each carries stable `finding_id`, severity, C01-C07 `dimension`, repairability,
+evidence refs, plus `repair_lane` / `repair_scope`. Allowed scopes include
+`DETERMINISTIC_WIRING`, `CHECKER_ROBUSTNESS`, `INSTRUCTION_CONTRACT`,
+`SCORING_SEMANTICS`, `DIRECT_INPUT_REFERENCE`, and `SCIENCE_SEMANTICS`.
+Normalized `repair_findings` appear on `agent_quality/assessment.json` and the
+source audit report (`repair_findings` + complete `repair_queue`); the CLI
+validates taxonomy, exact citations, source hashes, package path safety, and
+C-dimension mapping. When D1-D6 is `CLEAN` but an OPEN repairable Agent finding
+remains, finalization still routes to `REPAIR_QUEUE`. Hard Gates, unrepairable
+Agent findings, and evidence gaps keep their existing non-Repair routes.
+
+Publication class (consumed by later Repair tickets): narrow unique D wiring
+(`DETERMINISTIC_WIRING` / `UNIQUE_SCORING_WIRING`) may later qualify for direct
+deterministic publication; Agent checker-fairness, scoring semantics,
+direct-input, science, and paper-grounded instruction repairs require
+equal-depth re-audit.
+
 The optional `materials-agent-contract-assessment/1.0` is a separate,
 contract-only overlay. It is lane `deterministic_core`, binds machine schema,
 registry, and digest, and supplies D1-D6 in order as `PASS` or `NOT_PROVEN`.
@@ -71,26 +90,38 @@ effective `PASS`, and all machine findings remain preserved.
 
 ## Contract-only pending/resume
 
-`AGENT_CONTRACT_PENDING` is emitted only when every D1-D6 status is an eligible
-unavailable wiring gap and there is no machine `FAIL`, proven/blocking finding,
-required queue, Hard Gate, usable runtime contradiction, or other real defect.
-Otherwise Review finalizes the authoritative non-PASS verdict (`CONDITIONAL` or
-`REJECT` as applicable). A pending result is `NOT_ASSESSABLE`, has
-`publishable=false`, and has no final audit bundle.
-
-For an eligible pause, Review writes the external
-`agent_contract/request.json` with schema
-`materials-agent-contract-request/1.0`, binding package, implementation,
-static/probe artifacts, and machine-contract hashes. Resume the same workspace:
+`AGENT_ASSESSMENT_PENDING` is the mandatory pre-Review gate. Until a validated
+paper-grounded `agent_assessment.json` is present in the run (Stage 0 taxonomy
+plus A2/A4/A5 citations, or an Agent-authoritative `NON_MAT` fast reject), Review
+must not freeze A0, write a formal audit bundle, enter Repair, or update corpus
+tracking. Supply the assessment in the same run and resume:
 
 ```bash
-python scripts/run_review.py <Harbor题包目录> \
-  --audit-output-dir <外部审计目录> \
-  --agent-contract-assessment <assessment.json>
+python scripts/run_review.py --run-dir <run-dir>
+```
+
+`AGENT_CONTRACT_PENDING` is emitted only when every D1-D6 status is an eligible
+unavailable wiring gap and there is no machine `FAIL`, proven/blocking finding,
+required queue, Hard Gate, usable runtime contradiction, OPEN Agent-quality
+finding, or other real defect. It remains the narrow unavailable-machine-contract
+overlay only — never a substitute for repairable Agent-quality queue entries.
+Otherwise Review finalizes the authoritative non-PASS verdict (`CONDITIONAL` or
+`REJECT` as applicable). A pending result is `NOT_ASSESSABLE`, has
+`publishable=false`, and has no final audit bundle. Contract pending is only
+reachable after the paper Agent assessment has already validated.
+
+For an eligible contract pause, Review writes run-local
+`agent_contract/request.json`; the same Review Agent places its assessment at
+`agent_contract/assessment.json` and resumes the same run:
+
+```bash
+python scripts/run_review.py --run-dir <run-dir>
 ```
 
 Resume validates bindings, reuses persisted probes, and does not rerun
-deterministic preparation.
+deterministic preparation. Equal-depth Repair re-audits must inherit the same
+validated paper assessment through the restricted internal Review API; there is
+no deterministic-only fallback.
 
 ## Output roles and checker audit
 
@@ -129,21 +160,20 @@ solution, or metadata as evidence. Semantic changes require type-matched
 `ASSISTED_FIX`; otherwise use `ABANDON`/`BLOCKED_EVIDENCE`.
 See [references/scoring-rubric.md](references/scoring-rubric.md).
 
-## Run and external-output policy
+## Run policy
 
-Write taxonomy and paper assessments outside the package, then run:
+The main Agent creates a run for an explicit `package_id`; Review receives only
+that directory. Put Agent assessments inside the run (`agent_assessment.json`
+or `agent_contract/assessment.json`) and run:
 
 ```bash
-python scripts/run_review.py <Harbor题包目录> \
-  --audit-output-dir <外部审计目录> \
-  --agent-assessment <assessment.json> \
-  --attestation-output <external.json>
+python scripts/run_review.py --run-dir <run-dir>
 ```
 
-The default output is `<topic>/review_outputs/<paper-id>/`; explicit output
-directories must be external and non-overwriting. No fixture manifest or
-independent result directory is accepted. Generated probes and attestations
-remain external. Attestations bind the audit and external-input hashes.
+The run owns `snapshot/`, `audit/`, `agent_contract/`, `status.json` and
+`roots/A0.json`; no independent output directory is accepted. Generated probes
+and attestations remain inside the run, and the main Agent alone updates
+tracking after all assigned runs finish.
 
 Each Review acquires an atomic owner lock for the canonical output root before
 preflight or probes. The lock records an immutable run ID, PID, and
