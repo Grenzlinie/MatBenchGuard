@@ -438,6 +438,7 @@ def build_complete_open_repair_queue(
             ),
         }
         for item in required
+        if item.get("lane") != "agent_quality"
     ]
     agent_entries = build_agent_repair_findings(findings)
     open_findings = d_entries + agent_entries

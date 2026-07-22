@@ -31,10 +31,12 @@ def unavailable_machine_contract() -> dict[str, object]:
 
 def valid_contract_assessment(
     machine: dict[str, object],
+    *,
+    d6_status: str = "PASS",
 ) -> dict[str, object]:
     checks = {
         check_id: {
-            "status": "PASS" if check_id == "D6" else "NOT_PROVEN",
+            "status": d6_status if check_id == "D6" else "NOT_PROVEN",
             "rationale": f"{check_id} contract wiring is established",
             "evidence": (
                 [
@@ -42,11 +44,24 @@ def valid_contract_assessment(
                         "source_kind": "DETERMINISTIC_PROBE_ARTIFACT",
                         "path": "deterministic_core/probe_results.json",
                         "scope": "CONTRACT_WIRING",
-                        "artifact_digest": "sha256:probe",
+                        "claim": claim,
+                        "quote": f'"{claim}": "PROVEN"',
+                        "artifact_digest": "sha256:" + "1" * 64,
                     }
+                    for claim in agent_contract_wiring.D6_CHAIN_STATES
                 ]
                 if check_id == "D6"
                 else []
+            ),
+            **(
+                {
+                    "chain_states": {
+                        name: "PROVEN"
+                        for name in agent_contract_wiring.D6_CHAIN_STATES
+                    }
+                }
+                if check_id == "D6" and d6_status == "PASS"
+                else {}
             ),
         }
         for check_id in deterministic_contract.CHECK_IDS
@@ -63,6 +78,22 @@ class MaterialsReviewAgentContractResumeTests(unittest.TestCase):
         self.assertTrue(
             run_review.agent_contract_pending_eligible(
                 machine, clean_context
+            )
+        )
+        quality_context = {
+            "hard_gates": [],
+            "findings": [
+                {
+                    "lane": "agent_quality",
+                    "status": "OPEN",
+                    "severity": "HIGH",
+                    "repairable": True,
+                }
+            ],
+        }
+        self.assertTrue(
+            run_review.agent_contract_pending_eligible(
+                machine, quality_context
             )
         )
 
@@ -253,7 +284,53 @@ class MaterialsReviewAgentContractResumeTests(unittest.TestCase):
                 )
                 request_path = output / "agent_contract/request.json"
                 self.assertTrue(request_path.is_file())
+                request = json.loads(request_path.read_text(encoding="utf-8"))
+                self.assertEqual(
+                    request["assessment_statuses"]["D6"],
+                    ["PASS", "REPAIR_REQUIRED", "NOT_PROVEN"],
+                )
+                self.assertIn(
+                    "tests/checker.py", request["d6_evidence_sources"]
+                )
+                self.assertEqual(
+                    request["d6_chain_state_claims"],
+                    list(agent_contract_wiring.D6_CHAIN_STATES),
+                )
+                self.assertEqual(
+                    request["d6_evidence_contract"][
+                        "pass_required_claims"
+                    ],
+                    "ALL_FIVE_PROVEN_STATES",
+                )
                 self.assertEqual(calls, {"static": 1, "dynamic": 1, "resources": 1})
+
+                not_proven_path = root / "not-proven-assessment.json"
+                not_proven_path.write_text(
+                    json.dumps(
+                        valid_contract_assessment(
+                            machine, d6_status="NOT_PROVEN"
+                        )
+                    ),
+                    encoding="utf-8",
+                )
+                inconclusive = run_review.run_review(
+                    package,
+                    audit_output_dir=output,
+                    agent_contract_assessment_path=not_proven_path,
+                )
+                self.assertEqual(
+                    inconclusive["status"], "AGENT_CONTRACT_PENDING"
+                )
+                self.assertEqual(
+                    inconclusive["agent_contract_status"], "NOT_PROVEN"
+                )
+                self.assertEqual(
+                    inconclusive["publishability"], "EVIDENCE_PENDING"
+                )
+                self.assertTrue(request_path.is_file())
+                self.assertEqual(
+                    calls, {"static": 1, "dynamic": 1, "resources": 1}
+                )
 
                 assessment_path = root / "contract-assessment.json"
                 assessment_path.write_text(

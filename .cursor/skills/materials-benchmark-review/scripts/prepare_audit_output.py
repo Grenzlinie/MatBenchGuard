@@ -250,6 +250,31 @@ def write_agent_contract_request(
         "assessment_schema_version": AGENT_CONTRACT_ASSESSMENT_SCHEMA_VERSION,
         "assessment_lane": "deterministic_core",
         "assessment_checks": ["D1", "D2", "D3", "D4", "D5", "D6"],
+        "assessment_statuses": {
+            "D1-D5": ["PASS", "NOT_PROVEN"],
+            "D6": ["PASS", "REPAIR_REQUIRED", "NOT_PROVEN"],
+        },
+        "d6_evidence_sources": [
+            "instruction.md",
+            "tests/**/grading_spec",
+            "tests/checker.py",
+            "deterministic_core/**",
+            "deterministic_probe_artifacts/**",
+        ],
+        "d6_chain_state_claims": [
+            "content_read",
+            "scorer_binding",
+            "positive_effective_weight",
+            "finite_return",
+            "final_reward",
+        ],
+        "d6_evidence_contract": {
+            "claim_cardinality": "ONE_CANONICAL_STATE_PER_ITEM",
+            "exact_quote_or_excerpt_required": True,
+            "source_sha256_required": True,
+            "pass_required_claims": "ALL_FIVE_PROVEN_STATES",
+            "repair_required_claims": "EVERY_FAILED_STATE",
+        },
         "assessment_digest": None,
         "request_digest": None,
     }
@@ -293,6 +318,35 @@ def validate_agent_contract_request(
         or request.get("assessment_lane") != "deterministic_core"
         or request.get("assessment_checks")
         != ["D1", "D2", "D3", "D4", "D5", "D6"]
+        or request.get("assessment_statuses")
+        != {
+            "D1-D5": ["PASS", "NOT_PROVEN"],
+            "D6": ["PASS", "REPAIR_REQUIRED", "NOT_PROVEN"],
+        }
+        or request.get("d6_evidence_sources")
+        != [
+            "instruction.md",
+            "tests/**/grading_spec",
+            "tests/checker.py",
+            "deterministic_core/**",
+            "deterministic_probe_artifacts/**",
+        ]
+        or request.get("d6_chain_state_claims")
+        != [
+            "content_read",
+            "scorer_binding",
+            "positive_effective_weight",
+            "finite_return",
+            "final_reward",
+        ]
+        or request.get("d6_evidence_contract")
+        != {
+            "claim_cardinality": "ONE_CANONICAL_STATE_PER_ITEM",
+            "exact_quote_or_excerpt_required": True,
+            "source_sha256_required": True,
+            "pass_required_claims": "ALL_FIVE_PROVEN_STATES",
+            "repair_required_claims": "EVERY_FAILED_STATE",
+        }
     ):
         raise ValueError("agent contract request assessment schema is invalid")
     expected_digest = canonical_mapping_hash(

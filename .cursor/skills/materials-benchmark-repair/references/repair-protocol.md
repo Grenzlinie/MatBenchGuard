@@ -126,7 +126,9 @@ Publication requires `PASS`, score at least 80, effective deterministic
 unresolved HIGH/FATAL finding, every target finding resolved, and exactly one
 re-audit. Preserve a complete external history/bundle for every non-pending
 outcome. A pending `AGENT_CONTRACT_PENDING` workspace is retained for resume
-and is not a terminal repair bundle.
+and is not a terminal repair bundle. D6 `NOT_PROVEN` keeps that same pending
+candidate/workspace, consumes no semantic attempt, and never becomes FAILED or
+ABANDONED.
 
 The semantic attempt limit is two completed re-audits per `audit_id`; setup,
 Docker, regression, apply, and Review control failures do not consume it.

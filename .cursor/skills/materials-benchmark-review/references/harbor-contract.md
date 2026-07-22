@@ -25,10 +25,10 @@ repair summary, registry version, and `contract_digest`.
 
 When the machine repair summary is `NOT_APPLICABLE`, Review may persist
 `agent_contract/request.json` with schema
-`materials-agent-contract-request/1.0` and status
+`materials-agent-contract-request/1.1` and status
 `AGENT_CONTRACT_PENDING`. The request binds the package, Review implementation,
 static/probe artifacts, and machine contract. A supplied assessment uses schema
-`materials-agent-contract-assessment/1.0`, lane `deterministic_core`, D1–D6 in
+`materials-agent-contract-assessment/1.1`, lane `deterministic_core`, D1–D6 in
 order, and per-check status `PASS` or `NOT_PROVEN`. It must bind the machine
 schema, registry, and digest.
 
@@ -105,11 +105,12 @@ reclassified as `not-assessable`. Direct `checker.py` execution, when used for
 a narrow diagnostic, remains an audit harness and is not a separate runtime
 provenance label.
 Process artifacts are contract-map-only and are not a top-level probe class.
-Complete/full models, structures, trajectories, prediction fields, and meshes
-remain core even when mislabeled process; record the contradiction as
-`UNCLASSIFIED` while retaining core checker analysis. Only non-load-bearing
-logs/intermediates are process-only. Ignoring a core output or checking only
-file existence is `CHECKER_CORE_TASK_UNASSESSED`.
+Explicit `Role:` / `Purpose:` values control output classification:
+`scored*` (and compatible `core*` / `final*` aliases) is core, while
+`process*` is process-only. Words such as complete, full, load-bearing, model,
+structure, trajectory, field, or mesh never promote a process output into D6.
+Ignoring a scored core output or checking only file existence is
+`CHECKER_CORE_TASK_UNASSESSED`.
 
 If `solution/solve.sh` exists, the complete solution role is first copied into
 a separate disposable workspace. It receives `OUTPUT_DIR`; generated

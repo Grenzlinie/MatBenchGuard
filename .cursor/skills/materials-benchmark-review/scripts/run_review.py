@@ -703,6 +703,9 @@ def _pending_result(
         "status": AGENT_CONTRACT_PENDING,
         "review_status": AGENT_CONTRACT_PENDING,
         "verdict": "NOT_ASSESSABLE",
+        "review_verdict": "NOT_ASSESSABLE",
+        "disposition": "NOT_ASSESSABLE",
+        "publishability": "EVIDENCE_PENDING",
         "publishable": False,
         "deterministic_status": "NOT_APPLICABLE",
         "machine_contract_digest": request.get("machine_contract_digest"),
@@ -774,6 +777,7 @@ def agent_contract_pending_eligible(
         return False
     if not any(
         isinstance(check, dict)
+        and check.get("check_id") == "D6"
         and check.get("status") in UNAVAILABLE_CHECK_STATUSES
         for check in checks
     ):
@@ -802,11 +806,9 @@ def agent_contract_pending_eligible(
             continue
         lane = finding.get("lane")
         if lane in {"agent_quality", "quality_results"}:
-            # Agent-quality defects are real Review outcomes; they keep
-            # AGENT_CONTRACT_PENDING as the narrow unavailable-machine-contract
-            # overlay only.
-            if finding.get("status", "OPEN") == "OPEN":
-                return False
+            # This fallback answers only D6 scoring-chain availability.
+            # Unrelated Agent-quality findings remain in the queue after D6 is
+            # resolved and therefore must not suppress the request.
             continue
         if lane != "deterministic_core":
             continue
@@ -1034,6 +1036,28 @@ def _run_review_locked(
             raise ValueError(
                 "agent contract resume machine contract digest is stale"
             )
+        unavailable_not_proven = any(
+            item.get("status") == "NOT_PROVEN"
+            and next(
+                (
+                    check.get("status")
+                    for check in machine_contract.get("checks", [])
+                    if check.get("check_id") == item.get("check_id")
+                ),
+                None,
+            )
+            in UNAVAILABLE_CHECK_STATUSES
+            for item in agent_contract_assessment.get("checks", [])
+            if isinstance(item, dict)
+        )
+        if pending_request is not None and unavailable_not_proven:
+            pending = _pending_result(root, output_dir, pending_request)
+            pending["agent_contract_status"] = "NOT_PROVEN"
+            pending["message"] = (
+                "Agent D6 assessment did not prove the scoring chain. "
+                "The prepared Review remains EVIDENCE_PENDING and resumable."
+            )
+            return pending
     elif agent_contract_pending_eligible(machine_contract, report):
         request = write_agent_contract_request(
             root, temp_dir, machine_contract

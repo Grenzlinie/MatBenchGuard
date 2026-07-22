@@ -236,7 +236,7 @@ reward = 1.0 if Path("/app/outputs/structure.cif").exists() else 0.0
         self.assertEqual(with_statuses["duplicate_structure"], "ASSESSED")
         self.assertEqual(with_statuses["missing_core_model"], "ASSESSED")
 
-    def test_process_label_cannot_downgrade_load_bearing_core_outputs(self) -> None:
+    def test_explicit_process_role_is_never_promoted_by_keywords(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             package = Path(temporary) / SOURCE_PACKAGE.name
             copy_source_package(package)
@@ -266,31 +266,41 @@ reward = 1.0 if Path("/app/outputs/structure.cif").exists() else 0.0
         contract_map = static["contract_map"]
         self.assertEqual(
             contract_map["process_evidence"],
-            ["process.log"],
+            [
+                "crystal_structure.cif",
+                "predictive_model.bin",
+                "process.log",
+            ],
         )
-        self.assertEqual(
-            contract_map["core_outputs"],
-            ["crystal_structure.cif", "predictive_model.bin"],
-        )
+        self.assertEqual(contract_map["core_outputs"], [])
         self.assertEqual(
             [
                 requirement["classification"]
                 for requirement in contract_map["requirements"]
             ],
-            ["UNCLASSIFIED", "UNCLASSIFIED", "PROCESS_ONLY"],
+            ["PROCESS_ONLY", "PROCESS_ONLY", "PROCESS_ONLY"],
         )
         finding_codes = {item["code"] for item in static["issues"]}
-        self.assertIn("CONTRADICTORY_OUTPUT_ROLE", finding_codes)
+        self.assertNotIn("CONTRADICTORY_OUTPUT_ROLE", finding_codes)
         severe = [
             item
             for item in static["issues"]
             if item["code"] == "CHECKER_CORE_TASK_UNASSESSED"
         ]
-        self.assertTrue(all(item["severity"] == "FATAL" for item in severe))
-        messages = " ".join(item["message"] for item in severe)
-        self.assertIn("predictive_model.bin", messages)
-        self.assertIn("crystal_structure.cif", messages)
-        self.assertNotIn("process.log", messages)
+        self.assertEqual(severe, [])
+
+    def test_scored_role_enters_d6_core_outputs(self) -> None:
+        contract_map = audit_package.instruction_contract_map(
+            """
+### Step 1: Save a trajectory
+- Purpose: scored
+- Output file: `/app/outputs/trajectory.xyz`
+"""
+        )
+        self.assertEqual(contract_map["core_outputs"], ["trajectory.xyz"])
+        self.assertEqual(
+            contract_map["requirements"][0]["classification"], "CORE_OUTPUT"
+        )
 
     def test_missing_harbor_verifier_entrypoint_skips_direct_probes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

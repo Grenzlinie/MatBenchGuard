@@ -27,13 +27,18 @@ from deterministic_contract import (
 )
 
 
-AGENT_CONTRACT_STATUSES = frozenset({"PASS", "NOT_PROVEN"})
+AGENT_CONTRACT_STATUSES = frozenset({"PASS", "NOT_PROVEN", "REPAIR_REQUIRED"})
 AGENT_CONTRACT_LANE = "deterministic_core"
 AGENT_PROVENANCE_SOURCE = "EXTERNAL_AGENT_ASSESSMENT"
 CONTRACT_WIRING_SCOPE = "CONTRACT_WIRING"
 
 ALLOWED_EVIDENCE_SOURCE_KINDS = frozenset(
-    {"INSTRUCTION", "GRADING_SPEC", "DETERMINISTIC_PROBE_ARTIFACT"}
+    {
+        "INSTRUCTION",
+        "GRADING_SPEC",
+        "CHECKER_SOURCE",
+        "DETERMINISTIC_PROBE_ARTIFACT",
+    }
 )
 ALLOWED_EVIDENCE_SCOPES = frozenset(
     {"CONTRACT_WIRING", "DETERMINISTIC_CONTRACT"}
@@ -72,6 +77,14 @@ _PROBE_PATH_PREFIXES = (
 _PROBE_FILE_NAMES = frozenset(
     {"probe_results.json", "report.json", "probe_artifacts.json"}
 )
+D6_CHAIN_STATES = (
+    "content_read",
+    "scorer_binding",
+    "positive_effective_weight",
+    "finite_return",
+    "final_reward",
+)
+_SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 _EVIDENCE_ALLOWED_KEYS = frozenset(
     {
         "id",
@@ -103,7 +116,15 @@ _ASSESSMENT_ALLOWED_KEYS = frozenset(
     }
 )
 _CHECK_ASSESSMENT_ALLOWED_KEYS = frozenset(
-    {"check_id", "status", "rationale", "scope", "claim_scope", "evidence"}
+    {
+        "check_id",
+        "status",
+        "rationale",
+        "scope",
+        "claim_scope",
+        "evidence",
+        "chain_states",
+    }
 )
 
 
@@ -166,6 +187,8 @@ def _canonical_source_kind(value: Any, path: str) -> str:
             return normalized
     if path == "instruction.md":
         return "INSTRUCTION"
+    if path == "tests/checker.py":
+        return "CHECKER_SOURCE"
     if _GRADING_SPEC_PATH.fullmatch(path):
         return "GRADING_SPEC"
     if any(path.startswith(prefix) for prefix in _PROBE_PATH_PREFIXES):
@@ -198,9 +221,8 @@ def validate_contract_evidence(value: Any, *, context: str = "evidence") -> dict
     """Validate one source-bound contract-wiring evidence item.
 
     The accepted package surface is intentionally narrower than the general
-    review evidence boundary.  In particular, ``tests/checker.py`` is not
-    accepted here; deterministic probe artifacts are the only non-declaration
-    input allowed.
+    review evidence boundary. ``tests/checker.py`` is accepted only by the D6
+    assessment; all other checks remain declaration/probe-only.
     """
 
     if not isinstance(value, dict):
@@ -229,6 +251,8 @@ def validate_contract_evidence(value: Any, *, context: str = "evidence") -> dict
         raise ValueError(f"{context} instruction evidence path is invalid")
     if source_kind == "GRADING_SPEC" and not _GRADING_SPEC_PATH.fullmatch(path):
         raise ValueError(f"{context} grading-spec evidence path is invalid")
+    if source_kind == "CHECKER_SOURCE" and path != "tests/checker.py":
+        raise ValueError(f"{context} checker evidence path is invalid")
     if source_kind == "DETERMINISTIC_PROBE_ARTIFACT" and not (
         any(path.startswith(prefix) for prefix in _PROBE_PATH_PREFIXES)
         and (
@@ -264,10 +288,75 @@ def _validate_provenance(value: Any) -> dict[str, Any]:
     return deepcopy(value)
 
 
+def _validate_d6_chain_states(
+    value: Any, *, status: str, context: str
+) -> dict[str, str] | None:
+    if status not in {"PASS", "REPAIR_REQUIRED"}:
+        if value is not None:
+            raise ValueError(f"{context} chain_states are only legal for a conclusive D6 result")
+        return None
+    if not isinstance(value, dict) or set(value) != set(D6_CHAIN_STATES):
+        raise ValueError(
+            f"{context} requires exactly the five D6 scoring-chain states"
+        )
+    expected = "PROVEN" if status == "PASS" else None
+    normalized: dict[str, str] = {}
+    for name in D6_CHAIN_STATES:
+        state = str(value.get(name, "")).strip().upper()
+        if state not in {"PROVEN", "FAILED"}:
+            raise ValueError(f"{context} {name} must be PROVEN or FAILED")
+        if expected is not None and state != expected:
+            raise ValueError(f"{context} PASS requires all five states PROVEN")
+        normalized[name] = state
+    if status == "REPAIR_REQUIRED" and "FAILED" not in normalized.values():
+        raise ValueError(f"{context} REPAIR_REQUIRED must identify a failed state")
+    return normalized
+
+
+def _validate_d6_evidence_coverage(
+    evidence: list[dict[str, Any]],
+    chain_states: dict[str, str],
+    *,
+    status: str,
+    context: str,
+) -> None:
+    required_claims = (
+        set(D6_CHAIN_STATES)
+        if status == "PASS"
+        else {
+            name for name, state in chain_states.items() if state == "FAILED"
+        }
+    )
+    covered: set[str] = set()
+    for index, item in enumerate(evidence, start=1):
+        claim = item.get("claim")
+        if claim not in D6_CHAIN_STATES:
+            raise ValueError(
+                f"{context} evidence {index} claim must be one canonical "
+                "D6 scoring-chain state"
+            )
+        quote = item.get("quote", item.get("excerpt"))
+        if not _non_empty_string(quote):
+            raise ValueError(
+                f"{context} evidence {index} requires an exact quote or excerpt"
+            )
+        digest = item.get("sha256", item.get("artifact_digest"))
+        if not isinstance(digest, str) or not _SHA256_RE.fullmatch(digest):
+            raise ValueError(
+                f"{context} evidence {index} requires a canonical sha256 binding"
+            )
+        covered.add(claim)
+    missing = sorted(required_claims - covered)
+    if missing:
+        raise ValueError(
+            f"{context} evidence does not cover asserted chain states: {missing}"
+        )
+
+
 def validate_agent_contract_assessment(
     assessment: Any, machine_contract: dict[str, Any]
 ) -> dict[str, Any]:
-    """Validate an external per-check PASS/NOT_PROVEN assessment."""
+    """Validate an external contract assessment with a narrow D6 fallback."""
 
     machine = validate_deterministic_contract(machine_contract)
     if not isinstance(assessment, dict):
@@ -308,6 +397,11 @@ def validate_agent_contract_assessment(
             )
         if item.get("status") not in AGENT_CONTRACT_STATUSES:
             raise ValueError("agent contract check status is invalid")
+        if (
+            item.get("status") == "REPAIR_REQUIRED"
+            and item.get("check_id") != "D6"
+        ):
+            raise ValueError("REPAIR_REQUIRED is legal only for D6")
         scope = item.get("claim_scope", item.get("scope"))
         if scope is None:
             scope = CONTRACT_WIRING_SCOPE
@@ -317,6 +411,12 @@ def validate_agent_contract_assessment(
             raise ValueError(
                 f"{item['check_id']} agent contract rationale is required"
             )
+        forbidden_rationale = _contains_forbidden_scope(rationale)
+        if forbidden_rationale is not None:
+            raise ValueError(
+                f"{item['check_id']} rationale adjudicates forbidden "
+                f"scope: {forbidden_rationale}"
+            )
         evidence = item.get("evidence", [])
         if not isinstance(evidence, list):
             raise ValueError(f"{item['check_id']} contract evidence must be a list")
@@ -324,21 +424,42 @@ def validate_agent_contract_assessment(
             raise ValueError(
                 f"{item['check_id']} PASS requires contract evidence"
             )
-        normalized_checks.append(
-            {
+        normalized_evidence = [
+            validate_contract_evidence(
+                evidence_item,
+                context=f"{item['check_id']} evidence {index}",
+            )
+            for index, evidence_item in enumerate(evidence, start=1)
+        ]
+        if item["check_id"] != "D6" and any(
+            evidence_item.get("source_kind") == "CHECKER_SOURCE"
+            for evidence_item in normalized_evidence
+        ):
+            raise ValueError("tests/checker.py evidence is legal only for D6")
+        if item["status"] == "REPAIR_REQUIRED" and not normalized_evidence:
+            raise ValueError("D6 REPAIR_REQUIRED requires exact contract evidence")
+        chain_states = _validate_d6_chain_states(
+            item.get("chain_states"),
+            status=item["status"],
+            context=item["check_id"],
+        ) if item["check_id"] == "D6" else None
+        if chain_states is not None:
+            _validate_d6_evidence_coverage(
+                normalized_evidence,
+                chain_states,
+                status=item["status"],
+                context=item["check_id"],
+            )
+        normalized_item = {
                 "check_id": item["check_id"],
                 "status": item["status"],
                 "scope": scope,
                 "rationale": rationale.strip(),
-                "evidence": [
-                    validate_contract_evidence(
-                        evidence_item,
-                        context=f"{item['check_id']} evidence {index}",
-                    )
-                    for index, evidence_item in enumerate(evidence, start=1)
-                ],
+                "evidence": normalized_evidence,
             }
-        )
+        if chain_states is not None:
+            normalized_item["chain_states"] = chain_states
+        normalized_checks.append(normalized_item)
 
     normalized = {
         "schema_version": assessment["schema_version"],
@@ -401,6 +522,11 @@ def make_agent_contract_assessment(
                     )
                     for index, evidence_item in enumerate(evidence, start=1)
                 ],
+                **(
+                    {"chain_states": item.get("chain_states")}
+                    if item.get("chain_states") is not None
+                    else {}
+                ),
             }
         )
     value: dict[str, Any] = {
@@ -578,11 +704,14 @@ def check_eligibility(
 
 
 def _effective_repair_summary(
-    machine: dict[str, Any], checks: list[dict[str, Any]]
+    machine: dict[str, Any],
+    checks: list[dict[str, Any]],
+    overlay_repair_findings: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     required_findings = deepcopy(
         machine["repair_summary"].get("required_findings", [])
     )
+    required_findings.extend(deepcopy(overlay_repair_findings or []))
     required_ids = [
         item["finding_id"]
         for item in required_findings
@@ -630,6 +759,7 @@ def derive_effective_contract(
     runtime_contradictions: Any = None,
     dependency_failures: Any = None,
     agent_quality_findings: Any = None,
+    overlay_repair_findings: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Derive an effective contract without changing machine evidence.
 
@@ -670,6 +800,10 @@ def derive_effective_contract(
         item["effective_status"] = status
         item["machine_reason"] = original.get("reason")
         item["adjudication_status"] = agent_item["status"]
+        if "chain_states" in agent_item:
+            item["adjudication_chain_states"] = deepcopy(
+                agent_item["chain_states"]
+            )
         item["adjudication_scope"] = agent_item["scope"]
         item["adjudication_applied"] = applied
         item["adjudication_eligibility"] = eligibility
@@ -702,7 +836,7 @@ def derive_effective_contract(
         },
         "checks": effective_checks,
         "repair_summary": _effective_repair_summary(
-            machine, effective_checks
+            machine, effective_checks, overlay_repair_findings
         ),
         "adjudication": {
             "schema_version": adjudication["schema_version"],
@@ -725,6 +859,9 @@ def derive_effective_contract(
                 "agent_quality_findings_supplied": bool(agent_quality_findings),
                 "machine_findings_preserved": True,
             },
+            "overlay_repair_findings": deepcopy(
+                overlay_repair_findings or []
+            ),
         },
         "effective_contract_digest": None,
     }
@@ -839,8 +976,22 @@ def validate_effective_contract(value: Any) -> dict[str, Any]:
     ):
         raise ValueError("effective lane isolation is invalid")
 
+    overlay_repair_findings = adjudication.get("overlay_repair_findings", [])
+    if not isinstance(overlay_repair_findings, list):
+        raise ValueError("effective overlay repair findings are invalid")
+    for finding in overlay_repair_findings:
+        if (
+            not isinstance(finding, dict)
+            or finding.get("lane") != "agent_quality"
+            or finding.get("deterministic_check") is not None
+            or finding.get("status") != "OPEN"
+            or finding.get("repairable") is not True
+        ):
+            raise ValueError("effective D6 overlay repair finding is invalid")
     summary = value.get("repair_summary")
-    expected_summary = _effective_repair_summary(machine, checks)
+    expected_summary = _effective_repair_summary(
+        machine, checks, overlay_repair_findings
+    )
     if summary != expected_summary:
         raise ValueError("effective repair summary is stale")
     if value.get("effective_contract_digest") != effective_contract_digest(value):

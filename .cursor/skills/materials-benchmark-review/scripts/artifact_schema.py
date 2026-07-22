@@ -24,10 +24,10 @@ CHECKER_TESTS_SCHEMA_VERSION = "materials-checker-tests/2.0"
 RESOURCE_CHECKS_SCHEMA_VERSION = "materials-resource-checks/2.0"
 AGENT_ASSESSMENT_SCHEMA_VERSION = "materials-agent-assessment/2.0"
 AGENT_CONTRACT_ASSESSMENT_SCHEMA_VERSION = (
-    "materials-agent-contract-assessment/1.0"
+    "materials-agent-contract-assessment/1.1"
 )
 AGENT_CONTRACT_REQUEST_SCHEMA_VERSION = (
-    "materials-agent-contract-request/1.0"
+    "materials-agent-contract-request/1.1"
 )
 EFFECTIVE_DETERMINISTIC_CONTRACT_SCHEMA_VERSION = (
     "materials-effective-deterministic-contract/1.0"

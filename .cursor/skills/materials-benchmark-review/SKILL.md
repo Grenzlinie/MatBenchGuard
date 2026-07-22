@@ -65,18 +65,24 @@ deterministic publication; Agent checker-fairness, scoring semantics,
 direct-input, science, and paper-grounded instruction repairs require
 equal-depth re-audit.
 
-The optional `materials-agent-contract-assessment/1.0` is a separate,
+The optional `materials-agent-contract-assessment/1.1` is a separate,
 contract-only overlay. It is lane `deterministic_core`, binds machine schema,
-registry, and digest, and supplies D1-D6 in order as `PASS` or `NOT_PROVEN`.
+registry, and digest, and supplies D1-D6 in order as `PASS` or `NOT_PROVEN`;
+`REPAIR_REQUIRED` is additionally legal only for eligible unavailable D6.
 Accepted evidence is limited to `instruction.md`,
-`tests/**/grading_spec` (and optional extension), and deterministic probe
-artifacts under `deterministic_core/` or
-`deterministic_probe_artifacts/`. Scope is `CONTRACT_WIRING` or
+`tests/**/grading_spec` (and optional extension), deterministic probe artifacts
+under `deterministic_core/` or `deterministic_probe_artifacts/`, and—only for
+D6 scoring-chain facts—`tests/checker.py`. Scope is `CONTRACT_WIRING` or
 `DETERMINISTIC_CONTRACT`.
+Conclusive D6 evidence uses one canonical `claim` per cited fact:
+`content_read`, `scorer_binding`, `positive_effective_weight`, `finite_return`,
+or `final_reward`. PASS covers all five; REPAIR_REQUIRED covers every FAILED
+state with an exact quote/excerpt and sha256 binding.
 
 The overlay must not use `paper/`, `solution/`, Oracle output, metadata,
-`tests/checker.py`, Agent-quality evidence, Gold, targets, tolerances, formulas,
-units, thresholds, or scoring-direction claims. It may apply only to an
+Agent-quality evidence, Gold, targets, tolerances, formulas, units, thresholds,
+or scoring-direction claims. Checker source is restricted to the five D6
+scoring-chain states. It may apply only to an
 unavailable (`BLOCKED`/`NOT_ASSESSABLE`) check with no proven or blocking
 finding, dependency failure, missing input, Hard Gate, or usable runtime
 contradiction. It cannot override machine `FAIL` or any machine fact.
@@ -100,11 +106,12 @@ tracking. Supply the assessment in the same run and resume:
 python scripts/run_review.py --run-dir <run-dir>
 ```
 
-`AGENT_CONTRACT_PENDING` is emitted only when every D1-D6 status is an eligible
-unavailable wiring gap and there is no machine `FAIL`, proven/blocking finding,
-required queue, Hard Gate, usable runtime contradiction, OPEN Agent-quality
-finding, or other real defect. It remains the narrow unavailable-machine-contract
-overlay only — never a substitute for repairable Agent-quality queue entries.
+`AGENT_CONTRACT_PENDING` is emitted when D6 is an eligible unavailable
+scoring-chain gap and there is no machine `FAIL`, proven/blocking D finding,
+required machine queue, Hard Gate, usable runtime contradiction, or other
+machine defect. An unrelated OPEN Agent-quality finding does not suppress the
+D6 request; it remains in the queue and may route the completed Review to
+Repair after effective D6 PASS.
 Otherwise Review finalizes the authoritative non-PASS verdict (`CONDITIONAL` or
 `REJECT` as applicable). A pending result is `NOT_ASSESSABLE`, has
 `publishable=false`, and has no final audit bundle. Contract pending is only
@@ -125,18 +132,20 @@ no deterministic-only fallback.
 
 ## Output roles and checker audit
 
-Map every workflow requirement as:
+Map every workflow requirement from its explicit `Role:` or `Purpose:` as:
 
 ```text
 instruction requirement → Agent work/action → declared core output
 → checker reads → checker scores in final reward
 ```
 
-Use `CORE_OUTPUT`, `PROCESS_ONLY`, or `UNCLASSIFIED`. Process artifacts remain
-contract-map-only: they are excluded from probe classes, weights, deductions,
-gates, and anti-hacking traces. Complete models, structures, trajectories,
-fields, and meshes remain core even when mislabeled process. An ignored core
-output is `CHECKER_CORE_TASK_UNASSESSED`.
+Use `CORE_OUTPUT`, `PROCESS_ONLY`, or `UNCLASSIFIED`. `scored*` (plus compatible
+`core*` / `final*` aliases) maps to `CORE_OUTPUT`; `process*` maps to
+`PROCESS_ONLY`. Process artifacts remain contract-map-only: they are excluded
+from D6, probe classes, weights, deductions, gates, and anti-hacking traces.
+Descriptive words such as complete, full, load-bearing, model, structure, or
+trajectory never promote a process output. An ignored scored core output is
+`CHECKER_CORE_TASK_UNASSESSED`.
 
 For each scored output record content-read, scorer binding, non-zero effective
 weight, and final-reward use. Combine static mapping with sandbox probes for

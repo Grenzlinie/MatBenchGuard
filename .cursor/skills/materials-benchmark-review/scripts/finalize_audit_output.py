@@ -2190,6 +2190,51 @@ def write_disposition_artifacts(
     )
 
 
+def _validate_conclusive_d6_source_bindings(
+    root: Path,
+    temp_dir: Path,
+    assessment: dict[str, Any],
+) -> None:
+    d6 = next(
+        (
+            item
+            for item in assessment.get("checks", [])
+            if isinstance(item, dict) and item.get("check_id") == "D6"
+        ),
+        None,
+    )
+    if not isinstance(d6, dict) or d6.get("status") not in {
+        "PASS",
+        "REPAIR_REQUIRED",
+    }:
+        return
+    for index, evidence in enumerate(d6.get("evidence", []), start=1):
+        path = evidence.get("path")
+        quote = evidence.get("quote", evidence.get("excerpt"))
+        if not isinstance(path, str) or not isinstance(quote, str):
+            raise ValueError(
+                f"D6 evidence {index} lacks an exact source binding"
+            )
+        source = (
+            temp_dir / path
+            if path.startswith(
+                ("deterministic_core/", "deterministic_probe_artifacts/")
+            )
+            else root / path
+        )
+        if (
+            not source.is_file()
+            or source.is_symlink()
+            or quote not in source.read_text(encoding="utf-8", errors="replace")
+        ):
+            raise ValueError(f"D6 evidence {index} quote is stale")
+        supplied_hash = evidence.get(
+            "sha256", evidence.get("artifact_digest")
+        )
+        if supplied_hash != sha256_file(source):
+            raise ValueError(f"D6 evidence {index} source hash is stale")
+
+
 def synthesize_report(
     root: Path,
     temp_dir: Path,
@@ -2359,6 +2404,133 @@ def synthesize_report(
         package_roles=static_result.get("package_roles"),
         findings=findings,
     )
+    agent_d6_repair_findings: list[dict[str, Any]] = []
+    if agent_contract_assessment is not None:
+        _validate_conclusive_d6_source_bindings(
+            root, temp_dir, agent_contract_assessment
+        )
+        d6_assessment = next(
+            (
+                item
+                for item in agent_contract_assessment.get("checks", [])
+                if isinstance(item, dict) and item.get("check_id") == "D6"
+            ),
+            None,
+        )
+        if (
+            isinstance(d6_assessment, dict)
+            and d6_assessment.get("status") == "REPAIR_REQUIRED"
+        ):
+            machine_d6 = next(
+                item
+                for item in deterministic_contract["checks"]
+                if item["check_id"] == "D6"
+            )
+            if machine_d6.get("status") not in {
+                "BLOCKED",
+                "NOT_ASSESSABLE",
+            }:
+                raise ValueError(
+                    "D6 REPAIR_REQUIRED cannot overlay an assessable machine check"
+                )
+            citations: list[dict[str, Any]] = []
+            for evidence in d6_assessment.get("evidence", []):
+                path = evidence.get("path")
+                quote = evidence.get("quote", evidence.get("excerpt"))
+                if not isinstance(path, str) or not isinstance(quote, str) or not quote:
+                    raise ValueError(
+                        "D6 REPAIR_REQUIRED requires an exact checker/probe citation"
+                    )
+                if path == "tests/checker.py":
+                    source = root / path
+                    if not source.is_file() or quote not in source.read_text(
+                        encoding="utf-8", errors="replace"
+                    ):
+                        raise ValueError(
+                            "D6 REPAIR_REQUIRED checker citation is stale"
+                        )
+                    supplied_hash = evidence.get("sha256")
+                    actual_hash = sha256_file(source)
+                    if supplied_hash is not None and supplied_hash != actual_hash:
+                        raise ValueError(
+                            "D6 REPAIR_REQUIRED checker hash is stale"
+                        )
+                    citations.append(
+                        {
+                            "package_file": path,
+                            "package_quote": quote,
+                            "source_hash": actual_hash,
+                        }
+                    )
+                elif path.startswith(
+                    ("deterministic_core/", "deterministic_probe_artifacts/")
+                ):
+                    probe = temp_dir / path
+                    if not probe.is_file() or quote not in probe.read_text(
+                        encoding="utf-8", errors="replace"
+                    ):
+                        raise ValueError(
+                            "D6 REPAIR_REQUIRED probe citation is stale"
+                        )
+                    citations.append(
+                        {
+                            "file": path,
+                            "quote": quote,
+                            "source_hash": sha256_file(probe),
+                        }
+                    )
+            if not citations:
+                raise ValueError(
+                    "D6 REPAIR_REQUIRED requires checker.py or probe evidence"
+                )
+            identity = json.dumps(
+                {
+                    "machine": deterministic_contract["contract_digest"],
+                    "states": d6_assessment.get("chain_states"),
+                    "citations": citations,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+            finding_id = (
+                "AGENT-D6-SCORING-CHAIN-"
+                + hashlib.sha256(identity).hexdigest()[:16].upper()
+            )
+            source_finding = {
+                "finding_id": finding_id,
+                "severity": "HIGH",
+                "code": "AGENT_D6_SCORING_CHAIN_DEFECT",
+                "message": d6_assessment["rationale"],
+                "affected_files": sorted(
+                    {
+                        item["package_file"]
+                        for item in citations
+                        if "package_file" in item
+                    }
+                ),
+                "evidence": {
+                    "citations": citations,
+                    "chain_states": d6_assessment["chain_states"],
+                    "repair_scope": "SCORING_SEMANTICS",
+                    "machine_d6_status": machine_d6["status"],
+                },
+                "lane": "agent_quality",
+                "repairable": True,
+            }
+            normalized = normalized_finding(
+                root,
+                source_finding,
+                finding_id,
+                "AGENT",
+                "D6_SCORING_CHAIN",
+            )
+            normalized["repair_scope"] = "SCORING_SEMANTICS"
+            normalized["dimension"] = "C04"
+            normalized["deterministic_check"] = None
+            normalized["repair_lane"] = "agent_quality"
+            normalized["publication_hint"] = "REAUDIT_REQUIRED"
+            agent_d6_repair_findings.append(normalized)
+            findings.extend(agent_d6_repair_findings)
     paper_result = paper_consistency(
         agent_assessment,
         skip_reason=paper_skip_reason,
@@ -2454,6 +2626,7 @@ def synthesize_report(
                 for item in findings
                 if item.get("lane") in {"agent_quality", "quality_results"}
             ],
+            overlay_repair_findings=agent_d6_repair_findings,
         )
         validate_effective_contract(effective_contract)
     gate_contract = resolve_publication_contract(

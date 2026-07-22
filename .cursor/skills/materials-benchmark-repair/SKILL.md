@@ -35,19 +35,17 @@ assessments are rejected at ingress (legacy runs migrate per the Review
 `AGENT_ASSESSMENT_PENDING` path). Plan fields cannot replace that assessment.
 
 If equal-depth Review returns `AGENT_CONTRACT_PENDING`, preserve the candidate
-and workspace without consuming an attempt. The same run is resumed by its
-main Agent after placing the assessment in `agent_contract/assessment.json`:
+and workspace without consuming an attempt. Resume after placing the assessment:
 
 ```sh
 python scripts/run_repair.py --run-dir <run-dir>
 ```
 
-Pending has `status=AGENT_CONTRACT_PENDING`,
-`repair_state=AGENT_CONTRACT_PENDING`, `review_verdict=NOT_ASSESSABLE`,
-`publishability=EVIDENCE_PENDING`, `publishable=false`, and
-`attempt_consumed=false`. Resume validates package, plan, request, machine
-contract, probe, and workspace bindings; it reuses probes and creates no
-semantic attempt.
+Pending uses `review_verdict=NOT_ASSESSABLE`,
+`publishability=EVIDENCE_PENDING`, and `attempt_consumed=false`. Resume validates
+all package, plan, request, machine, probe, and workspace bindings.
+`NOT_PROVEN` preserves the candidate/workspace and consumes no attempt. D6
+`REPAIR_REQUIRED` is Agent-quality `SCORING_SEMANTICS` and always requires re-audit.
 
 ## Canonical run-local repair bundle
 
@@ -116,16 +114,8 @@ regressions without equal-depth Review, recording
 exactly one equal-depth re-audit that inherits the paper assessment. Direct
 publish does not consume the two-attempt re-audit budget.
 
-Place the plan as run-local `plan.json` (or an external path for harnesses)
-with:
-
-```json
-"agent_repair_assessment": {
-  "schema_version": "materials-agent-repair-assessment/1.0",
-  "path": "repair/agent_repair_assessment.json",
-  "assessment_hash": "sha256:..."
-}
-```
+Place the plan as run-local `plan.json`; its `agent_repair_assessment` object
+binds schema `materials-agent-repair-assessment/1.0`, run-local path, and hash.
 
 ## Plan, assessment, and AUTO_FIX contract
 
@@ -133,19 +123,15 @@ The machine contract remains authoritative. A contract-only assessment may
 overlay only an eligible unavailable (`BLOCKED`/`NOT_ASSESSABLE`) check. It
 cannot override machine `FAIL`, proven facts, blockers, missing-input
 failures, runtime contradictions, Hard Gates, or Agent-quality findings.
-Accepted evidence is only `instruction.md`, `tests/**/grading_spec` (with an
-optional extension), and deterministic probe artifacts. It cannot use paper,
-solution, Oracle, metadata, Gold, targets, tolerances, formulas, units,
-thresholds, or science-quality evidence for AUTO_FIX.
+Accepted evidence is `instruction.md`, grading specs, deterministic probes, and
+`tests/checker.py` strictly for D6 chain facts. It cannot use paper, solution,
+Oracle, metadata, Gold, targets, tolerances, formulas, units, thresholds, or
+science-quality evidence for AUTO_FIX.
 
 The autonomous decision set is `AUTO_FIX`, `ASSISTED_FIX`, `ABANDON`; there is
 no human approval state. `AUTO_FIX` is limited to unique, source-bound
-restoration of existing D1-D6 contract/scoring wiring:
-
-- synchronize an existing output declaration/path;
-- restore existing scorer registration, binding, return, or final-reward links;
-- restore a standard Harbor entrypoint around one existing producer;
-- normalize already-declared finite positive weights without changing ratios.
+restoration of existing D1-D6 declaration, scorer, final-reward, entrypoint, or
+ratio-preserving weight wiring.
 
 `AUTO_FIX` cannot introduce or choose Gold, targets, tolerances, thresholds,
 formulas, scorer algorithms, fields, units, scientific parameters, producers,

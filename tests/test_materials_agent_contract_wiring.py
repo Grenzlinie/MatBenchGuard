@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -15,6 +16,7 @@ sys.path.insert(0, str(REPAIR_SCRIPTS))
 import agent_contract_wiring  # noqa: E402
 import deterministic_contract  # noqa: E402
 import finalize_audit_output  # noqa: E402
+import repair_findings  # noqa: E402
 import run_repair  # noqa: E402
 
 
@@ -41,14 +43,33 @@ def assessment_for(
             "source_kind": "DETERMINISTIC_PROBE_ARTIFACT",
             "path": "deterministic_core/probe_results.json",
             "scope": "CONTRACT_WIRING",
-            "artifact_digest": "sha256:probe",
+            "claim": claim,
+            "quote": f'"{claim}": "PROVEN"',
+            "artifact_digest": "sha256:" + "1" * 64,
         }
+        for claim in agent_contract_wiring.D6_CHAIN_STATES
     ]
     checks = {
         check_id: {
             "status": d6_status if check_id == "D6" else "NOT_PROVEN",
             "rationale": f"{check_id} contract-wiring adjudication",
             "evidence": evidence if check_id == "D6" else [],
+            **(
+                {
+                    "chain_states": {
+                        name: (
+                            "FAILED"
+                            if d6_status == "REPAIR_REQUIRED"
+                            and name == "final_reward"
+                            else "PROVEN"
+                        )
+                        for name in agent_contract_wiring.D6_CHAIN_STATES
+                    }
+                }
+                if check_id == "D6"
+                and d6_status in {"PASS", "REPAIR_REQUIRED"}
+                else {}
+            ),
         }
         for check_id in deterministic_contract.CHECK_IDS
     }
@@ -136,6 +157,165 @@ class MaterialsAgentContractWiringTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     assessment_for(machine, d6_evidence=[evidence])
 
+    def test_checker_source_is_allowed_only_for_d6(self) -> None:
+        machine = unavailable_d6_contract()
+        assessment = assessment_for(
+            machine,
+            d6_evidence=[
+                {
+                    "source_kind": "CHECKER_SOURCE",
+                    "path": "tests/checker.py",
+                    "scope": "CONTRACT_WIRING",
+                    "claim": claim,
+                    "quote": f"# proves {claim}",
+                    "sha256": "sha256:" + "0" * 64,
+                }
+                for claim in agent_contract_wiring.D6_CHAIN_STATES
+            ],
+        )
+        self.assertEqual(
+            assessment["checks"][-1]["evidence"][0]["source_kind"],
+            "CHECKER_SOURCE",
+        )
+
+    def test_conclusive_d6_rejects_legacy_state_and_incomplete_claims(self) -> None:
+        machine = unavailable_d6_contract()
+        legacy_states = {
+            name: "PROVEN" for name in agent_contract_wiring.D6_CHAIN_STATES
+        }
+        legacy_states["positive_weight"] = legacy_states.pop(
+            "positive_effective_weight"
+        )
+        with self.assertRaisesRegex(ValueError, "exactly the five"):
+            agent_contract_wiring.make_agent_contract_assessment(
+                machine,
+                {
+                    check_id: {
+                        "status": "PASS" if check_id == "D6" else "NOT_PROVEN",
+                        "rationale": f"{check_id} contract wiring",
+                        "evidence": (
+                            [
+                                {
+                                    "source_kind": "DETERMINISTIC_PROBE_ARTIFACT",
+                                    "path": "deterministic_core/probe_results.json",
+                                    "scope": "CONTRACT_WIRING",
+                                    "claim": claim,
+                                    "quote": f'"{claim}": "PROVEN"',
+                                    "artifact_digest": "sha256:" + "1" * 64,
+                                }
+                                for claim in agent_contract_wiring.D6_CHAIN_STATES
+                            ]
+                            if check_id == "D6"
+                            else []
+                        ),
+                        **(
+                            {"chain_states": legacy_states}
+                            if check_id == "D6"
+                            else {}
+                        ),
+                    }
+                    for check_id in deterministic_contract.CHECK_IDS
+                },
+            )
+
+        with self.assertRaisesRegex(ValueError, "does not cover"):
+            assessment_for(
+                machine,
+                d6_evidence=[
+                    {
+                        "source_kind": "DETERMINISTIC_PROBE_ARTIFACT",
+                        "path": "deterministic_core/probe_results.json",
+                        "scope": "CONTRACT_WIRING",
+                        "claim": "content_read",
+                        "quote": '"content_read": "PROVEN"',
+                        "artifact_digest": "sha256:" + "1" * 64,
+                    }
+                ],
+            )
+
+    def test_repair_required_needs_claim_for_each_failed_state(self) -> None:
+        machine = unavailable_d6_contract()
+        checks = {
+            check_id: {
+                "status": (
+                    "REPAIR_REQUIRED" if check_id == "D6" else "NOT_PROVEN"
+                ),
+                "rationale": f"{check_id} contract wiring",
+                "evidence": (
+                    [
+                        {
+                            "source_kind": "CHECKER_SOURCE",
+                            "path": "tests/checker.py",
+                            "scope": "CONTRACT_WIRING",
+                            "claim": "content_read",
+                            "quote": "read output",
+                            "sha256": "sha256:" + "2" * 64,
+                        }
+                    ]
+                    if check_id == "D6"
+                    else []
+                ),
+                **(
+                    {
+                        "chain_states": {
+                            name: (
+                                "FAILED"
+                                if name in {"content_read", "final_reward"}
+                                else "PROVEN"
+                            )
+                            for name in agent_contract_wiring.D6_CHAIN_STATES
+                        }
+                    }
+                    if check_id == "D6"
+                    else {}
+                ),
+            }
+            for check_id in deterministic_contract.CHECK_IDS
+        }
+        with self.assertRaisesRegex(ValueError, "final_reward"):
+            agent_contract_wiring.make_agent_contract_assessment(
+                machine, checks
+            )
+
+    def test_conclusive_d6_bindings_verify_exact_probe_bytes(self) -> None:
+        machine = unavailable_d6_contract()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "package"
+            temp_dir = Path(temporary) / "audit"
+            root.mkdir()
+            probe = temp_dir / "deterministic_core/probe_results.json"
+            probe.parent.mkdir(parents=True)
+            probe.write_text(
+                "\n".join(
+                    f'"{claim}": "PROVEN"'
+                    for claim in agent_contract_wiring.D6_CHAIN_STATES
+                ),
+                encoding="utf-8",
+            )
+            digest = finalize_audit_output.sha256_file(probe)
+            assessment = assessment_for(
+                machine,
+                d6_evidence=[
+                    {
+                        "source_kind": "DETERMINISTIC_PROBE_ARTIFACT",
+                        "path": "deterministic_core/probe_results.json",
+                        "scope": "CONTRACT_WIRING",
+                        "claim": claim,
+                        "quote": f'"{claim}": "PROVEN"',
+                        "artifact_digest": digest,
+                    }
+                    for claim in agent_contract_wiring.D6_CHAIN_STATES
+                ],
+            )
+            finalize_audit_output._validate_conclusive_d6_source_bindings(
+                root, temp_dir, assessment
+            )
+            probe.write_text("tampered", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "quote is stale"):
+                finalize_audit_output._validate_conclusive_d6_source_bindings(
+                    root, temp_dir, assessment
+                )
+
     def test_eligibility_rejects_blockers_gates_runtime_and_dependencies(self) -> None:
         machine_check = unavailable_d6_contract()["checks"][-1]
         eligible = agent_contract_wiring.check_eligibility(machine_check)
@@ -200,6 +380,64 @@ class MaterialsAgentContractWiringTests(unittest.TestCase):
         self.assertEqual(effective["repair_summary"]["state"], "NOT_APPLICABLE")
         self.assertFalse(effective["repair_summary"]["complete"])
 
+    def test_repair_required_preserves_machine_unknown_and_requires_repair(self) -> None:
+        machine = unavailable_d6_contract()
+        assessment = assessment_for(
+            machine,
+            d6_status="REPAIR_REQUIRED",
+            d6_evidence=[
+                {
+                    "source_kind": "CHECKER_SOURCE",
+                    "path": "tests/checker.py",
+                    "scope": "CONTRACT_WIRING",
+                    "claim": "final_reward",
+                    "quote": "return final_reward",
+                    "sha256": "sha256:" + "0" * 64,
+                }
+            ],
+        )
+        overlay = {
+            "finding_id": "AGENT-D6-SCORING-CHAIN-TEST",
+            "lane": "agent_quality",
+            "repair_lane": "agent_quality",
+            "repair_scope": "SCORING_SEMANTICS",
+            "status": "OPEN",
+            "repairable": True,
+            "deterministic_check": None,
+            "severity": "HIGH",
+            "dimension": "C04",
+            "title": "AGENT_D6_SCORING_CHAIN_DEFECT",
+            "observed_fact": "final reward linkage is absent",
+        }
+        effective = agent_contract_wiring.derive_effective_contract(
+            machine,
+            assessment,
+            overlay_repair_findings=[overlay],
+        )
+        self.assertEqual(effective["machine_status"]["checks"]["D6"], "NOT_ASSESSABLE")
+        self.assertEqual(effective["checks"][-1]["status"], "NOT_ASSESSABLE")
+        self.assertEqual(effective["repair_summary"]["state"], "REQUIRED")
+        self.assertEqual(
+            effective["repair_summary"]["required_finding_ids"],
+            ["AGENT-D6-SCORING-CHAIN-TEST"],
+        )
+        agent_contract_wiring.validate_effective_contract(effective)
+        queue = repair_findings.build_complete_open_repair_queue(
+            effective, [overlay]
+        )
+        self.assertEqual(
+            queue["open_finding_ids"],
+            ["AGENT-D6-SCORING-CHAIN-TEST"],
+        )
+        self.assertEqual(
+            queue["open_findings"][0]["repair_scope"],
+            "SCORING_SEMANTICS",
+        )
+        self.assertEqual(
+            queue["open_findings"][0]["publication_hint"],
+            "REAUDIT_REQUIRED",
+        )
+
     def test_machine_fail_and_blocker_cannot_be_suppressed(self) -> None:
         machine = deterministic_contract.evaluate_deterministic_contract(
             normalized_instruction_contract={},
@@ -232,6 +470,33 @@ class MaterialsAgentContractWiringTests(unittest.TestCase):
             "machine-f1",
             effective["repair_summary"]["required_finding_ids"],
         )
+
+    def test_machine_d6_fail_cannot_be_overlaid(self) -> None:
+        machine = deterministic_contract.evaluate_deterministic_contract(
+            normalized_instruction_contract={},
+            grading_contract={},
+            checker_analysis={
+                "d6_core_output_scoring": {"status": "FAILED"},
+            },
+            package_roles={},
+            findings=[
+                {
+                    "finding_id": "machine-d6",
+                    "title": "CHECKER_CORE_TASK_UNASSESSED",
+                    "status": "OPEN",
+                    "repairable": True,
+                    "evidence": {},
+                }
+            ],
+        )
+        assessment = assessment_for(machine)
+        effective = agent_contract_wiring.derive_effective_contract(
+            machine, assessment
+        )
+        d6 = effective["checks"][-1]
+        self.assertEqual(d6["machine_status"], "FAIL")
+        self.assertEqual(d6["status"], "FAIL")
+        self.assertFalse(d6["adjudication_applied"])
 
     def test_assessment_and_effective_digests_detect_tampering(self) -> None:
         machine = unavailable_d6_contract()

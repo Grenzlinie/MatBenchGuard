@@ -74,16 +74,6 @@ PROCESS_ROLE_NAMES = {
     "process_artifact",
     "process_evidence",
 }
-LOAD_BEARING_ARTIFACTS = (
-    "crystal structure",
-    "mesh",
-    "model",
-    "prediction artifact",
-    "prediction field",
-    "predictive field",
-    "structure",
-    "trajectory",
-)
 def read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -102,8 +92,6 @@ def read_role(path: Path, role_type: str) -> Any:
 def _classify_declaration_role(
     requirement: dict[str, Any], declaration: dict[str, Any]
 ) -> str:
-    if _is_load_bearing_artifact(requirement, declaration):
-        return "CORE_OUTPUT"
     role = re.sub(
         r"[\s-]+",
         "_",
@@ -126,46 +114,6 @@ def _classify_declaration_role(
     if declaration.get("kind") == "scored_output":
         return "CORE_OUTPUT"
     return "UNCLASSIFIED"
-
-
-def _is_load_bearing_artifact(
-    requirement: dict[str, Any], declaration: dict[str, Any]
-) -> bool:
-    context = " ".join(
-        str(requirement.get(key) or "")
-        for key in ("title", "agent_work")
-    )
-    context += " " + str(declaration.get("quote") or "")
-    lowered = context.lower()
-    return any(
-        re.search(
-            rf"\b(?:complete|full|load-bearing)\b"
-            rf"(?:\s+[a-z0-9_-]+){{0,4}}\s+{re.escape(artifact)}\b",
-            lowered,
-        )
-        for artifact in LOAD_BEARING_ARTIFACTS
-    )
-
-
-def _has_process_annotation(
-    requirement: dict[str, Any], declaration: dict[str, Any]
-) -> bool:
-    role = re.sub(
-        r"[\s-]+",
-        "_",
-        str(requirement.get("role") or "").strip().lower(),
-    )
-    core_role = any(
-        role == name or role.startswith(name + "_")
-        for name in CORE_ROLE_NAMES
-    )
-    process_role = any(
-        role == name or role.startswith(name + "_")
-        for name in PROCESS_ROLE_NAMES
-    )
-    return process_role or (
-        not core_role and declaration.get("kind") == "process_evidence"
-    )
 
 
 def materials_classification_context(text: str) -> dict[str, Any]:
@@ -276,7 +224,9 @@ def instruction_contract_map(instruction: str) -> dict[str, Any]:
         if re.match(r"^#{1,6}\s+", line):
             flush()
             continue
-        role_match = re.match(r"^-\s*Role:\s*(.+?)\s*$", line, re.IGNORECASE)
+        role_match = re.match(
+            r"^-\s*(?:Role|Purpose):\s*(.+?)\s*$", line, re.IGNORECASE
+        )
         if role_match and current is not None:
             current["role"] = role_match.group(1).strip()
             continue
@@ -318,59 +268,32 @@ def instruction_contract_map(instruction: str) -> dict[str, Any]:
     ]
     process_evidence: list[str] = []
     scored_outputs: list[str] = []
+    # Retained as empty compatibility fields for existing report consumers.
+    # Lexical descriptions must never promote an explicitly process-only output.
     load_bearing_outputs: list[str] = []
     role_conflicts: list[dict[str, Any]] = []
     for requirement in requirements:
         declaration_roles: list[str] = []
-        requirement_conflict = False
         for declaration in requirement["evidence"]:
             output_name = declaration["file"]
-            load_bearing = _is_load_bearing_artifact(
-                requirement, declaration
-            )
             role_classification = _classify_declaration_role(
                 requirement, declaration
             )
             declaration["role_classification"] = role_classification
-            if load_bearing and _has_process_annotation(
-                requirement, declaration
-            ):
-                requirement_conflict = True
-                declaration["annotation_conflict"] = (
-                    "PROCESS_ANNOTATION_CONTRADICTS_CORE_SEMANTICS"
-                )
-                role_conflicts.append(
-                    {
-                        "file": output_name,
-                        "line": declaration["line"],
-                        "quote": declaration["quote"],
-                        "declared_role": requirement.get("role"),
-                        "resolved_role": "CORE_OUTPUT",
-                        "semantic_context": {
-                            "title": requirement.get("title"),
-                            "agent_work": requirement.get("agent_work"),
-                        },
-                    }
-                )
             declaration_roles.append(role_classification)
             if role_classification == "CORE_OUTPUT":
                 _append_unique(scored_outputs, output_name)
-                if load_bearing:
-                    _append_unique(load_bearing_outputs, output_name)
             elif role_classification == "PROCESS_ONLY":
                 _append_unique(process_evidence, output_name)
-        if requirement_conflict:
-            requirement["classification"] = "UNCLASSIFIED"
-        else:
-            requirement["classification"] = (
-                declaration_roles[0]
-                if declaration_roles
-                and all(
-                    item == declaration_roles[0]
-                    for item in declaration_roles
-                )
-                else "UNCLASSIFIED"
+        requirement["classification"] = (
+            declaration_roles[0]
+            if declaration_roles
+            and all(
+                item == declaration_roles[0]
+                for item in declaration_roles
             )
+            else "UNCLASSIFIED"
+        )
     unclassified = [
         name
         for name in all_outputs

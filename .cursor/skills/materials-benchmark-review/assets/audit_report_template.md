@@ -71,7 +71,7 @@ unbound repair plan `0.1` artifacts remain evidence archives.
 
 If preparation is incomplete because the machine summary is
 `NOT_APPLICABLE`, Review persists `agent_contract/request.json` under
-`materials-agent-contract-request/1.0` with status
+`materials-agent-contract-request/1.1` with status
 `AGENT_CONTRACT_PENDING`. The pending response is
 `NOT_ASSESSABLE`, `publishable=false`, and includes `request_path`; resume with
 `--agent-contract-assessment` reuses persisted probes and validates the

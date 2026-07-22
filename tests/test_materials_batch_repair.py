@@ -1249,11 +1249,24 @@ class MaterialsBatchRepairTests(unittest.TestCase):
                                 "source_kind": "DETERMINISTIC_PROBE_ARTIFACT",
                                 "path": "deterministic_core/probe_results.json",
                                 "scope": "CONTRACT_WIRING",
+                                "claim": claim,
+                                "quote": f'"{claim}": "PROVEN"',
                                 "artifact_digest": request["probe_hash"],
                             }
+                            for claim in agent_contract_wiring.D6_CHAIN_STATES
                         ]
                         if check_id == "D6"
                         else []
+                    ),
+                    **(
+                        {
+                            "chain_states": {
+                                name: "PROVEN"
+                                for name in agent_contract_wiring.D6_CHAIN_STATES
+                            }
+                        }
+                        if check_id == "D6"
+                        else {}
                     ),
                 }
                 for check_id in ("D1", "D2", "D3", "D4", "D5", "D6")
@@ -1284,14 +1297,38 @@ class MaterialsBatchRepairTests(unittest.TestCase):
                     check_id: {
                         "status": "PASS",
                         "rationale": f"{check_id} contract wiring",
-                        "evidence": [
+                        "evidence": (
+                            [
+                                {
+                                    "source_kind": "DETERMINISTIC_PROBE_ARTIFACT",
+                                    "path": "deterministic_core/probe_results.json",
+                                    "scope": "CONTRACT_WIRING",
+                                    "claim": claim,
+                                    "quote": f'"{claim}": "PROVEN"',
+                                    "artifact_digest": request["probe_hash"],
+                                }
+                                for claim in agent_contract_wiring.D6_CHAIN_STATES
+                            ]
+                            if check_id == "D6"
+                            else [
+                                {
+                                    "source_kind": "DETERMINISTIC_PROBE_ARTIFACT",
+                                    "path": "deterministic_core/probe_results.json",
+                                    "scope": "CONTRACT_WIRING",
+                                    "artifact_digest": request["probe_hash"],
+                                }
+                            ]
+                        ),
+                        **(
                             {
-                                "source_kind": "DETERMINISTIC_PROBE_ARTIFACT",
-                                "path": "deterministic_core/probe_results.json",
-                                "scope": "CONTRACT_WIRING",
-                                "artifact_digest": request["probe_hash"],
+                                "chain_states": {
+                                    name: "PROVEN"
+                                    for name in agent_contract_wiring.D6_CHAIN_STATES
+                                }
                             }
-                        ],
+                            if check_id == "D6"
+                            else {}
+                        ),
                     }
                     for check_id in ("D1", "D2", "D3", "D4", "D5", "D6")
                 },
@@ -1367,7 +1404,7 @@ class MaterialsBatchRepairTests(unittest.TestCase):
                 )
             self.assertEqual(review_calls["count"], 2)
 
-    def test_agent_contract_not_proven_is_terminal_and_retains_bundle(self) -> None:
+    def test_agent_contract_not_proven_remains_pending_without_attempt(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, _runner = batch_context(workspace)
@@ -1481,27 +1518,20 @@ class MaterialsBatchRepairTests(unittest.TestCase):
                     agent_contract_assessment_path=assessment_path,
                 )
 
-            self.assertEqual(result["status"], "NOT_ASSESSABLE")
+            self.assertEqual(result["status"], "AGENT_CONTRACT_PENDING")
             self.assertEqual(result["publishability"], "EVIDENCE_PENDING")
             self.assertFalse(result["publishable"])
             self.assertFalse(result["package_mutated"])
-            self.assertTrue(result["attempt_consumed"])
-            self.assertEqual(result["attempt_number"], 1)
+            self.assertFalse(result["attempt_consumed"])
+            self.assertEqual(result["attempt_number"], 0)
             self.assertEqual(result["agent_contract_status"], "NOT_PROVEN")
             self.assertEqual(calls["count"], 2)
             self.assertEqual(module.package_hashes(package), package_before)
-            retained = Path(result["reaudit_bundle_dir"]) / "benchmark_audit"
-            self.assertTrue((retained / "audit_report.json").is_file())
-            self.assertTrue((retained / "audit_manifest.json").is_file())
-            self.assertTrue(
-                (retained / "deterministic_core/probe_results.json").is_file()
-            )
             state = json.loads(
                 (history / "pending_state.json").read_text(encoding="utf-8")
             )
-            self.assertEqual(state["status"], "COMPLETED")
-            self.assertEqual(state["terminal_status"], "NOT_ASSESSABLE")
-            self.assertTrue(state["attempt_consumed"])
+            self.assertEqual(state["status"], "AGENT_CONTRACT_PENDING")
+            self.assertFalse(state["attempt_consumed"])
 
     def test_pending_relocation_preserves_quality_and_refreshes_request_hashes(
         self,

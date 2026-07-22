@@ -112,11 +112,24 @@ def effective_contract_bundle() -> tuple[
                             "source_kind": "DETERMINISTIC_PROBE_ARTIFACT",
                             "path": "deterministic_core/probe_results.json",
                             "scope": "CONTRACT_WIRING",
-                            "artifact_digest": "sha256:probe",
+                            "claim": claim,
+                            "quote": f'"{claim}": "PROVEN"',
+                            "artifact_digest": "sha256:" + "1" * 64,
                         }
+                        for claim in agent_contract_wiring.D6_CHAIN_STATES
                     ]
                     if check_id == "D6"
                     else []
+                ),
+                **(
+                    {
+                        "chain_states": {
+                            name: "PROVEN"
+                            for name in agent_contract_wiring.D6_CHAIN_STATES
+                        }
+                    }
+                    if check_id == "D6"
+                    else {}
                 ),
             }
             for check_id in deterministic_contract.CHECK_IDS

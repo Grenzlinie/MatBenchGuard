@@ -4698,11 +4698,66 @@ def _resume_pending_repair_attempt(
         root, plan, expected_source_bundle_hash
     )
     if reaudit.get("status") == AGENT_CONTRACT_PENDING:
-        # A valid fresh assessment should never produce another preparation
-        # pause.  Preserve the state and fail closed if Review does so anyway.
-        raise ValueError(
-            "agent contract assessment did not finalize the prepared re-audit"
+        if reaudit.get("agent_contract_status") != "NOT_PROVEN":
+            raise ValueError(
+                "agent contract assessment did not finalize the prepared re-audit"
+            )
+        # NOT_PROVEN is evidence pending, not a semantic re-audit. Keep the
+        # same candidate and prepared Review workspace resumable, and refresh
+        # only the authenticated workspace bindings changed by synthesis.
+        request_preview = read_json(
+            audit_output_dir / AGENT_CONTRACT_REQUEST_RELATIVE_PATH
         )
+        raw_temp_dir = request_preview.get("audit_temp_dir")
+        temp_dir = Path(str(raw_temp_dir)).expanduser().resolve()
+        request = validate_agent_contract_request(candidate, temp_dir)
+        state["request"] = request
+        state["workspace_hashes"] = _pending_workspace_hashes(
+            snapshot, candidate, audit_output_dir
+        )
+        state["candidate_package_hashes"] = package_hashes(candidate)
+        state["snapshot_package_hashes"] = package_hashes(snapshot)
+        state["recorded_at"] = timestamp()
+        state["state_digest"] = canonical_json_hash(
+            {
+                key: value
+                for key, value in state.items()
+                if key != "state_digest"
+            }
+        )
+        write_json(history / "pending_state.json", state)
+        return {
+            "repair_id": state["repair_id"],
+            "resume_id": state["repair_id"],
+            "status": AGENT_CONTRACT_PENDING,
+            "review_status": AGENT_CONTRACT_PENDING,
+            "review_verdict": "NOT_ASSESSABLE",
+            "disposition": "NOT_ASSESSABLE",
+            "publishability": "EVIDENCE_PENDING",
+            "publishable": False,
+            "repair_state": AGENT_CONTRACT_PENDING,
+            "attempt_number": int(state.get("attempt_number", 0)),
+            "attempt_consumed": False,
+            "package_mutated": False,
+            "history_root": str(history_root_for(root, plan)),
+            "history_dir": str(history),
+            "pending_state": str(history / "pending_state.json"),
+            "request_path": str(
+                audit_output_dir / AGENT_CONTRACT_REQUEST_RELATIVE_PATH
+            ),
+            "candidate_dir": str(candidate),
+            "snapshot_dir": str(snapshot),
+            "reaudit_workspace_dir": str(audit_output_dir),
+            "machine_contract_digest": request.get(
+                "machine_contract_digest"
+            ),
+            "probe_hash": request.get("probe_hash"),
+            "agent_contract_status": "NOT_PROVEN",
+            "message": (
+                "Agent D6 assessment was NOT_PROVEN. Repair remains paused "
+                "with the same candidate and no semantic attempt consumed."
+            ),
+        }
     if reaudit.get("status") == AGENT_ASSESSMENT_PENDING:
         return {
             "status": AGENT_ASSESSMENT_PENDING,
@@ -4815,6 +4870,52 @@ def _resume_pending_repair_attempt(
         else "INVALID"
     )
     not_proven = _pending_agent_contract_not_proven(reaudit)
+    if not_proven:
+        # Compatibility for Review implementations that finalized an
+        # inconclusive overlay instead of returning AGENT_CONTRACT_PENDING.
+        # It is still evidence pending and must not consume a semantic attempt.
+        state["workspace_hashes"] = _pending_workspace_hashes(
+            snapshot, candidate, audit_output_dir
+        )
+        state["candidate_package_hashes"] = package_hashes(candidate)
+        state["snapshot_package_hashes"] = package_hashes(snapshot)
+        state["recorded_at"] = timestamp()
+        state["state_digest"] = canonical_json_hash(
+            {
+                key: value
+                for key, value in state.items()
+                if key != "state_digest"
+            }
+        )
+        write_json(history / "pending_state.json", state)
+        return {
+            "repair_id": state["repair_id"],
+            "resume_id": state["repair_id"],
+            "status": AGENT_CONTRACT_PENDING,
+            "review_status": AGENT_CONTRACT_PENDING,
+            "review_verdict": "NOT_ASSESSABLE",
+            "disposition": "NOT_ASSESSABLE",
+            "publishability": "EVIDENCE_PENDING",
+            "publishable": False,
+            "repair_state": AGENT_CONTRACT_PENDING,
+            "attempt_number": int(state.get("attempt_number", 0)),
+            "attempt_consumed": False,
+            "package_mutated": False,
+            "history_root": str(history_root_for(root, plan)),
+            "history_dir": str(history),
+            "pending_state": str(history / "pending_state.json"),
+            "request_path": str(
+                audit_output_dir / AGENT_CONTRACT_REQUEST_RELATIVE_PATH
+            ),
+            "candidate_dir": str(candidate),
+            "snapshot_dir": str(snapshot),
+            "reaudit_workspace_dir": str(audit_output_dir),
+            "agent_contract_status": "NOT_PROVEN",
+            "message": (
+                "Agent D6 assessment was NOT_PROVEN. Repair remains "
+                "EVIDENCE_PENDING with no semantic attempt consumed."
+            ),
+        }
     comparison = {
         "target_resolved": False,
         "reaudit_audit_id": reaudit_audit_id,

@@ -16,8 +16,8 @@
   ├─ REQUIRED ────► score, then CONDITIONAL / REPAIR_QUEUE when eligible
   └─ NOT_APPLICABLE ─► persist contract request and return
       AGENT_CONTRACT_PENDING until an external contract assessment is supplied.
-[Stage 1b Contract-only Agent overlay]  only eligible unavailable D1–D6 checks
-  may receive PASS; derive an additive effective contract.
+[Stage 1b Contract-only Agent overlay]  eligible unavailable checks may receive
+  PASS; D6 alone may receive REPAIR_REQUIRED. NOT_PROVEN remains pending.
 [Stage 2 Agent quality lane]  scientific justification and quality results.
   Repairable Agent findings become first-class OPEN queue entries
   (`lane: agent_quality`, `repair_lane` / `repair_scope`); never assign a
@@ -106,20 +106,23 @@ version, and `contract_digest`. An external `agent_contract_assessment` never
 rewrites that artifact.
 
 The contract-only Agent assessment uses schema
-`materials-agent-contract-assessment/1.0`, lane `deterministic_core`, and
+`materials-agent-contract-assessment/1.1`, lane `deterministic_core`, and
 machine schema/registry/digest bindings. It contains D1 through D6 in order;
-each check is `PASS` or `NOT_PROVEN` with a rationale. Its provenance is
+each check is `PASS` or `NOT_PROVEN` with a rationale; `REPAIR_REQUIRED` is
+legal only for an eligible unavailable D6. Its provenance is
 `EXTERNAL_AGENT_ASSESSMENT`. Accepted evidence is limited to:
 
 - `instruction.md` (`source_kind=INSTRUCTION`);
 - `tests/**/grading_spec` with an optional extension
   (`source_kind=GRADING_SPEC`); and
+- `tests/checker.py` only for D6 scoring-chain facts
+  (`source_kind=CHECKER_SOURCE`); and
 - deterministic probe artifacts under `deterministic_core/` or
   `deterministic_probe_artifacts/` (`source_kind=DETERMINISTIC_PROBE_ARTIFACT`).
 
 Evidence claim scope is only `CONTRACT_WIRING` or
 `DETERMINISTIC_CONTRACT`. The assessment must not use `paper/`, `solution/`,
-Oracle output, metadata, `tests/checker.py`, or science-quality evidence, and
+Oracle output, metadata, or science-quality evidence, and
 must not adjudicate Gold, targets, tolerances, formulas, units, thresholds, or
 scoring direction. `quality_results` and `agent_quality` findings are never
 merged into this lane.
@@ -129,6 +132,15 @@ status. The Agent may directly overlay only a machine check whose status is
 `BLOCKED` or `NOT_ASSESSABLE`, with no proven finding, blocking finding,
 dependency failure, missing input, Hard Gate, or usable runtime contradiction.
 An Agent `PASS` can make that eligible unavailable check effectively `PASS`.
+For D6, conclusive evidence items carry exactly one canonical `claim`:
+`content_read`, `scorer_binding`, `positive_effective_weight`, `finite_return`,
+or `final_reward`, plus an exact quote/excerpt and sha256 binding. PASS covers
+all five PROVEN states; REPAIR_REQUIRED covers every FAILED state.
+`REPAIR_REQUIRED` preserves machine UNKNOWN/NOT_ASSESSABLE, adds a stable
+source-bound Agent repair finding, and makes the effective repair state
+`REQUIRED`; it never fabricates machine FAIL. Its default scope is
+`SCORING_SEMANTICS`, lane `agent_quality`, and publication requires re-audit;
+an Agent claim never receives `UNIQUE_SCORING_WIRING`.
 Machine `FAIL`, any proven machine fact, runtime contradiction, Hard Gate, and
 quality finding cannot be overlaid. `NOT_PROVEN` leaves the check unavailable.
 Machine findings and blockers remain preserved in the effective artifact.
@@ -140,11 +152,12 @@ The additive effective artifact has schema
 the assessment digest, eligibility and applied-check lists, and an effective
 repair summary. It may change only an eligible unavailable check from
 `BLOCKED`/`NOT_ASSESSABLE` to `PASS`; it cannot suppress machine findings or
-change a machine `FAIL`.
+change a machine `FAIL`. `NOT_PROVEN` remains `NOT_ASSESSABLE` /
+`EVIDENCE_PENDING` and keeps the same prepared run resumable.
 
 Review persists `agent_contract/request.json` only when the machine summary is
 `NOT_APPLICABLE` and the assessment is not yet supplied. The request has schema
-`materials-agent-contract-request/1.0`, status `AGENT_CONTRACT_PENDING`, and
+`materials-agent-contract-request/1.1`, status `AGENT_CONTRACT_PENDING`, and
 the run-local A0 ContentRoot. Static/probe hashes remain diagnostic provenance;
 Review implementation byte hashes are not freshness gates. A pending result is
 `NOT_ASSESSABLE`, not publishable, includes `request_path`, and resumes when

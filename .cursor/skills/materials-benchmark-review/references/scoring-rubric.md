@@ -143,10 +143,10 @@ workflow requirement:
 `instruction requirement → Agent work → core output → checker read → checker
 score`.
 
-Complete/full models, structures, trajectories, prediction fields, and meshes
-remain core despite a contradictory process annotation; escalate the role as
-`UNCLASSIFIED` while retaining core checker analysis. Only non-load-bearing
-audit/log/intermediate outputs are process-only. Process artifacts are contract-map-only:
+Explicit `Role:` / `Purpose:` values are authoritative: `scored*` (plus
+compatible `core*` / `final*` aliases) is core and `process*` is process-only.
+Keywords such as complete, full, load-bearing, model, structure, trajectory,
+field, or mesh do not promote process outputs. Process artifacts are contract-map-only:
 they are never checker targets, weighted components, deductions, gates, or
 dynamic probes. Do not emit `PROCESS_EVIDENCE_NOT_VERIFIED` or run an
 anti-hacking trace.
@@ -155,7 +155,7 @@ Process evidence is not a dynamic fixture or checker target. Do not create a
 `PROCESS_EVIDENCE_NOT_VERIFIED` deduction from dynamic fixture behavior, and do
 not include process artifacts in any of the five top-level probe inputs.
 
-An ignored or existence-only load-bearing artifact produces the severe
+An ignored or existence-only scored core artifact produces the severe
 `CHECKER_CORE_TASK_UNASSESSED` finding. Its affected artifact is evidence for
 one grouped core-task finding, not a separate deduction per file.
 
