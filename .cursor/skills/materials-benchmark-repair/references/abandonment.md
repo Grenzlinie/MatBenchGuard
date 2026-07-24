@@ -5,6 +5,8 @@ repair, or the final core scientific result cannot be fairly scored. Qualifying
 cases are:
 
 - non-materials task;
+- `SCIENTIFIC_REASONING_ABSENT` confirmed during Review (already `REJECT` with
+  disposition `ABANDON`; do not route it into Repair);
 - scientifically invalid or unanswerable target;
 - missing target-defining parameter that cannot be sourced;
 - indispensable data or pretrained model permanently unavailable and no valid

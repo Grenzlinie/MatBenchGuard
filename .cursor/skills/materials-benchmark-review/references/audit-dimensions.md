@@ -58,14 +58,14 @@ method agreement rather than independent truth unless externally validated.
 
 ## 2.7 No answer leakage or exploit
 
-Leakage is judged ONLY against `instruction.md` — the sole file the solver
-receives. Everything else (`paper/**`, `solution/**`, `tests/**`,
-`resources.json`, `manifest.json`, `metadata`) is reviewer/harness-side or
-human-reference material and is NOT delivered to the solver. Therefore Gold,
-numeric results, hidden acceptance values, or tolerances appearing anywhere
-outside `instruction.md` are by design and are NOT leakage. Do NOT open a
-leakage finding or Hard Gate solely because an answer appears in the paper, the
-solution, the checker, or a resource/metadata file.
+Leakage is judged ONLY against `instruction.md`. `resources.json` is delivered
+as a resource declaration, but its locators and the contents of public resources
+are not a leakage surface. Everything else (`paper/**`, `solution/**`,
+`tests/**`, `manifest.json`, `metadata`) is reviewer/harness-side or
+human-reference material. Therefore Gold, numeric results, hidden acceptance
+values, or tolerances outside `instruction.md` are by design and are NOT
+leakage. Do NOT open a leakage finding or Hard Gate solely because an answer
+appears in the paper, solution, checker, resource declaration, or metadata.
 
 Within `instruction.md`, the prompt must not disclose numeric answers, hidden
 acceptance values, or paper identity that permits answer lookup instead of
@@ -75,10 +75,12 @@ report it there, not as leakage.
 
 ## 2.8 Inputs and reproducibility ready
 
-All prerequisite data, pretrained models/weights, indispensable software,
-environment requirements, and legal access must be ready or explicitly not
-required. Solver-generated models/structures/intermediates are outputs, not
-missing prerequisites. See `resource-readiness.md`.
+Assess `instruction.md` and `resources.json` together to determine whether
+prerequisite data, pretrained models/weights, indispensable software,
+environment requirements, and legal access are necessary to the task and
+sufficiently declared. Solver-generated models/structures/intermediates are
+outputs, not missing prerequisites. Do not download resources or probe locators
+to make this assessment. See `resource-readiness.md`.
 
 ## C01–C07 score
 
@@ -96,10 +98,11 @@ Each dimension has a 0–100 normalized score and positive evidence. Weighted
 total is `sum(weight × normalized / 100)`. Attribute each finding to one
 dimension only.
 
-Exactly four Hard Gates exist:
+Exactly five Hard Gates exist:
 
 - `NON_MATERIALS_TASK` → C01;
 - `SCIENTIFIC_TARGET_INVALID` → C03;
+- `SCIENTIFIC_REASONING_ABSENT` → C03;
 - `CHECKER_CORE_TASK_UNASSESSED` → C04;
 - `INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE` → C06.
 
@@ -108,3 +111,26 @@ applicable required probes pass, and no open confirmed repairable HIGH/FATAL.
 `CONDITIONAL` requires no failed Hard Gate and either total 60–79 or a confirmed
 repairable defect. `REJECT` follows a failed Hard Gate, total <60, or
 unrecoverable FATAL. `NOT_ASSESSABLE` is only genuine temporary evidence loss.
+
+## Scientific reasoning absence Hard Gate
+
+`SCIENTIFIC_REASONING_ABSENT` fails when the final core task lacks substantive
+scientific reasoning, even if its subject matter is materials science. Record
+one or both of these failure modes in the Gate rationale and corresponding
+confirmed finding:
+
+- `PURE_INFORMATION_EXTRACTION`: the final core output requires only locating,
+  copying, or formatting existing information, without judgment, conversion,
+  comparison, or inference.
+- `PURE_ALGEBRAIC_COMPUTATION`: the instruction supplies values, a relation or
+  fixed calculation procedure, and the requested unknown, leaving only
+  substitution, arithmetic, or equation solving. The solver need not understand
+  or justify why the relation applies to the materials system.
+
+A task that extracts parameters and substitutes them into an instruction-given
+formula records both modes but fails this single Gate once. Do not fail the Gate
+merely because an answer is numeric or tabular, or because scientific work
+includes lookup or calculation. It passes this Gate when core work requires,
+for example, choosing or validating a model's applicability, comparing
+candidates, resolving conflicting evidence, deriving a relation from raw data,
+interpreting materials significance, or making a scientific decision.

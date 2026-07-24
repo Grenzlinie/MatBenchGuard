@@ -9,7 +9,7 @@ import math
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "materials-agent-final-decision/2.0"
+SCHEMA = "materials-agent-final-decision/2.1"
 CRITERIA = {
     "2.1": "materials_qualification",
     "2.2": "prompt_contract",
@@ -24,6 +24,7 @@ DIMENSIONS = {"C01": 10, "C02": 20, "C03": 20, "C04": 20, "C05": 10, "C06": 10, 
 HARD_GATES = {
     "NON_MATERIALS_TASK",
     "SCIENTIFIC_TARGET_INVALID",
+    "SCIENTIFIC_REASONING_ABSENT",
     "CHECKER_CORE_TASK_UNASSESSED",
     "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE",
 }
@@ -39,6 +40,8 @@ PROBE_STATUSES = STATUSES | {"NOT_APPLICABLE"}
 READY_STATUSES = {"READY", "NOT_REQUIRED", "NOT_READY", "NOT_ASSESSABLE"}
 VERDICTS = {"PASS", "CONDITIONAL", "REJECT", "NOT_ASSESSABLE"}
 DIAGNOSTICS = {"CONFIRMED", "DISMISSED_FALSE_POSITIVE", "AUTOMATION_LIMITATION"}
+DISPOSITIONS = {"NONE", "REPAIR", "ABANDON"}
+REASONING_FAILURE_MODES = {"PURE_INFORMATION_EXTRACTION", "PURE_ALGEBRAIC_COMPUTATION"}
 
 
 def _text(value: Any, label: str) -> str:
@@ -68,6 +71,14 @@ def _status_record(value: Any, statuses: set[str], label: str) -> dict[str, Any]
         "rationale": _text(value.get("rationale"), f"{label}.rationale"),
         "evidence": _evidence(value.get("evidence"), f"{label}.evidence"),
     }
+
+
+def _failure_modes(value: Any, label: str) -> list[str]:
+    if not isinstance(value, list) or any(mode not in REASONING_FAILURE_MODES for mode in value):
+        raise ValueError(f"{label} must contain valid failure modes")
+    if len(value) != len(set(value)):
+        raise ValueError(f"{label} contains duplicates")
+    return value
 
 
 def validate(value: Any) -> dict[str, Any]:
@@ -123,15 +134,34 @@ def validate(value: Any) -> dict[str, Any]:
         raise ValueError(f"weighted_score is inconsistent; expected {round(calculated, 2)}")
 
     gates = value.get("hard_gates")
-    if not isinstance(gates, list) or len(gates) != 4:
-        raise ValueError("hard_gates must contain exactly four records")
+    if not isinstance(gates, list) or len(gates) != len(HARD_GATES):
+        raise ValueError(f"hard_gates must contain exactly {len(HARD_GATES)} records")
     gate_status: dict[str, str] = {}
+    gate_disposition: dict[str, str] = {}
+    gate_modes: dict[str, list[str]] = {}
     for index, item in enumerate(gates):
         record = _status_record(item, STATUSES, f"hard_gates[{index}]")
         code = record.get("code")
         if code not in HARD_GATES or code in gate_status:
             raise ValueError("hard_gates must contain each canonical code once")
+        disposition = record.get("disposition")
+        if disposition not in DISPOSITIONS:
+            raise ValueError(f"hard_gates[{index}].disposition is invalid")
+        if record["status"] == "PASS" and disposition != "NONE":
+            raise ValueError(f"hard_gates[{index}] PASS requires disposition NONE")
+        if record["status"] == "FAIL" and disposition == "NONE":
+            raise ValueError(f"hard_gates[{index}] FAIL requires REPAIR or ABANDON")
+        modes = _failure_modes(item.get("failure_modes"), f"hard_gates[{index}].failure_modes")
+        if code == "SCIENTIFIC_REASONING_ABSENT":
+            if record["status"] == "FAIL" and not modes:
+                raise ValueError("SCIENTIFIC_REASONING_ABSENT FAIL requires failure_modes")
+            if record["status"] != "FAIL" and modes:
+                raise ValueError("SCIENTIFIC_REASONING_ABSENT modes require FAIL")
+        elif modes:
+            raise ValueError(f"hard_gates[{index}].failure_modes is only valid for SCIENTIFIC_REASONING_ABSENT")
         gate_status[code] = record["status"]
+        gate_disposition[code] = disposition
+        gate_modes[code] = modes
     if set(gate_status) != HARD_GATES:
         raise ValueError("hard_gates are incomplete")
 
@@ -189,7 +219,42 @@ def validate(value: Any) -> dict[str, Any]:
             raise ValueError(f"open_confirmed_findings[{index}] has invalid severity/dimension")
         if not isinstance(item.get("repairable"), bool) or not isinstance(item.get("hard_gate"), bool):
             raise ValueError(f"open_confirmed_findings[{index}] requires boolean repairable/hard_gate")
+        disposition = item.get("disposition")
+        if disposition not in {"REPAIR", "ABANDON"}:
+            raise ValueError(f"open_confirmed_findings[{index}].disposition is invalid")
+        if (disposition == "REPAIR") != item["repairable"]:
+            raise ValueError(f"open_confirmed_findings[{index}] disposition conflicts with repairable")
+        hard_gate_code = item.get("hard_gate_code")
+        if item["hard_gate"]:
+            if hard_gate_code not in HARD_GATES:
+                raise ValueError(f"open_confirmed_findings[{index}].hard_gate_code is invalid")
+        elif hard_gate_code is not None:
+            raise ValueError(f"open_confirmed_findings[{index}].hard_gate_code must be null when hard_gate is false")
+        modes = _failure_modes(item.get("failure_modes"), f"open_confirmed_findings[{index}].failure_modes")
+        if hard_gate_code == "SCIENTIFIC_REASONING_ABSENT":
+            if not modes:
+                raise ValueError("SCIENTIFIC_REASONING_ABSENT finding requires failure_modes")
+        elif modes:
+            raise ValueError(f"open_confirmed_findings[{index}].failure_modes is only valid for SCIENTIFIC_REASONING_ABSENT")
         _evidence(item.get("evidence"), f"open_confirmed_findings[{index}].evidence")
+
+    reasoning_gate_failed = gate_status["SCIENTIFIC_REASONING_ABSENT"] == "FAIL"
+    if reasoning_gate_failed:
+        if gate_disposition["SCIENTIFIC_REASONING_ABSENT"] != "ABANDON":
+            raise ValueError("SCIENTIFIC_REASONING_ABSENT FAIL requires disposition ABANDON")
+        if criteria["2.3"]["status"] != "FAIL":
+            raise ValueError("SCIENTIFIC_REASONING_ABSENT FAIL requires criteria.2.3 FAIL")
+        matches = [
+            item for item in findings
+            if item.get("hard_gate_code") == "SCIENTIFIC_REASONING_ABSENT"
+        ]
+        if not matches:
+            raise ValueError("SCIENTIFIC_REASONING_ABSENT FAIL requires a matching finding")
+        for item in matches:
+            if item["repairable"] or item["disposition"] != "ABANDON":
+                raise ValueError("SCIENTIFIC_REASONING_ABSENT finding must be non-repairable ABANDON")
+            if set(item["failure_modes"]) != set(gate_modes["SCIENTIFIC_REASONING_ABSENT"]):
+                raise ValueError("SCIENTIFIC_REASONING_ABSENT finding modes must match the Gate")
 
     criterion_statuses = [criteria[key]["status"] for key in CRITERIA]
     probe_statuses = [probes[name]["status"] for name in PROBES]

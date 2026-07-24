@@ -21,6 +21,11 @@ equal-depth Review. Local regression success alone never authorizes publication.
 Mechanical evidence before and after repair is retained as observation; only
 the Agent may decide whether a candidate fact resolves the scientific finding.
 
+A Review decision that confirms `SCIENTIFIC_REASONING_ABSENT` with disposition
+`ABANDON` terminates the lifecycle before Repair. Do not remove supplied
+parameters or formulas, add process requirements, or alter the checker to turn
+such a task into a different scientific task.
+
 Only write mutations under
 `/personal/qa_review/<cluster>/<theme>/<paper>/candidate`; keep the original
 Harbor package unchanged. Preserve an immutable snapshot, candidate hashes or

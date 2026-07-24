@@ -27,7 +27,14 @@ def decision() -> dict:
         for dim, weight in module.DIMENSIONS.items()
     ]
     gates = [
-        {"code": code, "status": "PASS", "rationale": "No gate defect.", "evidence": evidence()}
+        {
+            "code": code,
+            "status": "PASS",
+            "disposition": "NONE",
+            "failure_modes": [],
+            "rationale": "No gate defect.",
+            "evidence": evidence(),
+        }
         for code in sorted(module.HARD_GATES)
     ]
     probes = {
@@ -50,12 +57,33 @@ def decision() -> dict:
     return {
         "schema_version": module.SCHEMA, "package_id": "cluster/theme/paper-1",
         "mode": "REVIEW", "reproduction_intent": "METHOD_REIMPLEMENTATION",
-        "reviewed_scope": ["instruction.md", "paper/**", "tests/**"],
+        "reviewed_scope": ["instruction.md", "resources.json", "paper/**", "tests/**"],
         "verdict": "PASS", "weighted_score": 100.0, "criteria": criteria,
         "dimensions": dimensions, "hard_gates": gates, "checker_probes": probes,
         "readiness": readiness, "parameter_assessment": parameters,
         "diagnostic_adjudications": [], "open_confirmed_findings": [], "limitations": [],
     }
+
+
+def reasoning_absent_decision(*modes: str) -> dict:
+    value = decision()
+    value["criteria"]["2.3"]["status"] = "FAIL"
+    gate = next(item for item in value["hard_gates"] if item["code"] == "SCIENTIFIC_REASONING_ABSENT")
+    gate.update({"status": "FAIL", "disposition": "ABANDON", "failure_modes": list(modes)})
+    value["open_confirmed_findings"] = [{
+        "finding_id": "F-SCI-REASONING-ABSENT",
+        "title": "Final task lacks substantive scientific reasoning.",
+        "severity": "FATAL",
+        "dimension": "C03",
+        "repairable": False,
+        "hard_gate": True,
+        "hard_gate_code": "SCIENTIFIC_REASONING_ABSENT",
+        "disposition": "ABANDON",
+        "failure_modes": list(modes),
+        "evidence": evidence("instruction leaves only mechanical work"),
+    }]
+    value["verdict"] = "REJECT"
+    return value
 
 
 class AgentFinalDecisionTests(unittest.TestCase):
@@ -124,8 +152,64 @@ class AgentFinalDecisionTests(unittest.TestCase):
     def test_hard_gate_forces_reject(self) -> None:
         value = decision()
         value["hard_gates"][0]["status"] = "FAIL"
+        value["hard_gates"][0]["disposition"] = "REPAIR"
         value["verdict"] = "REJECT"
         self.assertEqual(module.validate(value)["verdict"], "REJECT")
+
+    def test_pure_information_extraction_is_rejected_and_abandoned(self) -> None:
+        value = reasoning_absent_decision("PURE_INFORMATION_EXTRACTION")
+        self.assertEqual(module.validate(value)["verdict"], "REJECT")
+
+    def test_pure_algebraic_computation_is_rejected_and_abandoned(self) -> None:
+        value = reasoning_absent_decision("PURE_ALGEBRAIC_COMPUTATION")
+        self.assertEqual(module.validate(value)["verdict"], "REJECT")
+
+    def test_extraction_plus_algebra_records_both_modes_on_one_gate(self) -> None:
+        value = reasoning_absent_decision(
+            "PURE_INFORMATION_EXTRACTION", "PURE_ALGEBRAIC_COMPUTATION"
+        )
+        self.assertEqual(module.validate(value)["verdict"], "REJECT")
+
+    def test_model_and_evidence_reasoning_examples_do_not_trigger_gate(self) -> None:
+        for rationale in (
+            "Task requires validating model applicability before computing a value.",
+            "Task requires comparing conflicting evidence before producing a table.",
+        ):
+            with self.subTest(rationale=rationale):
+                value = decision()
+                gate = next(item for item in value["hard_gates"] if item["code"] == "SCIENTIFIC_REASONING_ABSENT")
+                gate["rationale"] = rationale
+                self.assertEqual(module.validate(value)["verdict"], "PASS")
+
+    def test_reasoning_absence_rejects_inconsistent_dispositions(self) -> None:
+        value = reasoning_absent_decision("PURE_INFORMATION_EXTRACTION")
+        gate = next(item for item in value["hard_gates"] if item["code"] == "SCIENTIFIC_REASONING_ABSENT")
+        gate["disposition"] = "REPAIR"
+        with self.assertRaisesRegex(ValueError, "requires disposition ABANDON"):
+            module.validate(value)
+
+        value = reasoning_absent_decision("PURE_INFORMATION_EXTRACTION")
+        value["open_confirmed_findings"][0]["repairable"] = True
+        value["open_confirmed_findings"][0]["disposition"] = "REPAIR"
+        with self.assertRaisesRegex(ValueError, "must be non-repairable ABANDON"):
+            module.validate(value)
+
+    def test_reasoning_absence_requires_reject_and_matching_c03_failure(self) -> None:
+        value = reasoning_absent_decision("PURE_INFORMATION_EXTRACTION")
+        value["criteria"]["2.3"]["status"] = "PASS"
+        with self.assertRaisesRegex(ValueError, "criteria.2.3 FAIL"):
+            module.validate(value)
+
+        value = reasoning_absent_decision("PURE_INFORMATION_EXTRACTION")
+        value["verdict"] = "CONDITIONAL"
+        with self.assertRaisesRegex(ValueError, "expected REJECT"):
+            module.validate(value)
+
+    def test_version_2_0_is_rejected(self) -> None:
+        value = decision()
+        value["schema_version"] = "materials-agent-final-decision/2.0"
+        with self.assertRaisesRegex(ValueError, "2.1"):
+            module.validate(value)
 
 
 if __name__ == "__main__":

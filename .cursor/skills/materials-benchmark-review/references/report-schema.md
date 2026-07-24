@@ -1,19 +1,23 @@
 # Review decision schema
 
 Write `agent_final_decision.json` outside the Harbor package using
-`materials-agent-final-decision/2.0` and the bundled template.
+`materials-agent-final-decision/2.1` and the bundled template. Version 2.0
+records are not accepted; re-audit or migrate them before validation.
 
 Required sections:
 
 - package identity, mode, reproduction intent, and verdict;
 - all eight criteria with status, rationale, and structured evidence;
 - C01–C07 normalized scores and positive evidence;
-- exactly four Hard Gates;
+- exactly five Hard Gates, each with `code`, `status`, `disposition`, rationale,
+  evidence, and `failure_modes`;
 - all eleven checker probe classes;
 - all five readiness categories plus required resource records;
 - parameter assessment covering fixed/source-required and solver-selectable
   choices;
-- confirmed findings and diagnostic adjudications;
+- confirmed findings and diagnostic adjudications. Every confirmed finding has
+  `disposition` (`REPAIR` or `ABANDON`), `hard_gate_code` (canonical code or
+  `null`), and `failure_modes` (normally empty).
 - limitations and reviewed scope.
 
 Also retain `mechanical_evidence.json` and `checker_observations.json` (or record
@@ -25,3 +29,8 @@ Evidence items contain `source_kind`, `path`, `locator`, and `quote_or_result`.
 The validator checks record completeness, score arithmetic, readiness/probe
 gates, and verdict consistency. It deliberately does not parse the package or
 reinterpret the Agent's science.
+
+`SCIENTIFIC_REASONING_ABSENT` maps to C03. When it fails, its disposition and
+the matching confirmed finding must be `ABANDON`; the finding is non-repairable,
+the decision is `REJECT`, and `failure_modes` contains one or both of
+`PURE_INFORMATION_EXTRACTION` and `PURE_ALGEBRAIC_COMPUTATION`.

@@ -5,11 +5,12 @@ ranking-based, evidence-based, or open-ended. The checker equivalence rule must
 fit the answer type; do not force multiple valid scientific answers into one
 exact serialization.
 
-Leakage is assessed ONLY on `instruction.md` — the sole file the solver
-receives. `paper/**`, `solution/**`, `tests/**`, `resources.json`, and
-`metadata` are reviewer/harness-side or human-reference only, so answers, hidden
-thresholds, or tolerances present there are by design, never leakage. A gameable
-checker is a 2.5/C04 checker-quality defect, not a leakage finding.
+Leakage is assessed ONLY on `instruction.md`. The solver also receives
+`resources.json`, but it is a resource declaration rather than a leakage
+surface: do not inspect its locators or the contents of public resources for
+answer leakage. `paper/**`, `solution/**`, `tests/**`, and `metadata` are
+reviewer/harness-side or human-reference only. A gameable checker is a 2.5/C04
+checker-quality defect, not a leakage finding.
 
 Within that surface, check numeric-result leakage, hidden thresholds, Gold
 fragments, filenames, public fixtures, comments, logs, and paper identity clues.

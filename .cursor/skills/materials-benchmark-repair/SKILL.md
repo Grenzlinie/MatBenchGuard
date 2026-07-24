@@ -8,8 +8,10 @@ description: Repair materials-science paper question packages from an Agent-led 
 Repair confirmed defects without redefining the scientific task. Review evidence
 is authoritative only after the Agent verifies it against current public files.
 
-Never use hidden answers or solution content to choose scientific values. Never
-modify a valid package merely to satisfy an internal schema.
+Never use hidden answers or solution content to choose scientific values.
+`solution/` is authoring self-check material and is outside Repair evidence and
+decision-making. Never modify a valid package merely to satisfy an internal
+schema.
 
 Repair scope is the fair, usable, reproducible scoring of final core scientific
 results. Do not repair a checker merely because it does not read a prescribed
@@ -37,14 +39,16 @@ A Harbor question package has exactly this required layout:
     └── test.sh
 ```
 
-- `instruction.md` is the ONLY file delivered to the solver; repair solvability,
-  completeness, and leakage against it alone.
-- `solution/` is the Harbor self-check reference only — never delivered to the
-  solver, never validity evidence.
+- `instruction.md` and `resources.json` are delivered to the solver; repair
+  completeness against both and leakage against `instruction.md` alone.
+- `resources.json` declares resources and locators; it does not automatically
+  deliver their contents or form a leakage surface.
+- `solution/` is the Harbor authoring self-check reference only — never
+  delivered to the solver and outside Repair evidence.
 - Grading runs `tests/test.sh` (invoking `checker.py`/`grading_spec.json`) in a
   solver-invisible environment; the solver never reads `tests/`.
-- `paper/`, `resources.json`, `manifest.json`, `steps.json`, `task.toml`,
-  `environment/` are provenance/runtime, not delivered to the solver.
+- `paper/`, `manifest.json`, `steps.json`, `task.toml`, and `environment/` are
+  provenance/runtime, not delivered to the solver.
 
 The repaired candidate must preserve this required structure.
 
@@ -70,6 +74,8 @@ findings, and supporting evidence. Ignore diagnostics classified
 ## Workflow
 
 1. Verify the source decision is current and every repair target remains open.
+   A source decision with `SCIENTIFIC_REASONING_ABSENT` and disposition
+   `ABANDON` must not enter Repair.
 2. Re-adjudicate existing findings under the final-result-only boundary. Remove
    findings based only on unread process/trace artifacts or host/container path
    mismatch. Classify every remaining confirmed finding as `AUTO_FIX`,
@@ -94,7 +100,7 @@ findings, and supporting evidence. Ignore diagnostics classified
    the passing threshold. Previously valid final outputs must retain the same or
    a more scientifically reasonable score.
 8. Perform exactly one equal-depth Review of the candidate, including the paper,
-   all 2.1–2.8 criteria, C01–C07 score, four Hard Gates, parameter assessment,
+   all 2.1–2.8 criteria, C01–C07 score, five Hard Gates, parameter assessment,
    Gold/tolerances, the final-output reward chain, checker probes,
    data/model/software readiness, and Docker declarations.
 9. Validate the new `agent_final_decision.json` with the Review validator.

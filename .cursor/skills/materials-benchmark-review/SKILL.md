@@ -9,11 +9,11 @@ Audit one paper-authored materials question before admission. The Agent is the
 scientific and verdict authority. Deterministic diagnostics are hypotheses until
 verified against primary files or usable runtime evidence.
 
-Never use hidden answers or solution implementation as validity evidence. The
-solution may only be executed in isolation to test whether a positive submission
-can be produced and accepted. Scope checker quality to the final core scientific
-results requested by the public task. Do not require the checker to read or
-prove methods, traces, training logs, or intermediate artifacts.
+Never use hidden answers or solution implementation as validity evidence.
+`solution/` is authoring self-check material and is outside Review evidence and
+decision-making. Scope checker quality to the final core scientific results
+requested by the public task. Do not require the checker to read or prove
+methods, traces, training logs, or intermediate artifacts.
 
 ## Required references
 
@@ -59,16 +59,18 @@ A Harbor question package has exactly this required layout:
 ```
 
 Roles and delivery contract:
-- `instruction.md` is the ONLY file delivered to the solver. Judge leakage,
-  solvability, and completeness solely against it.
-- `solution/` is the reference solution used ONLY for Harbor self-check. It is
-  never delivered to the solver and is never validity evidence; execute it only
-  in isolation to confirm a positive submission can be produced/accepted.
+- `instruction.md` and `resources.json` are delivered to the solver. Judge
+  task completeness against both; judge answer leakage solely against
+  `instruction.md`.
+- `resources.json` is a declaration of resources and locators, not automatic
+  delivery of the resource contents. Use it with `instruction.md` for 2.8;
+  do not inspect a locator or public resource for leakage.
+- `solution/` is the reference solution used only for Harbor authoring
+  self-check. It is not delivered to the solver and is outside Review evidence.
 - Grading runs `tests/test.sh` (which invokes `checker.py`/`grading_spec.json`)
   in an environment the solver cannot see; the solver never reads `tests/`.
-- `paper/`, `resources.json`, `manifest.json`, `steps.json`, `task.toml`,
-  `environment/` are authoring/reviewer/runtime provenance, not delivered to the
-  solver.
+- `paper/`, `manifest.json`, `steps.json`, `task.toml`, and `environment/` are
+  authoring/reviewer/runtime provenance, not delivered to the solver.
 
 ## Inputs and scope
 
@@ -76,7 +78,7 @@ Locate functional equivalents of the instruction, paper/supplements, checker,
 grading contract, public fixtures, test entrypoint, declared resources, and
 environment. Names/layouts may vary; build a role map before judging.
 
-Read the complete instruction and paper. For A2/A4/A5-equivalent judgments
+Read the complete instruction, `resources.json`, and paper. For A2/A4/A5-equivalent judgments
 (scientific validity, paper fidelity, Gold), paper reading is mandatory unless
 the task is already proven `NON_MAT`.
 
@@ -90,7 +92,9 @@ mutates it.
 2. Classify materials qualification and reproduction intent.
 3. Extract the scientific target, required inputs, fixed parameters,
    solver-selectable parameters, **final core scientific outputs**, answer type,
-   and claimed capability. Explicitly exclude recommended methods, execution
+   and claimed capability. Adjudicate whether that capability requires
+   substantive scientific reasoning rather than pure information extraction or
+   pure algebraic computation. Explicitly exclude recommended methods, execution
    traces, training logs, and intermediate artifacts from the core-output map.
 4. Check prompt self-consistency across workflow, output contract, grading, and
    self-check.
@@ -107,10 +111,13 @@ mutates it.
    Agent-built valid/gradient/
    equivalence/component cases, and adjudicate all applicable classes under
    `checker-audit.md`.
-8. Verify each required data/model/software/environment/access item is ready;
-   distinguish prerequisites from outputs the solver must generate.
+8. Assess `instruction.md` and `resources.json` together to verify that each
+   required data/model/software/environment/access item is necessary and
+   sufficiently declared; distinguish prerequisites from outputs the solver
+   must generate. Do not download, click, or otherwise probe declared locators
+   merely to make this assessment.
 9. Audit leakage, security, feasibility, and reproducibility.
-10. Assess 2.1–2.8 independently, score C01–C07, adjudicate all four Hard Gates,
+10. Assess 2.1–2.8 independently, score C01–C07, adjudicate all five Hard Gates,
    and record findings with exact evidence.
 11. For every automated diagnostic use `CONFIRMED`,
     `DISMISSED_FALSE_POSITIVE`, or `AUTOMATION_LIMITATION`. Only confirmed
