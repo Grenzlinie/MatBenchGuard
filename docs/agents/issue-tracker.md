@@ -1,15 +1,15 @@
 # Issue tracker: GitHub
 
-Issues and PRDs for this repo live in `Grenzlinie/qa-review` GitHub Issues. Use the `gh` CLI and pass `--repo Grenzlinie/qa-review` when repository inference is unavailable.
+Issues and PRDs for this repo live in `Grenzlinie/MatBenchGuard` GitHub Issues. Use the `gh` CLI and pass `--repo Grenzlinie/MatBenchGuard` when repository inference is unavailable.
 
 ## Conventions
 
-- Create: `gh issue create --repo Grenzlinie/qa-review --title "..." --body "..."`
-- Read: `gh issue view <number> --repo Grenzlinie/qa-review --comments`
-- List: `gh issue list --repo Grenzlinie/qa-review`
-- Comment: `gh issue comment <number> --repo Grenzlinie/qa-review --body "..."`
-- Label: `gh issue edit <number> --repo Grenzlinie/qa-review --add-label "..."`
-- Close: `gh issue close <number> --repo Grenzlinie/qa-review --comment "..."`
+- Create: `gh issue create --repo Grenzlinie/MatBenchGuard --title "..." --body "..."`
+- Read: `gh issue view <number> --repo Grenzlinie/MatBenchGuard --comments`
+- List: `gh issue list --repo Grenzlinie/MatBenchGuard`
+- Comment: `gh issue comment <number> --repo Grenzlinie/MatBenchGuard --body "..."`
+- Label: `gh issue edit <number> --repo Grenzlinie/MatBenchGuard --add-label "..."`
+- Close: `gh issue close <number> --repo Grenzlinie/MatBenchGuard --comment "..."`
 
 Use heredocs for multiline bodies.
 
@@ -19,7 +19,7 @@ Use heredocs for multiline bodies.
 
 ## When a skill says "publish to the issue tracker"
 
-Create a GitHub issue in `Grenzlinie/qa-review`.
+Create a GitHub issue in `Grenzlinie/MatBenchGuard`.
 
 ## When a skill says "fetch the relevant ticket"
 

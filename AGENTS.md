@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-Issues and PRDs are tracked in `Grenzlinie/qa-review` GitHub Issues. See `docs/agents/issue-tracker.md`.
+Issues and PRDs are tracked in `Grenzlinie/MatBenchGuard` GitHub Issues. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
