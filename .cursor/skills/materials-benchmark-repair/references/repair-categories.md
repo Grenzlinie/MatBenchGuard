@@ -23,6 +23,20 @@ quote, identity/hash, applicability, derivation, and affected paths. Examples
 include correcting paper-inconsistent units, fixed parameters, data identity,
 Gold transcription, or evidenced tolerances.
 
+This category also covers `METHOD_REFERENCE_MISMATCH` and
+`UNSUPPORTED_SYNTHETIC_GOLD` through either of these evidence-backed repairs:
+
+1. restore a paper-consistent absolute-value task when the source uniquely
+   determines the system, method, conditions, result, and tolerance; or
+2. retain a reduced/smoke system and score a paper/authoritative-source-backed
+   trend, ordering, sign, or qualitative relationship when that was already the
+   core scientific endpoint and its transferability is justified.
+
+Synchronize instruction, steps, resources/task configuration, Gold/relations,
+grading, checker, and test entrypoint. Never replace synthetic Gold with paper
+numbers while retaining a materially different system, and never silently
+redefine an absolute-value endpoint as a trend task.
+
 ## ABANDON
 
 Use only when the task cannot be restored without guessing, redefining the

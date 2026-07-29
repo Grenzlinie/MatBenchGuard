@@ -8,9 +8,10 @@ exact serialization.
 Leakage is assessed ONLY on `instruction.md`. The solver also receives
 `resources.json`, but it is a resource declaration rather than a leakage
 surface: do not inspect its locators or the contents of public resources for
-answer leakage. `paper/**`, `solution/**`, `tests/**`, and `metadata` are
+answer leakage. `paper/**`, `tests/**`, and `metadata` are
 reviewer/harness-side or human-reference only. A gameable checker is a 2.5/C04
-checker-quality defect, not a leakage finding.
+checker-quality defect, not a leakage finding. `solution/**` is outside Review
+and must not be opened or considered.
 
 Within that surface, check numeric-result leakage, hidden thresholds, Gold
 fragments, filenames, public fixtures, comments, logs, and paper identity clues.

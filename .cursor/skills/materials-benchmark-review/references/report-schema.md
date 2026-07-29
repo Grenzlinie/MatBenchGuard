@@ -1,8 +1,8 @@
 # Review decision schema
 
 Write `agent_final_decision.json` outside the Harbor package using
-`materials-agent-final-decision/2.1` and the bundled template. Version 2.0
-records are not accepted; re-audit or migrate them before validation.
+`materials-agent-final-decision/2.2` and the bundled template. Version 2.1 and
+older records are not accepted; re-audit or migrate them before validation.
 
 Required sections:
 
@@ -15,6 +15,8 @@ Required sections:
 - all five readiness categories plus required resource records;
 - parameter assessment covering fixed/source-required and solver-selectable
   choices;
+- all required `scientific_risk_patterns`, each with canonical criterion,
+  status, rationale, and evidence;
 - confirmed findings and diagnostic adjudications. Every confirmed finding has
   `disposition` (`REPAIR` or `ABANDON`), `hard_gate_code` (canonical code or
   `null`), and `failure_modes` (normally empty).
@@ -24,6 +26,25 @@ Also retain `mechanical_evidence.json` and `checker_observations.json` (or recor
 why a collector was inapplicable). Cite their observation IDs in the Agent
 decision where they support a conclusion; never copy candidates directly into
 findings without adjudication.
+
+Every applicable checker probe must cite an exact raw observation `case_id`.
+Validate the decision with all builtin and task-specific observation files:
+
+```bash
+python .cursor/skills/materials-benchmark-review/scripts/validate_agent_decision.py \
+  agent_final_decision.json \
+  --probe-observations evidence/checker_observations.json \
+  --probe-observations evidence/task_specific_observations.json
+```
+
+The validator rejects declared `PASS`/`FAIL` probe states that lack an executed
+`OBSERVED` case and rejects `NOT_ASSESSABLE` without a matching raw
+`NOT_ASSESSED`/`UNUSABLE` record.
+
+Every failed scientific pattern must fail its mapped criterion and have a
+matching confirmed finding with the same `pattern_id`. A pattern evidence gap
+forces `NOT_ASSESSABLE`; `NOT_APPLICABLE` requires an explicit rationale and
+evidence.
 
 Evidence items contain `source_kind`, `path`, `locator`, and `quote_or_result`.
 The validator checks record completeness, score arithmetic, readiness/probe

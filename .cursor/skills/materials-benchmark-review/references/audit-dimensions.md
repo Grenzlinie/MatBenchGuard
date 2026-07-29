@@ -14,7 +14,10 @@ generic work does not pass.
 Verify inputs, target, work, outputs, paths, formats, fields, types, units,
 identifiers, reference versions, coordinates, missing values, duplicates, and
 ordering. Workflow, output contract, grading description, and self-check must
-agree. Every checker-required condition must be public. Separate final core
+agree. Explicitly compare repeated analysis windows, durations, temperatures,
+loads, cutoffs, coordinate conventions, row counts, and thresholds across
+steps; conflicting values for the same quantity fail this criterion. Every
+checker-required condition must be public. Separate final core
 scientific outputs from recommended methods, optional/process artifacts,
 traces, training logs, and intermediates. The latter are outside checker
 coverage unless they are themselves the task's final scientific result.
@@ -24,7 +27,11 @@ coverage unless they are themselves the task's final scientific result.
 The target must be meaningful, the method appropriate, and the task solvable
 independently from declared inputs. Compare instruction, data, method, fixed
 parameters, and intended result with the paper. Apply the parameter policy in
-`paper-grounded-audit.md`.
+`paper-grounded-audit.md`. A materially changed system or method must not be
+graded against paper values unless those values are independently valid for the
+new conditions. A changed or reduced system may instead evaluate a
+source-supported trend, ordering, sign, or qualitative relation when that
+relational endpoint is public and its applicability is justified.
 
 ## 2.4 Checker assesses core science
 
@@ -55,17 +62,25 @@ by the paper or another public authoritative source and consistent between the
 grading specification and checker. Paper-sourced Gold is expected and does not
 require an invented second Gold set. A method's own output must be described as
 method agreement rather than independent truth unless externally validated.
+Random, perturbed, fitted, interpolated, smoke, dummy, or placeholder numbers
+found in in-scope grading files are not Gold provenance unless the declared
+scientific target is exactly that transformation and its inputs are
+independently valid.
+A paper/authoritative-source-backed trend or ordering can be credible Gold
+semantics without exact values; do not confuse a directly scored relation with
+invented trend-shaped pseudo-numbers.
 
 ## 2.7 No answer leakage or exploit
 
 Leakage is judged ONLY against `instruction.md`. `resources.json` is delivered
 as a resource declaration, but its locators and the contents of public resources
-are not a leakage surface. Everything else (`paper/**`, `solution/**`,
-`tests/**`, `manifest.json`, `metadata`) is reviewer/harness-side or
+are not a leakage surface. Everything else (`paper/**`, `tests/**`,
+`manifest.json`, `metadata`) is reviewer/harness-side or
 human-reference material. Therefore Gold, numeric results, hidden acceptance
 values, or tolerances outside `instruction.md` are by design and are NOT
 leakage. Do NOT open a leakage finding or Hard Gate solely because an answer
-appears in the paper, solution, checker, resource declaration, or metadata.
+appears in the paper, checker, resource declaration, or metadata. `solution/`
+is outside the audit and must not be opened for leakage review.
 
 Within `instruction.md`, the prompt must not disclose numeric answers, hidden
 acceptance values, or paper identity that permits answer lookup instead of
@@ -79,8 +94,11 @@ Assess `instruction.md` and `resources.json` together to determine whether
 prerequisite data, pretrained models/weights, indispensable software,
 environment requirements, and legal access are necessary to the task and
 sufficiently declared. Solver-generated models/structures/intermediates are
-outputs, not missing prerequisites. Do not download resources or probe locators
-to make this assessment. See `resource-readiness.md`.
+outputs, not missing prerequisites. When network access is permitted, probe
+indispensable locators for publication readiness while keeping their contents
+outside the leakage audit. A confirmed 404/410, identity mismatch, or
+insufficient artifact is a resource defect; transient audit-host failure is an
+automation limitation. See `resource-readiness.md`.
 
 ## C01–C07 score
 

@@ -14,8 +14,19 @@ Criterion 2.8 passes only when all five are `READY` or `NOT_REQUIRED`.
 Assess `instruction.md` and `resources.json` together. For every declared
 required object record its role, identity/version, locator, sufficiency, and
 allowed equivalent, then judge whether it is genuinely necessary for solving
-the task. Do not click URLs, download artifacts, or retry network failures as
-part of this assessment.
+the task.
+
+When network access is permitted, publication readiness requires an availability
+probe for every indispensable external locator. Record timestamp, final URL,
+HTTP/status result, resolved identity/version, and content hash when practical.
+Do not use downloaded contents for leakage assessment. Distinguish:
+
+- confirmed 404/410, wrong identity/version, empty/corrupt content, or an
+  insufficient artifact: `NOT_READY`;
+- transient DNS/TLS/timeout/rate-limit or audit-host failure:
+  `NOT_ASSESSABLE`/`AUTOMATION_LIMITATION`;
+- successful reachability without identity verification: incomplete evidence,
+  not by itself `READY`.
 
 Required external data, pretrained weights, potentials, tokenizers, and
 checkpoints must be sufficiently declared when they are necessary for the task.
@@ -26,7 +37,8 @@ by `paper-grounded-audit.md`, not resource readiness.
 An indispensable input that is absent from the task contract, identity-mismatched,
 or insufficiently declared without an allowed equivalent triggers
 `INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE`. Do not infer unavailability from an
-unvisited locator or an audit-host/network failure.
+unvisited locator or a transient audit-host/network failure. Conversely, do not
+declare `READY` solely because a URL string is present.
 
 Evaluate filesystem locations according to the declared container layout and
 mounts. Missing host paths or a helper's inability to rewrite container paths
