@@ -44,6 +44,10 @@ for f in glob.glob("**/agent_final_decision.json", recursive=True):
 
 def strip_artifacts(root):
     for r, dirs, files in os.walk(root):
+        relative = os.path.relpath(r, root)
+        if relative == "solution" or relative.startswith(f"solution{os.sep}"):
+            dirs[:] = []
+            continue
         if "__pycache__" in dirs:
             shutil.rmtree(os.path.join(r, "__pycache__"), ignore_errors=True)
             dirs.remove("__pycache__")
@@ -79,5 +83,6 @@ open(os.path.join(PUB, "_PUBLISH_MANIFEST.txt"), "w").write(
     f"pass_as_is={len(pass_pkgs)}\nrepaired={len(repaired_pkgs)}\n"
     f"copied_ok={stats['ok']} skipped_existing={stats['skip']} missing_src={stats['missing']}\n"
     "PASS = unchanged source package; REPAIRED = clean repaired package "
-    "(QA_ROOT/<pkg>/candidate). No audit files; __pycache__ stripped.\n")
+    "(QA_ROOT/<pkg>/candidate). No audit files; in-scope __pycache__ stripped; "
+    "solution/ preserved without inspection.\n")
 print("pass:", len(pass_pkgs), "repaired:", len(repaired_pkgs), "stats:", stats)

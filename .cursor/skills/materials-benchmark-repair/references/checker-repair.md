@@ -4,9 +4,26 @@ Before changing checker logic, prove the defect with a minimal failing case and
 trace the intended behavior to instruction, paper/public evidence, and grading
 contract.
 
+Trace each Gold value to its source or reproducible generating run. Search
+`tests/` for random generation, perturbation, interpolation, fitting, and
+smoke/dummy/placeholder data. Treat these as candidates until adjudicated, but
+never preserve them as truth merely because the current checker accepts them.
+Do not open or inspect `solution/`.
+
+Do not flag a reduced smoke calculation merely because it differs from the
+paper's scale. If the public endpoint is a source-supported trend/order/sign,
+verify the checker evaluates that relation directly, test reversed and boundary
+relations, and document why the relation applies to the reduced system. Reject
+invented intermediate magnitudes that merely imitate the expected trend.
+
 After repair test valid positive, missing/empty/malformed, random/constant,
 duplicates, NaN/Inf, minimal exploit, quality gradient, semantic equivalence,
 component isolation, and relevant task-specific attacks.
+
+Write a probe plan before mutation and retain generic plus named task-specific
+variants for every affected scientific variable, key, coordinate, unit, and
+tolerance boundary. A generic duplicate/minimal case passing does not discharge
+task-specific duplicate-key or wrong-coordinate attacks.
 
 Verify every final core scientific output is read, bound to a scorer, positively weighted,
 finite-returning, and included in final reward. Process artifacts remain

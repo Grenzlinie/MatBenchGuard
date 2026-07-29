@@ -65,8 +65,8 @@ _Avoid_: metadata 参与加权、把临时环境故障直接判 REJECT
 _Avoid_: 物理删除、继续留在可发布 corpus
 
 **审查路径**:
-材料题包使用单一双车道路径（deterministic code checks + Agent paper read）。不使用证据层级路由。审查与等深复审都执行 Harbor `tests/test.sh` 探针，但不声称科学工作流已复现。
-_Avoid_: 证据层级路由、把 checker 探针视为科学流程已复现
+材料题包按从便宜到昂贵的 Phase Gate 审核。Phase 0–2 先做 deterministic 筛查；只有保留实质科学目标且没有不可修复早期 Hard Gate 的题才升级到 Phase 3 论文深审。深审采用 `MECHANICAL + HYBRID + AGENT` 责任矩阵：Agent 必须回看真实题包文件并主动检查机械工具未命中的问题。审查与等深复审都执行 Harbor `tests/test.sh` 探针，但不声称科学工作流已复现。
+_Avoid_: 把机械候选或零命中直接当 verdict、把 checker 探针视为科学流程已复现
 
 **确定性修复**:
 有唯一、可测试且不改变核心科学契约的修复对应 `AUTO_FIX`；有 instruction/tests/solution 或按需 paper 证据支持的解释性修复对应 `ASSISTED_FIX`；证据不足或会重定义核心科学契约时对应 `ABANDON`。前两者都可由 Agent 在隔离副本自主应用、回归并同深度复审；禁止猜科学参数、泄露答案、降低阈值或重定义核心科学任务。

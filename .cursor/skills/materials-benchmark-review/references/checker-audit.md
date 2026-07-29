@@ -24,10 +24,24 @@ Use task-specific attacks for tables, structures, trajectories, images,
 rankings, scalar values, models, or other outputs. Test boundary tolerances and
 partial correctness when meaningful.
 
+Before execution, write a probe plan that maps every core scientific variable,
+identifier/key, coordinate, unit, ordering rule, tolerance boundary, and
+capability claim to at least one positive or adversarial case. Generic
+random/constant/duplicate/minimal fixtures are smoke tests only; they cannot
+stand in for task-specific attacks. Retain both the generic observation and
+named variants such as `minimal_exploit:wrong-time-axis` or
+`duplicate_records:conflicting-key`.
+
 A result is usable only when execution completes, reward is finite, breakdown
 is parseable, and checker errors are absent. Mark irrelevant probes
 `NOT_APPLICABLE` with a rationale. Criteria 2.4/2.5 cannot pass when an
 applicable core probe fails or is unassessed.
+
+Every applicable decision status must cite the exact executed observation
+`case_id`. The decision validator must cross-check raw observation files and
+reject a declared `PASS`/`FAIL` when the corresponding raw class contains no
+usable `OBSERVED` case. Static reasoning about weights or code paths cannot be
+substituted for `quality_gradient` or `component_isolation` execution.
 
 Non-finite values, wrong types, missing fields, duplicate identifiers, invalid
 formats, and unsafe parsing are checker defects eligible for `AUTO_FIX`; they

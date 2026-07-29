@@ -12,6 +12,7 @@ import ast
 import hashlib
 import ipaddress
 import json
+import os
 import re
 import socket
 import urllib.error
@@ -20,11 +21,52 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "materials-mechanical-evidence/1.0"
+SCHEMA = "materials-mechanical-evidence/1.1"
 URL_RE = re.compile(r"https?://[^\s<>)\]}`\"']+")
 OUTPUT_RE = re.compile(r"(?:/app/outputs/)?([A-Za-z0-9_.-]+\.(?:json|jsonl|csv|tsv|txt|yaml|yml|cif|xyz|vasp|png|npz|npy|pt|pth|ckpt|onnx))", re.I)
 MODEL_RE = re.compile(r"\b(model|weights?|checkpoint|potential|tokenizer|pretrained|ckpt|onnx|\.pt|\.pth)\b", re.I)
 DATA_RE = re.compile(r"\b(dataset|data file|input file|structure file|database|annotation|split)\b", re.I)
+ANALYSIS_WINDOW_RE = re.compile(
+    r"(?:(?:final|last)\s+|最后\s*)(\d+(?:\.\d+)?)\s*"
+    r"(fs|ps|ns|(?:u|µ|μ)s|ms|s)\b",
+    re.I,
+)
+TIME_FACTORS_SECONDS = {
+    "fs": 1e-15,
+    "ps": 1e-12,
+    "ns": 1e-9,
+    "us": 1e-6,
+    "µs": 1e-6,
+    "μs": 1e-6,
+    "ms": 1e-3,
+    "s": 1.0,
+}
+REQUIRED_CORE_PATHS = (
+    "manifest.json",
+    "task.toml",
+    "resources.json",
+    "steps.json",
+    "instruction.md",
+    "paper/paper.md",
+    "tests/grading_spec.json",
+    "tests/checker.py",
+    "tests/test.sh",
+)
+GOLD_RISK_PATTERNS = {
+    "RANDOM_OR_PERTURBED_REFERENCE": re.compile(
+        r"\b(?:random|default_rng|randn?|uniform|normal|gauss|noise|jitter|perturb)\b",
+        re.I,
+    ),
+    "INTERPOLATED_OR_FITTED_REFERENCE": re.compile(
+        r"\b(?:interp|interp1d|interpolate|polyfit|curve_fit|linspace|trend[-_ ]?fit)\b",
+        re.I,
+    ),
+    "SMOKE_OR_SYNTHETIC_REFERENCE": re.compile(
+        r"\b(?:smoke|dummy|placeholder|synthetic|mock|fabricat(?:e|ed|ion)|toy data)\b",
+        re.I,
+    ),
+}
+TEXT_SUFFIXES = {".py", ".sh", ".json", ".toml", ".yaml", ".yml", ".md", ".txt"}
 
 
 def sha256(path: Path) -> str:
@@ -49,14 +91,21 @@ def locate(root: Path, names: tuple[str, ...]) -> Path | None:
 
 def inventory(root: Path) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
     rows, limitations = [], []
-    for path in sorted(root.rglob("*")):
+    paths: list[Path] = []
+    for current, directories, filenames in os.walk(root):
+        current_path = Path(current)
+        if current_path == root and "solution" in directories:
+            directories.remove("solution")
+        paths.extend(current_path / name for name in filenames)
+    for path in sorted(paths):
+        relative = path.relative_to(root)
         if path.is_symlink():
-            limitations.append({"stage": "inventory", "path": path.relative_to(root).as_posix(), "reason": "symlink not followed"})
+            limitations.append({"stage": "inventory", "path": relative.as_posix(), "reason": "symlink not followed"})
             continue
         if not path.is_file():
             continue
         role = "other"
-        name = path.relative_to(root).as_posix()
+        name = relative.as_posix()
         if name == "instruction.md": role = "instruction"
         elif name.startswith("paper/"): role = "paper"
         elif name.endswith("tests/checker.py"): role = "checker"
@@ -67,6 +116,138 @@ def inventory(root: Path) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
         elif DATA_RE.search(name): role = "data_candidate"
         rows.append({"path": name, "role": role, "size": path.stat().st_size, "sha256": sha256(path)})
     return rows, limitations
+
+
+def package_structure(root: Path) -> dict[str, Any]:
+    records = []
+    for name in REQUIRED_CORE_PATHS:
+        path = root / name
+        present = path.is_file() and not path.is_symlink()
+        records.append({"path": name, "required": True, "present": present})
+    missing = [item["path"] for item in records if not item["present"]]
+    entrypoint = root / "tests/test.sh"
+    if entrypoint.is_file() and not entrypoint.is_symlink():
+        text = entrypoint.read_text(encoding="utf-8", errors="replace")
+        entrypoint_facts = {
+            "path": "tests/test.sh",
+            "status": (
+                "READY"
+                if text.strip() and text.startswith("#!") and entrypoint.stat().st_mode & 0o111
+                else "INVALID"
+            ),
+            "non_empty": bool(text.strip()),
+            "has_shebang": text.startswith("#!"),
+            "executable_bit": bool(entrypoint.stat().st_mode & 0o111),
+        }
+    else:
+        entrypoint_facts = {
+            "path": "tests/test.sh",
+            "status": "MISSING",
+            "non_empty": False,
+            "has_shebang": False,
+            "executable_bit": False,
+        }
+    return {
+        "status": "COMPLETE" if not missing and entrypoint_facts["status"] == "READY" else "INCOMPLETE",
+        "required_files": records,
+        "missing_required_files": missing,
+        "test_entrypoint": entrypoint_facts,
+    }
+
+
+def _json_text_records(value: Any, path: str = "$") -> list[dict[str, str]]:
+    records: list[dict[str, str]] = []
+    if isinstance(value, str):
+        records.append({"locator": path, "text": value})
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            records.extend(_json_text_records(item, f"{path}[{index}]"))
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            records.extend(_json_text_records(item, f"{path}.{key}"))
+    return records
+
+
+def contract_text_records(root: Path) -> list[dict[str, str]]:
+    records: list[dict[str, str]] = []
+    instruction = root / "instruction.md"
+    if instruction.is_file() and not instruction.is_symlink():
+        for line, text in enumerate(
+            instruction.read_text(encoding="utf-8", errors="replace").splitlines(), 1
+        ):
+            records.append(
+                {"path": "instruction.md", "locator": f"line {line}", "text": text}
+            )
+    for name in ("steps.json", "tests/grading_spec.json"):
+        path = root / name
+        if not path.is_file() or path.is_symlink():
+            continue
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        for item in _json_text_records(value):
+            records.append({"path": name, **item})
+    return records
+
+
+def analysis_window_candidates(root: Path) -> dict[str, Any]:
+    mentions = []
+    for record in contract_text_records(root):
+        for match in ANALYSIS_WINDOW_RE.finditer(record["text"]):
+            unit = match.group(2).lower().replace("u", "u")
+            value = float(match.group(1))
+            mentions.append(
+                {
+                    **record,
+                    "quote": match.group(0),
+                    "value": value,
+                    "unit": unit,
+                    "seconds": value * TIME_FACTORS_SECONDS[unit],
+                }
+            )
+    distinct = sorted({round(item["seconds"], 18) for item in mentions})
+    return {
+        "mentions": mentions,
+        "conflict_candidate": len(distinct) > 1,
+        "distinct_windows_seconds": distinct,
+        "candidate_only": True,
+        "limitation": (
+            "Different final/last windows can be legitimate for different outputs; "
+            "the Agent must decide whether they govern the same analysis."
+        ),
+    }
+
+
+def gold_provenance_risk_candidates(root: Path) -> list[dict[str, Any]]:
+    candidates = []
+    for top in ("tests",):
+        directory = root / top
+        if not directory.is_dir():
+            continue
+        for path in sorted(directory.rglob("*")):
+            if (
+                not path.is_file()
+                or path.is_symlink()
+                or path.suffix.lower() not in TEXT_SUFFIXES
+                or path.stat().st_size > 2 * 1024 * 1024
+            ):
+                continue
+            for line, text in enumerate(
+                path.read_text(encoding="utf-8", errors="replace").splitlines(), 1
+            ):
+                for pattern_id, pattern in GOLD_RISK_PATTERNS.items():
+                    if pattern.search(text):
+                        candidates.append(
+                            {
+                                "pattern_id": pattern_id,
+                                "path": path.relative_to(root).as_posix(),
+                                "line": line,
+                                "quote": text.strip(),
+                                "candidate_only": True,
+                            }
+                        )
+    return candidates
 
 
 def instruction_contract(path: Path | None) -> dict[str, Any]:
@@ -247,7 +428,12 @@ def collect(root: Path, *, probe_urls: bool = False, timeout: float = 10.0) -> d
     return {
         "schema_version": SCHEMA, "package_root": str(root),
         "authority": "MECHANICAL_EVIDENCE_ONLY", "may_decide_findings_or_verdict": False,
-        "inventory": files, "instruction_contract_candidates": instruction_data,
+        "inventory": files, "package_structure": package_structure(root),
+        "instruction_contract_candidates": instruction_data,
+        "cross_step_parameter_candidates": {
+            "analysis_window": analysis_window_candidates(root)
+        },
+        "gold_provenance_risk_candidates": gold_provenance_risk_candidates(root),
         "grading_contract_facts": grading_data, "checker_ast_facts": checker_data,
         "resource_candidates": instruction_data.get("resource_candidates", []),
         "url_probes": [probe_url(url, timeout) for url in urls] if probe_urls else [],

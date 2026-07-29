@@ -16,18 +16,31 @@ Add `--probe-urls` only when external access checks are appropriate.
 
 The collector records:
 
-- package inventory, roles, sizes, and hashes;
+- package inventory, roles, sizes, hashes, and required-core structure status,
+  including the mandatory `tests/test.sh`;
 - lexical instruction output/resource candidates with exact lines;
+- repeated final/last analysis-window candidates across instruction, steps, and
+  grading files;
 - the raw-compatible grading output contract, steps, weights, threshold, and
   unsupported-shape limitations;
 - checker AST functions, literal file access calls, scorer registries, constant
   returns, reward writes, risky-call candidates, and per-output scoring-chain
   candidates;
+- lexical Gold-provenance risk candidates in `tests/` for random,
+  interpolated/fitted, smoke, synthetic, dummy, or placeholder reference
+  generation;
 - instruction-declared data/model/URL candidates and optional URL observations.
 
 Lexical mismatch, missing expected keys, or unsupported shapes are limitations
 or candidates—not schema findings. The Agent must adjudicate output roles,
 aliases, scientific coverage, resource indispensability, and equivalent forms.
+Missing required core files are structural facts; scientific-risk lexical hits
+remain candidates and must not be promoted automatically. In particular, a
+`smoke`, `random`, `fit`, or `interpolate` hit in `tests/` may belong to a
+negative fixture, robustness test, declared analysis, or reduced runner rather
+than Gold generation; retain the exact line and adjudicate its data flow into
+the acceptance rule. The collector must skip `solution/**` entirely: no content
+read, hash, lexical candidate, or evidence record.
 
 ## Dynamic observations
 
@@ -44,8 +57,15 @@ Supply evidence-backed cases when available:
 ... --case valid_positive=<outputs-dir> \
     --case quality_gradient=<outputs-dir> \
     --case semantic_equivalence=<outputs-dir> \
-    --case component_isolation=<outputs-dir>
+    --case component_isolation=<outputs-dir> \
+    --case minimal_exploit:wrong-time-axis=<outputs-dir> \
+    --case duplicate_records:conflicting-key=<outputs-dir>
 ```
+
+Agent-supplied cases are allowed for all eleven probe classes. Use
+`PROBE_CLASS:VARIANT` for task-specific attacks; builtin generic observations
+are retained rather than overwritten. Multiple variants may be supplied for one
+class.
 
 The runner copies `tests/**` to a disposable workspace, rewrites Harbor absolute
 paths only in that copy, creates generic missing/empty/malformed/random/
@@ -70,4 +90,9 @@ are independently proven invalid.
 
 Quality-gradient, equivalence, component-isolation, and scientifically valid
 positive outputs cannot be fabricated generically. The Agent constructs or
-selects them from public task evidence without reading solution values.
+selects them from public task evidence without opening `solution/`.
+
+Pass every builtin and task-specific observation file to the decision validator.
+The validator checks that applicable decision claims cite an actually executed
+`case_id`; it does not decide whether the observed reward is scientifically
+acceptable.

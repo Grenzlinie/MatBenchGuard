@@ -1,129 +1,120 @@
 ---
 name: materials-benchmark-repair
-description: Repair materials-science paper question packages from an Agent-led review. Use confirmed 2.1–2.8 findings, paper/public evidence, isolated candidates, checker regressions, and equal-depth re-audit. Never repair dismissed schema false positives or invent scientific parameters, Gold, models, data, or tolerances.
+description: 根据 Agent 主导的审核结果修复材料科学论文问题包。使用已确认的 2.1–2.8 缺陷、论文或公开证据、隔离候选包、检查器回归测试和同等深度复审。不得修复已排除的模式误报，也不得臆造科学参数、Gold、模型、数据或容差。
 ---
 
-# Materials Benchmark Repair
+# 材料科学基准修复
 
-Repair confirmed defects without redefining the scientific task. Review evidence
-is authoritative only after the Agent verifies it against current public files.
+在不重新定义科学任务的前提下修复已确认缺陷。只有经 Agent 对照当前公开文件核验后，审核证据才具有权威性。
 
-Never use hidden answers or solution content to choose scientific values.
-`solution/` is authoring self-check material and is outside Repair evidence and
-decision-making. Never modify a valid package merely to satisfy an internal
-schema.
+`solution/` 完全不属于 Repair 范围：不得读取、执行、哈希、扫描、引用或修改。复制源包形成 candidate 时可以随包原样携带，但任何修复和证据均不得涉及其内容。不得仅为满足内部模式而修改有效的问题包。
 
-Repair scope is the fair, usable, reproducible scoring of final core scientific
-results. Do not repair a checker merely because it does not read a prescribed
-method, trace, training log, or intermediate artifact. Audit Docker paths using
-the package's declared container layout, not host-path coincidence.
+修复范围是对最终核心科学结果进行公平、可用且可复现的评分。不得仅因检查器未读取指定方法、轨迹、训练日志或中间产物而修复检查器。审核 Docker 路径时，应依据问题包声明的容器布局，而非宿主机路径是否恰好一致。
 
-## Harbor package structure and roles
-
-A Harbor question package has exactly this required layout:
+## 题包格式要求
 
 ```
-<paper-id>/
-├── instruction.md
-├── task.toml
-├── manifest.json
-├── steps.json
-├── resources.json
-├── environment/Dockerfile
-├── paper/paper.md
-├── paper/images_manifest.json
-├── solution/solve.sh
-└── tests/
-    ├── checker.py
-    ├── grading_spec.json
-    └── test.sh
+paper-xxx/
+├── manifest.json          # 元数据
+├── task.toml              # 任务配置（资源限制、超时）
+├── resources.json         # 数据源列表
+├── steps.json             # 分步骤定义
+├── instruction.md         # Agent 题面
+├── paper/
+│   └── paper.md           # 论文全文
+├── tests/
+│   ├── grading_spec.json  # 评分规范
+│   ├── checker.py         # 评分脚本
+│   ├── test.sh            # 标准评分入口
+│   └── *.bed / *.csv      # Gold standard 参考文件
+└── solution/ (optional)
+    └── solve.sh           # 参考解法（Review/Repair 完全忽略）
 ```
 
-- `instruction.md` and `resources.json` are delivered to the solver; repair
-  completeness against both and leakage against `instruction.md` alone.
-- `resources.json` declares resources and locators; it does not automatically
-  deliver their contents or form a leakage surface.
-- `solution/` is the Harbor authoring self-check reference only — never
-  delivered to the solver and outside Repair evidence.
-- Grading runs `tests/test.sh` (invoking `checker.py`/`grading_spec.json`) in a
-  solver-invisible environment; the solver never reads `tests/`.
-- `paper/`, `manifest.json`, `steps.json`, `task.toml`, and `environment/` are
-  provenance/runtime, not delivered to the solver.
+- `instruction.md` 和 `resources.json` 会交付给求解者；结合两者修复完整性，仅依据 `instruction.md` 修复泄露问题。
+- `resources.json` 声明资源及其定位信息；它不会自动交付资源内容，也不构成泄露面。
+- `solution/` 是可选目录，但完全排除在 Review/Repair 范围外；若存在，只随题包原样保留，不读取、不运行、不扫描、不引用、不修改。
+- `tests/` 对求解者不可见；`checker.py`、`grading_spec.json`、`test.sh` 和其中的 Gold 文件共同定义评分。`tests/test.sh` 是核心格式必需的标准评分入口；`environment/`、图片清单或其他扩展文件可以存在。
+- `paper/`、`manifest.json`、`steps.json` 和 `task.toml` 用于溯源或运行时，不会交付给求解者。
 
-The repaired candidate must preserve this required structure.
+修复候选包必须保留这一必需结构。
 
-## Required references
+## 必读参考资料
 
-Read before repair:
+修复前必须阅读：
 
-- [repair-policy.md](references/repair-policy.md);
-- [repair-categories.md](references/repair-categories.md);
-- [checker-repair.md](references/checker-repair.md) for checker/grading changes;
-- [abandonment.md](references/abandonment.md);
-- [report-schema.md](references/report-schema.md).
+- [repair-policy.md](references/repair-policy.md)；
+- [repair-categories.md](references/repair-categories.md)；
+- 涉及检查器或评分变更时阅读 [checker-repair.md](references/checker-repair.md)；
+- [abandonment.md](references/abandonment.md)；
+- [report-schema.md](references/report-schema.md)。
 
-Also read the Review skill's audit dimensions, paper policy, checker audit, and
-resource readiness rules. The candidate must pass the same full Review.
+还必须阅读审核 skill 中的审核维度、论文规则、检查器审核和资源就绪规则。候选包必须通过相同的完整审核。
+必须同时阅读并执行审核 skill 的 [检查责任矩阵](../materials-benchmark-review/references/check-responsibility-matrix.md)：机械结果只用于定位，修复前缺陷发现和候选包完整复审都必须对决定性真实文件执行 Hybrid 检查。
 
-## Required input
+## 必需输入
 
-Require the source package, validated `agent_final_decision.json`, confirmed
-findings, and supporting evidence. Ignore diagnostics classified
-`DISMISSED_FALSE_POSITIVE` or `AUTOMATION_LIMITATION`.
+必须提供源问题包、已验证的 `agent_final_decision.json`、已确认缺陷及其支持证据。忽略分类为 `DISMISSED_FALSE_POSITIVE` 或 `AUTOMATION_LIMITATION` 的诊断。
 
-## Workflow
+## Repair 准入 Gate
 
-1. Verify the source decision is current and every repair target remains open.
-   A source decision with `SCIENTIFIC_REASONING_ABSENT` and disposition
-   `ABANDON` must not enter Repair.
-2. Re-adjudicate existing findings under the final-result-only boundary. Remove
-   findings based only on unread process/trace artifacts or host/container path
-   mismatch. Classify every remaining confirmed finding as `AUTO_FIX`,
-   `ASSISTED_FIX`, or `ABANDON`.
-3. Copy the source to immutable `snapshot/` and editable `candidate/` outside
-   the Harbor package.
-4. Build the final-core-output scoring map. Run the Review mechanical collector
-   and applicable probes on the snapshot; run each target regression and require
-   the expected failure as the fail-before half of the retained
-   fail-before/pass-after evidence. Container-only behavior that cannot be reproduced
-   locally is a recorded automation limitation, not a defect.
-5. Apply only evidence-backed changes mapped to confirmed findings.
-   Uniquely determined checker defenses, Docker path-declaration synchronization,
-   reward wiring, and public scoring-contract consistency are eligible repairs.
-6. Record changed paths, before/after hashes, rationale, evidence, and patch.
-7. Run the same collector, target regressions, and probes on the candidate;
-   require pass-after and retain a before/after evidence comparison. Rerun
-   relevant valid/invalid, gradient, equivalence, security, and readiness checks.
-   Non-finite values, wrong types, missing fields, empty/malformed outputs,
-   duplicate identifiers, unsafe formats, random/constant results, and
-   task-relevant clearly wrong final results must receive zero or remain below
-   the passing threshold. Previously valid final outputs must retain the same or
-   a more scientifically reasonable score.
-8. Perform exactly one equal-depth Review of the candidate, including the paper,
-   all 2.1–2.8 criteria, C01–C07 score, five Hard Gates, parameter assessment,
-   Gold/tolerances, the final-output reward chain, checker probes,
-   data/model/software readiness, and Docker declarations.
-9. Validate the new `agent_final_decision.json` with the Review validator.
-10. Write `repair_report.json` from the bundled template and validate it:
+仅当源 Review 为 `CONDITIONAL` 或 `REJECT`、至少存在一项 disposition 为 `REPAIR` 的已确认 finding/Hard Gate，且不存在足以决定最终结论的非修复型 `ABANDON` Hard Gate 时，才进入 Repair。
+
+- `PASS`：无需 Repair；
+- `NOT_ASSESSABLE`：等待补证，不得用 Repair 猜测缺失信息；
+- 早期筛查已确认不可修复 Hard Gate，或所有 finding 均为 `ABANDON`：终态为 `SCREENED_OUT`，不创建 candidate，不运行 Repair，也不生成 `repair_report.json`；
+- 同时存在可修 finding 和决定性 `ABANDON` Hard Gate：仍为 `SCREENED_OUT`，因为局部修复不能使题包通过。
+
+Repair 的 `ABANDONED` 仅表示题包已经合法进入 Repair，但在修复或等深复审中发现无法安全修复；它不用于包装本应在 Review 早停的题。
+
+## 工作流程
+
+1. 先执行 Repair 准入 Gate，再验证源决策仍为当前版本，且每个修复目标仍未关闭。源决策必须已经使用原始 probe observations 完成交叉验证；历史 schema、缺少任务特定探针或存在“决策 PASS、原始证据 `NOT_ASSESSED`”时，必须先重新 Review，不能直接进入 Repair。任何足以决定最终结论且 disposition 为 `ABANDON` 的 Hard Gate 均不得进入修复流程。
+2. 按“仅限最终结果”的边界重新裁决现有发现，并执行一次**修复前独立缺陷发现轮次**，不得只复述源决策。使用论文、题面、`steps.json`、`grading_spec.json`、checker 和资源重新搜索遗漏问题，并重新裁决审核 skill 定义的全部 `scientific_risk_patterns`。移除仅基于未读取的过程或轨迹产物，或仅基于宿主机与容器路径不一致的发现。将其余每项已确认缺陷分类为 `AUTO_FIX`、`ASSISTED_FIX` 或 `ABANDON`。
+3. 在 Harbor 问题包之外，将源包复制为不可变的 `snapshot/` 和可编辑的 `candidate/`。
+4. 构建最终核心输出评分映射、`scientific_claim_matrix.md` 和 `probe_plan.json`。对快照运行审核 skill 的机械收集器、必要资源可达性检查及所有适用探针；运行每项目标回归测试，并要求出现预期失败，作为“修复前失败、修复后通过”证据中修复前失败的一半。仅能在容器中复现、而本地无法复现的行为应记录为自动化限制，不得认定为缺陷。
+5. 为每个拟修改字段建立影响矩阵：
+
+   ```text
+   论文/公开证据 → instruction → steps → resources/task 配置
+   → grading_spec/Gold → checker
+   ```
+
+   合同修复必须按科学与公开证据决定，不能仅把题面改成迎合现有 checker。任何受影响文件未同步或未明确证明无需修改，都视为未完成。
+6. 仅应用有证据支持且映射到已确认缺陷的变更。唯一确定的检查器防御、路径声明同步、奖励接线和公开评分契约一致性均属于可修复范围。修复若需要选择晶体学定义、物理条件、Gold 或容差，必须使用论文/权威公开证据并归类为 `ASSISTED_FIX`；证据不能唯一决定时不得猜测。对于方法—论文绝对值错配或合成 Gold，可选择两条证据化路径：把题面、输入、Gold 和 checker 一起修正为论文一致的绝对值复现；或在原核心科学目标本来就是比较趋势/排序时，改为直接评分论文或权威来源支持、且对缩小体系仍有适用依据的关系。不得只替换 Gold 数字、用拟合数值冒充计算真值，或未经授权把绝对值任务改成不同的关系任务。
+7. 记录变更路径、变更前后哈希、理由、证据、影响矩阵和补丁。
+8. 对候选包运行相同的收集器、目标回归测试和探针；要求修复后通过，并保留前后证据对比。通用样例必须保留，同时为每个核心自变量、主键、坐标、单位和边界运行任务特定变体。
+   非有限数值、错误类型、缺失字段、空或格式错误的输出、重复标识符、不安全格式、随机或常量结果，以及与任务相关且明显错误的最终结果，必须得到零分或保持在通过阈值以下。此前有效的最终输出必须保持相同分数或获得更符合科学合理性的分数。
+9. 对候选包执行一次**从空白结论开始的完整复审**，不得复制源决策的 criterion/probe/pattern rationale。复审必须重新阅读论文，按检查责任矩阵重新执行所有 Hybrid 检查，并重新评估全部 2.1–2.8、C01–C07、五个硬门槛、全部科学问题 pattern、参数、Gold/容差、评分链和资源；机械候选为零不构成通过证据。使用候选包新生成的 observations；仍不得读取或检查 `solution/`。
+10. 使用审核验证器和所有候选 observations 验证新的 `agent_final_decision.json`：
+
+    ```bash
+    python .cursor/skills/materials-benchmark-review/scripts/validate_agent_decision.py \
+      <path>/reaudit_agent_final_decision.json \
+      --probe-observations <path>/candidate_checker_observations.json \
+      --probe-observations <path>/candidate_task_specific_observations.json
+    ```
+
+11. 使用随附模板编写 `repair_report.json` 并进行验证：
 
     ```bash
     python .cursor/skills/materials-benchmark-repair/scripts/validate_repair_report.py \
       <path>/repair_report.json
     ```
 
-    Publish only a validated `REPAIRED` candidate whose equal-depth Review is
-    `PASS`; otherwise preserve the original and all evidence. All mutations stay
-    in `/personal/qa_review/<cluster>/<theme>/<paper>/candidate`; the source
-    Harbor package remains unchanged.
+    只有独立完整复审结论为 `PASS`、原始证据与决策状态一致、所有修复目标和新发现均关闭，且 `repair_report.json` 验证通过的 `REPAIRED` 候选包才可发布；否则必须保留原始包及全部证据。所有修改必须位于 `/personal/qa_review/<cluster>/<theme>/<paper>/candidate`；源 Harbor 问题包保持不变。
 
-## Outcomes
+兼容既有自动检查的英文表述：每个回归必须保留 `fail-before/pass-after` 证据；只有
+equal-depth Review is
+    `PASS`
+且上述独立复审和原始探针同时满足时，候选包才可发布。
 
-- `REPAIRED`: re-audit is `PASS`, all targets resolved, regressions pass.
-- `PARTIALLY_REPAIRED`: re-audit is `CONDITIONAL`, no Hard Gate, unresolved
-  findings explicit; never publish.
-- `ABANDONED`: re-audit is `REJECT` or safe repair requires guessing/redefinition.
-- `ROLLED_BACK`: mutation or validation failed; original remains unchanged.
-- Genuine `NOT_ASSESSABLE` remains resumable and is not abandonment.
+## 结果类型
 
-In the user response state the outcome, repaired or blocking issues, and
-candidate/evidence/report locations.
+- `REPAIRED`：复审为 `PASS`，所有修复目标均已解决，回归测试通过。
+- `PARTIALLY_REPAIRED`：复审为 `CONDITIONAL`，没有硬门槛失败，未解决问题已明确列出；不得发布。
+- `ABANDONED`：复审为 `REJECT`，或安全修复需要猜测或重定义任务。
+- `ROLLED_BACK`：修改或验证失败；原始包保持不变。
+- 真正的 `NOT_ASSESSABLE` 仍可恢复处理，不等同于放弃。
+
+面向用户的回复必须说明结果类型、已修复问题或阻塞问题，以及候选包、证据和报告的位置。
