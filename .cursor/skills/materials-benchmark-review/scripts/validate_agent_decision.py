@@ -9,7 +9,7 @@ import math
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "materials-agent-final-decision/2.2"
+SCHEMA = "materials-agent-final-decision/2.3"
 CRITERIA = {
     "2.1": "materials_qualification",
     "2.2": "prompt_contract",
@@ -35,6 +35,7 @@ HARD_GATES = {
     "SCIENTIFIC_REASONING_ABSENT",
     "CHECKER_CORE_TASK_UNASSESSED",
     "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE",
+    "ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE",
 }
 PROBES = {
     "valid_positive",
@@ -63,6 +64,8 @@ SCIENTIFIC_PATTERNS = {
     "OUTPUT_SCORING_CONTRACT_CONTRADICTION": ("2.2", "C02"),
     "UNVERIFIABLE_COMPUTATION_CLAIM": ("2.4", "C04"),
     "ANALYSIS_PROTOCOL_UNDERSPECIFIED": ("2.2", "C02"),
+    "SIMULATION_CONTRACT_UNDERDETERMINED": ("2.3", "C03"),
+    "SIMULATION_PARAMETER_DEPENDENCY_BROKEN": ("2.3", "C03"),
 }
 STATUSES = {"PASS", "FAIL", "NOT_ASSESSABLE"}
 PROBE_STATUSES = STATUSES | {"NOT_APPLICABLE"}
@@ -72,6 +75,28 @@ VERDICTS = {"PASS", "CONDITIONAL", "REJECT", "NOT_ASSESSABLE"}
 DIAGNOSTICS = {"CONFIRMED", "DISMISSED_FALSE_POSITIVE", "AUTOMATION_LIMITATION"}
 DISPOSITIONS = {"NONE", "REPAIR", "ABANDON"}
 REASONING_FAILURE_MODES = {"PURE_INFORMATION_EXTRACTION", "PURE_ALGEBRAIC_COMPUTATION"}
+PARAMETER_BUCKETS = {
+    "fixed_or_source_required",
+    "derived_or_coupled",
+    "representation_equivalent",
+    "solver_selectable",
+}
+PARAMETER_SOURCE_STATUSES = {
+    "PAPER_EXPLICIT",
+    "PAPER_DERIVED",
+    "PACKAGE_DEFINED",
+    "REPRESENTATION_EQUIVALENT",
+    "SOLVER_SELECTABLE",
+    "MISSING",
+}
+PARAMETER_RESOLUTIONS = {
+    "FIXED_TO_SOURCE",
+    "UNIQUE_DERIVATION",
+    "PACKAGE_SELF_CONTAINED",
+    "EQUIVALENCE_TRANSFORM",
+    "SOLVER_CHOICE_JUSTIFIED",
+    "UNRESOLVED",
+}
 
 
 def _text(value: Any, label: str) -> str:
@@ -116,6 +141,139 @@ def _failure_modes(value: Any, label: str) -> list[str]:
     if len(value) != len(set(value)):
         raise ValueError(f"{label} contains duplicates")
     return value
+
+
+def _text_list(value: Any, label: str, *, allow_empty: bool = False) -> list[str]:
+    if not isinstance(value, list) or (not allow_empty and not value):
+        raise ValueError(f"{label} must be a {'list' if allow_empty else 'non-empty list'}")
+    return [_text(item, f"{label}[{index}]") for index, item in enumerate(value)]
+
+
+def _validate_parameter_assessment(value: Any) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
+    if not isinstance(value, dict) or set(value) != PARAMETER_BUCKETS:
+        raise ValueError(
+            "parameter_assessment requires fixed_or_source_required, "
+            "derived_or_coupled, representation_equivalent, and solver_selectable"
+        )
+    records: dict[str, dict[str, Any]] = {}
+    items: list[dict[str, Any]] = []
+    for bucket in sorted(PARAMETER_BUCKETS):
+        record = _status_record(value[bucket], STATUSES, f"parameter_assessment.{bucket}")
+        raw_items = record.get("items")
+        if not isinstance(raw_items, list):
+            raise ValueError(f"parameter_assessment.{bucket}.items must be a list")
+        records[bucket] = record
+        for index, item in enumerate(raw_items):
+            label = f"parameter_assessment.{bucket}.items[{index}]"
+            if not isinstance(item, dict):
+                raise ValueError(f"{label} must be an object")
+            parameter_id = _text(item.get("parameter_id"), f"{label}.parameter_id")
+            if any(existing["parameter_id"] == parameter_id for existing in items):
+                raise ValueError(f"duplicate parameter_id: {parameter_id}")
+            source_status = item.get("source_status")
+            resolution = item.get("resolution")
+            if source_status not in PARAMETER_SOURCE_STATUSES:
+                raise ValueError(f"{label}.source_status is invalid")
+            if resolution not in PARAMETER_RESOLUTIONS:
+                raise ValueError(f"{label}.resolution is invalid")
+            scoring_sensitive = item.get("scoring_sensitive")
+            execution_required = item.get("execution_required")
+            paper_reference_required = item.get("paper_reference_required")
+            if not isinstance(scoring_sensitive, bool):
+                raise ValueError(f"{label}.scoring_sensitive must be boolean")
+            if not isinstance(execution_required, bool):
+                raise ValueError(f"{label}.execution_required must be boolean")
+            if not isinstance(paper_reference_required, bool):
+                raise ValueError(f"{label}.paper_reference_required must be boolean")
+            normalized = {
+                **item,
+                "parameter_id": parameter_id,
+                "category": _text(item.get("category"), f"{label}.category"),
+                "introduced_at": _text_list(
+                    item.get("introduced_at"), f"{label}.introduced_at"
+                ),
+                "source_status": source_status,
+                "value_or_rule": _text(item.get("value_or_rule"), f"{label}.value_or_rule"),
+                "depends_on": _text_list(
+                    item.get("depends_on"), f"{label}.depends_on", allow_empty=True
+                ),
+                "downstream_consumers": _text_list(
+                    item.get("downstream_consumers"),
+                    f"{label}.downstream_consumers",
+                    allow_empty=True,
+                ),
+                "affects_scored_outputs": _text_list(
+                    item.get("affects_scored_outputs"),
+                    f"{label}.affects_scored_outputs",
+                    allow_empty=True,
+                ),
+                "scoring_sensitive": scoring_sensitive,
+                "execution_required": execution_required,
+                "paper_reference_required": paper_reference_required,
+                "resolution": resolution,
+                "evidence": _evidence(item.get("evidence"), f"{label}.evidence"),
+                "bucket": bucket,
+            }
+            if source_status == "MISSING" and resolution != "UNRESOLVED":
+                raise ValueError(f"{label} MISSING requires resolution UNRESOLVED")
+            if source_status == "PAPER_DERIVED" and resolution != "UNIQUE_DERIVATION":
+                raise ValueError(
+                    f"{label} PAPER_DERIVED requires resolution UNIQUE_DERIVATION"
+                )
+            if (
+                source_status == "REPRESENTATION_EQUIVALENT"
+                and resolution != "EQUIVALENCE_TRANSFORM"
+            ):
+                raise ValueError(
+                    f"{label} REPRESENTATION_EQUIVALENT requires EQUIVALENCE_TRANSFORM"
+                )
+            if (
+                source_status == "SOLVER_SELECTABLE"
+                and resolution != "SOLVER_CHOICE_JUSTIFIED"
+            ):
+                raise ValueError(
+                    f"{label} SOLVER_SELECTABLE requires SOLVER_CHOICE_JUSTIFIED"
+                )
+            if scoring_sensitive and not normalized["affects_scored_outputs"]:
+                raise ValueError(
+                    f"{label} scoring_sensitive requires affects_scored_outputs"
+                )
+            items.append(normalized)
+        if any(
+            item["bucket"] == bucket and item["resolution"] == "UNRESOLVED"
+            for item in items
+        ) and record["status"] != "FAIL":
+            raise ValueError(
+                f"parameter_assessment.{bucket} requires FAIL for unresolved items"
+            )
+
+    ids = {item["parameter_id"] for item in items}
+    for item in items:
+        unknown = set(item["depends_on"]) - ids
+        if unknown:
+            raise ValueError(
+                f"parameter {item['parameter_id']} depends on unknown ids: "
+                + ", ".join(sorted(unknown))
+            )
+
+    graph = {item["parameter_id"]: item["depends_on"] for item in items}
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(parameter_id: str) -> None:
+        if parameter_id in visiting:
+            raise ValueError("parameter dependency graph contains a cycle")
+        if parameter_id in visited:
+            return
+        visiting.add(parameter_id)
+        for dependency in graph[parameter_id]:
+            visit(dependency)
+        visiting.remove(parameter_id)
+        visited.add(parameter_id)
+
+    for parameter_id in graph:
+        visit(parameter_id)
+    return records, items
 
 
 def validate(value: Any) -> dict[str, Any]:
@@ -286,20 +444,9 @@ def validate(value: Any) -> dict[str, Any]:
                     resource.get(field), f"readiness.{name}.resources[{index}].{field}"
                 )
 
-    parameters = value.get("parameter_assessment")
-    if not isinstance(parameters, dict) or set(parameters) != {
-        "fixed_or_source_required",
-        "solver_selectable",
-    }:
-        raise ValueError(
-            "parameter_assessment requires fixed_or_source_required and solver_selectable"
-        )
-    for name in parameters:
-        record = _status_record(
-            parameters[name], STATUSES, f"parameter_assessment.{name}"
-        )
-        if not isinstance(record.get("items"), list):
-            raise ValueError(f"parameter_assessment.{name}.items must be a list")
+    parameters, parameter_items = _validate_parameter_assessment(
+        value.get("parameter_assessment")
+    )
 
     diagnostics = value.get("diagnostic_adjudications", [])
     if not isinstance(diagnostics, list):
@@ -429,6 +576,53 @@ def validate(value: Any) -> dict[str, Any]:
             ):
                 raise ValueError(
                     "SCIENTIFIC_REASONING_ABSENT finding modes must match the Gate"
+                )
+
+    essential_parameter_code = "ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE"
+    essential_missing = [
+        item
+        for item in parameter_items
+        if item["source_status"] == "MISSING"
+        and item["paper_reference_required"]
+        and (item["execution_required"] or item["scoring_sensitive"])
+    ]
+    essential_gate_failed = gate_status[essential_parameter_code] == "FAIL"
+    if bool(essential_missing) != essential_gate_failed:
+        raise ValueError(
+            "paper-required essential MISSING parameters and "
+            "ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE Gate must agree"
+        )
+    if essential_gate_failed:
+        if gate_disposition[essential_parameter_code] != "ABANDON":
+            raise ValueError(
+                "ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE FAIL requires "
+                "disposition ABANDON"
+            )
+        if criteria["2.3"]["status"] != "FAIL":
+            raise ValueError(
+                "ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE FAIL requires "
+                "criteria.2.3 FAIL"
+            )
+        if pattern_status["SIMULATION_CONTRACT_UNDERDETERMINED"] != "FAIL":
+            raise ValueError(
+                "ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE FAIL requires "
+                "SIMULATION_CONTRACT_UNDERDETERMINED FAIL"
+            )
+        matches = [
+            item
+            for item in findings
+            if item.get("hard_gate_code") == essential_parameter_code
+        ]
+        if not matches:
+            raise ValueError(
+                "ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE FAIL requires "
+                "a matching finding"
+            )
+        for item in matches:
+            if item["repairable"] or item["disposition"] != "ABANDON":
+                raise ValueError(
+                    "essential simulation parameter finding must be "
+                    "non-repairable ABANDON"
                 )
 
     criterion_statuses = [criteria[key]["status"] for key in CRITERIA]

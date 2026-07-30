@@ -16,8 +16,13 @@ processing the first package. It defines the mandatory MECHANICAL/HYBRID/AGENT
 boundary and the escalation condition for paper deep review.
 
 ## Delivery contract (leakage scope)
-The solver receives ONLY `instruction.md`. `paper/**`, `tests/**`,
-`resources.json`, `manifest.json` are NOT delivered — reviewer/harness-side.
+The solver receives ONLY `instruction.md` as the task statement. Required
+resources are declared in its `assets` section. The authoring/Playground side
+uses `resources.json` to locate and deploy those resources; `resources.json`
+itself is not solver-facing. Review/Repair does not call Playground to pull
+resources or inspect their deployed contents. Explicit HTTP(S) URLs in the
+declarations are still checked for lightweight reachability. `paper/**`,
+`tests/**`, and `manifest.json` are reviewer/harness-side.
 So Gold/thresholds/tolerances appearing in the paper or checker are
 BY DESIGN, NOT leakage. Judge 2.7 leakage only against `instruction.md`. A
 checker a no-computation/fabricated submission can pass is a 2.5/C04 defect
@@ -27,11 +32,14 @@ IN FULL as the reviewer's grounding. `solution/**` is fully out of scope: never
 read, execute, hash, scan, cite, or modify it.
 
 ## Network policy
-GitHub / HuggingFace / other external hosts being unreachable is a VM egress
-restriction, NOT a resource defect. Classify such failures as
-`AUTOMATION_LIMITATION` and readiness `NOT_ASSESSABLE`/`READY` per the declared
-container layout — never `NOT_READY`/`INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE`
-solely because a download failed.
+Do not call Playground, download asset bodies, or inspect deployment/mount
+results. Review whether `instruction.md` `assets` completely and unambiguously
+declare the required inputs and whether their identifiers, versions, roles, and
+mappings are internally consistent with `resources.json`. When either
+declaration contains an explicit HTTP(S) URL, run the collector with
+`--probe-urls`: confirmed `404/410` is a defect for an indispensable resource;
+authentication/method errors and transient network failures are limitations;
+success proves reachability only. Resource contents are outside leakage review.
 
 ## Self-claim loop (drain the queue)
 You are given a unique AGENT_ID. Loop until the queue is empty:
@@ -48,15 +56,22 @@ relaunches to continue). Always finish the package you started.
 2. Collect Phase 0–2 mechanical evidence:
    `uv run --python 3.12 python $REVIEW_SCRIPTS/collect_package_evidence.py SRC \
       --output OUT/evidence/mechanical_evidence.json`
+   Add `--probe-urls` when the instruction or `resources.json` contains an
+   explicit HTTP(S) URL.
 3. Complete the Phase 0–2 cheap-screen responsibilities from the responsibility
-   matrix. Read the actual instruction, steps, resources, grading, checker,
+   matrix. Read the actual instruction (including `assets`), steps,
+   `resources.json` as reviewer-side provenance, grading, checker,
    `tests/test.sh`, task/manifest fields, and relevant Gold/data flow needed to
    resolve limitations and Hybrid checks; a candidate hit or zero hits is never
-   itself a verdict.
+   itself a verdict. Do not pull or inspect Playground resource bodies.
 4. If the package retains a substantive scientific target and has no confirmed
    non-repairable early Hard Gate, enter Phase 3: read `paper/paper.md` IN FULL
-   and re-check the decisive package passages against the paper. Perform every
-   mandatory Phase 3 Hybrid check in the responsibility matrix. Do not open
+   and re-check the decisive package passages against the paper. For every
+   simulation task create `evidence/simulation_parameter_matrix.json`, covering
+   system, frame/symmetry, model, initialization, boundary/load, evolution,
+   sampling, analysis, derived dependencies, and scored outputs. Perform every
+   mandatory Phase 3 Hybrid check in the responsibility matrix. Zero lexical
+   candidates never prove closure. Do not open
    `solution/`. If a non-repairable early Hard Gate is already confirmed, stop
    before Phase 3 and expensive probes; retain the stop reason and collect an
    explicit `--no-execute` observation file only to record why probe classes
@@ -66,19 +81,27 @@ relaunches to continue). Always finish the package you started.
    `uv run --python 3.12 python $REVIEW_SCRIPTS/run_checker_probes.py SRC \
       --output OUT/evidence/checker_observations.json`
    Supply Agent-built --case dirs for valid/gradient/equivalence/component
-   outputs built from public task evidence.
-6. Adjudicate 2.1–2.8, score C01–C07, five Hard Gates, all scientific risk
+   outputs built from public task evidence in the same command. The resulting
+   JSON must retain both builtin and task-specific observations. If observations
+   are intentionally split across files, retain every file for step 7.
+6. Adjudicate 2.1–2.8, score C01–C07, six Hard Gates, all scientific risk
    patterns, all probe classes, 5 readiness categories, and parameter assessment.
    Explicitly inspect cross-step numeric conflicts, method/reference mismatch,
-   and random/interpolated/fitted/smoke/synthetic Gold provenance. Treat lexical
+   simulation parameter closure/dependencies, and
+   random/interpolated/fitted/smoke/synthetic Gold provenance. Treat lexical
    hits as candidates only: a reduced smoke system may validly score a
    source-backed trend/order when applicability is justified and no exact paper
-   value is claimed. Write
+   value is claimed. `ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE` is
+   non-repairable `ABANDON`; never substitute defaults, customary values, or a
+   different paper for missing source parameters. Write
    `OUT/agent_final_decision.json` from the review template. Set `package_id`
    to `<pkg>`.
 7. Validate:
    `uv run --python 3.12 python $REVIEW_SCRIPTS/validate_agent_decision.py \
-      OUT/agent_final_decision.json`  -> must print `"valid": true`.
+      OUT/agent_final_decision.json \
+      --probe-observations OUT/evidence/checker_observations.json`
+   Repeat `--probe-observations PATH` for every additional task-specific raw
+   observation file. The command must print `"valid": true`.
 
 ### If verdict == PASS
 No repair needed. Skip to step 10.
@@ -114,7 +137,11 @@ missing evidence or external state.
 10. Completion. DONE when `OUT/agent_final_decision.json` validates AND one of:
    verdict is `PASS`; terminal state is `SCREENED_OUT` under the rule above; or
    `OUT/repair_report.json` validates. `NOT_ASSESSABLE` is never DONE. Then:
-   `touch OUT/.done` and `uv run --python 3.12 python $SCRIPTS/queue.py done <pkg>`.
+   `uv run --python 3.12 python $SCRIPTS/queue.py done <pkg>`.
+   `queue.py done` first runs `validate_lifecycle.py`; only a valid lifecycle
+   creates `OUT/.done`. For simulation tasks this also requires the completed
+   parameter matrix to match the decision, and a controlling `ABANDON` rejects
+   any existing candidate or repair report.
 
 ## Rules
 - Do the science honestly; never fabricate Gold/parameters/tolerances/probes.

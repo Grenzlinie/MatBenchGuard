@@ -17,8 +17,8 @@ _Avoid_: cluster、corpus
 _Avoid_: 由 `manifest.discipline` 单独定义的材料题
 
 **核心科学契约**:
-`instruction.md` 对公开任务的定义、`tests/` 对该定义的评分实现，以及 `solution/` 中仅用于正例 mock 的 Oracle 链路。质量证据只来自这三处；`paper/` 仅在触发条件成立时用于消歧和溯源。
-_Avoid_: 用 metadata、environment、resources 或 cluster 形成质量分
+`instruction.md` 定义求解者可见的公开任务，`tests/` 实现对最终核心科学结果的隐藏评分，`paper/` 用于论文忠实度、科学定义和 Gold 溯源。`solution/` 完全不在 Review/Repair 范围内。
+_Avoid_: 用 solution、metadata、environment、resources 或 cluster 代替核心科学证据
 
 **论文审查模式**:
 双车道默认路径：确定性代码检查 + Agent 读 `paper/`。仅当材料资格已确立 `NON_MAT` 时可跳过论文。论文读取没有回退开关或两阶段绑定。按 instruction 意图判定复现类型：明确逐项复现才是 `EXACT_REPRODUCTION`，新问题或新终点是 `SCIENTIFIC_EXTENSION`，其余默认 `METHOD_REIMPLEMENTATION`。
@@ -29,8 +29,8 @@ Auditor 和 Repairer 可读取的 `tests/grading_spec.json`、`tests/checker.py`
 _Avoid_: 使用 Oracle 数值证明论文复现正确、把隐藏答案泄露给解题 Agent
 
 **题包元数据**:
-`manifest.json`、`resources.json`、`steps.json`、`task.toml` 和 `environment/` 只承担身份、运行和人工说明角色，不是质检对象，不进入质量分或 Hard Gate。只有 `instruction.md` 明确要求、完成任务不可替代且没有科学等价来源的直接输入/服务才验证可用性；Agent 应自行生成的结构、轨迹、模型和 solver 收敛参数不属于直接输入。
-_Avoid_: 核心科学证据、资源声明即阻塞
+`manifest.json`、`resources.json`、`steps.json`、`task.toml` 和 `environment/` 承担身份、上游资源部署、运行和人工说明角色。求解者只收到 `instruction.md` 题面，资源在其 `assets` 中声明；出题方/Playground 根据 `resources.json` 部署资源。Review/Repair 不调用 Playground 拉取资源、不下载资源正文、不审核平台部署机制，也不把资源内容作为泄露面；核对 `assets` 与 `resources.json` 的声明完整性和内部一致性，并轻量检查其中明确 HTTP(S) URL 的状态以识别稳定 `404/410`。Agent 应自行生成的结构、轨迹、模型和 solver 收敛参数不属于直接输入。
+_Avoid_: 把 resources.json 当求解者题面、通过 Playground 拉取资源、下载正文、审核 Playground 部署、把暂时网络失败当资源缺陷
 
 **科学等价性**:
 只阻塞会改变体系定义、科学目标、归一化或被评分结果的实质差异。允许等价软件、版本和 solver 自选收敛参数，除非 instruction 明确固定，或 checker 暗中依赖某个未公开选择。不同超胞、边界条件或参数若改变 Gold，则不是等价实现。
@@ -53,12 +53,16 @@ _Avoid_: 审计单元、质检结论
 _Avoid_: 无快照的原地修改、只隔离修复报告
 
 **Hard gate**:
-仅有四项可覆盖总分：①不是真正的材料科学任务；②任务科学上无效或缺少不可恢复的必要定义；③ checker 根本未评价核心任务且无法在不重定义题目的前提下修复；④ instruction 要求的不可替代直接输入永久不可用且无等价来源。格式、NaN、容差、等价表示、部分分、缺失或损坏 Oracle 等可修实现问题不属于 Hard Gate。
+仅有六项可覆盖总分：①非材料任务；②科学目标无效；③最终任务缺少实质科学推理；④ checker 未评价核心任务且无法在不重定义题目的前提下修复；⑤不可替代直接输入永久不可用且无等价来源；⑥论文复现必需的执行/目标/评分参数在论文、补充材料和声明权威来源中均缺失且不可唯一推导。第⑥项必须 `REJECT + ABANDON`，不得用经验值、软件默认值或其他论文补齐。格式、NaN、容差、等价表示、部分分、缺失或损坏 Oracle 等可修实现问题不属于 Hard Gate。
 _Avoid_: 任意 FATAL 或低分自动升级为 Hard Gate
 
 **审查结论**:
-质量总分为 100：科学有效性 35、instruction 可答性 20、checker/Gold 对齐 25、鲁棒性与区分度 15、solution 完整性 5。`PASS` 为至少 80 且无未解决可修复 HIGH；`CONDITIONAL` 为 60–79 或存在可修复问题；`REJECT` 为低于 60 或触发四项 Hard Gate。`NOT_ASSESSABLE` 只表示关键证据临时无法取得，补齐后必须重审，不能把证据不足写成科学错误。
+质量总分按 C01–C07 的 10/20/20/20/10/10/10 权重计算；`solution/` 完全不进入审核或评分。`PASS` 为至少 80 且无未解决可修复 HIGH；`CONDITIONAL` 为 60–79 或存在可修复问题；`REJECT` 为低于 60 或触发六项 Hard Gate。`NOT_ASSESSABLE` 只表示关键证据临时无法取得，补齐后必须重审，不能把证据不足写成科学错误。
 _Avoid_: metadata 参与加权、把临时环境故障直接判 REJECT
+
+**模拟参数闭包**:
+Agent 在 Phase 3 全文阅读论文后，对 MD、DFT、MC、相场、有限元等模拟题建立 `simulation_parameter_matrix`，覆盖体系、坐标/对称性、模型、初始化、边界/加载、演化、采样、分析、派生参数和评分依赖。只固定执行必需、目标定义或评分敏感参数；允许有证据的表示等价与 solver-selectable 参数。上游自由选择不得被下游固定数值、方向、公式或论文 Gold 暗中锁定。
+_Avoid_: 只改坐标轴标签、机械零命中即通过、无来源补参数
 
 **拒绝归档**:
 对 `REJECT` 题包的非破坏性处置：保留原始题包和完整审查证据，将其移出可发布集合并放入隔离归档。

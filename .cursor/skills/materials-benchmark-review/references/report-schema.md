@@ -1,20 +1,22 @@
 # Review decision schema
 
 Write `agent_final_decision.json` outside the Harbor package using
-`materials-agent-final-decision/2.2` and the bundled template. Version 2.1 and
-older records are not accepted; re-audit or migrate them before validation.
+`materials-agent-final-decision/2.3` and the bundled template. Version 2.2 and
+older records are not accepted; re-audit them before validation.
 
 Required sections:
 
 - package identity, mode, reproduction intent, and verdict;
 - all eight criteria with status, rationale, and structured evidence;
 - C01–C07 normalized scores and positive evidence;
-- exactly five Hard Gates, each with `code`, `status`, `disposition`, rationale,
+- exactly six Hard Gates, each with `code`, `status`, `disposition`, rationale,
   evidence, and `failure_modes`;
 - all eleven checker probe classes;
 - all five readiness categories plus required resource records;
-- parameter assessment covering fixed/source-required and solver-selectable
-  choices;
+- parameter assessment covering fixed/source-required, derived/coupled,
+  representation-equivalent, and solver-selectable choices. Each parameter
+  records source status, value/rule, dependencies, consumers, scoring impact,
+  execution necessity, paper-reference dependency, resolution, and evidence;
 - all required `scientific_risk_patterns`, each with canonical criterion,
   status, rationale, and evidence;
 - confirmed findings and diagnostic adjudications. Every confirmed finding has
@@ -55,3 +57,8 @@ reinterpret the Agent's science.
 the matching confirmed finding must be `ABANDON`; the finding is non-repairable,
 the decision is `REJECT`, and `failure_modes` contains one or both of
 `PURE_INFORMATION_EXTRACTION` and `PURE_ALGEBRAIC_COMPUTATION`.
+
+`ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE` also maps to C03. A paper-required
+essential `MISSING` parameter and this Gate must agree. Failure requires
+`SIMULATION_CONTRACT_UNDERDETERMINED` FAIL, a matching non-repairable `ABANDON`
+finding, and verdict `REJECT`.

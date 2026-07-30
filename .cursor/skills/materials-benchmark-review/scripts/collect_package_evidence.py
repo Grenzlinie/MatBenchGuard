@@ -21,7 +21,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "materials-mechanical-evidence/1.1"
+SCHEMA = "materials-mechanical-evidence/1.3"
 URL_RE = re.compile(r"https?://[^\s<>)\]}`\"']+")
 OUTPUT_RE = re.compile(r"(?:/app/outputs/)?([A-Za-z0-9_.-]+\.(?:json|jsonl|csv|tsv|txt|yaml|yml|cif|xyz|vasp|png|npz|npy|pt|pth|ckpt|onnx))", re.I)
 MODEL_RE = re.compile(r"\b(model|weights?|checkpoint|potential|tokenizer|pretrained|ckpt|onnx|\.pt|\.pth)\b", re.I)
@@ -31,6 +31,35 @@ ANALYSIS_WINDOW_RE = re.compile(
     r"(fs|ps|ns|(?:u|µ|μ)s|ms|s)\b",
     re.I,
 )
+SIMULATION_PARAMETER_PATTERNS = {
+    "CARTESIAN_AXIS_REFERENCE": re.compile(
+        r"(?:\b[xyz][-_ ]?(?:axis|direction|component)\b|"
+        r"\b(?:epsilon|strain|stress|force)[-_ ]?[xyz]{1,2}\b|"
+        r"[εσ]_[xyz]{1,2}|沿着?\s*[xyz]\s*(?:轴|方向))",
+        re.I,
+    ),
+    "CRYSTALLOGRAPHIC_REFERENCE": re.compile(
+        r"(?:\[[0-9\-\s\u0305]+\]|\{[0-9\-\s\u0305]+\}|"
+        r"\([0-9\-\s\u0305]+\)|晶向|晶面|Miller)",
+        re.I,
+    ),
+    "SOLVER_CHOICE_LANGUAGE": re.compile(
+        r"\b(?:choose|select|arbitrary|user[- ]defined|as desired|"
+        r"any reasonable)\b|自行(?:选择|设定)|自设参数|任意(?:选择|方向|参数)",
+        re.I,
+    ),
+    "DERIVED_PARAMETER_LANGUAGE": re.compile(
+        r"\b(?:derive|derived|calculate[ds]? from|computed? from|obtained? from|"
+        r"based on (?:step|the previous))\b|"
+        r"(?:由|根据).{0,40}(?:计算|推导|求得|得到)",
+        re.I,
+    ),
+    "FIXED_TARGET_LANGUAGE": re.compile(
+        r"\b(?:fixed|target value|reference match|paper value|must equal|"
+        r"set to|maintain(?:ed)? at)\b|固定|目标值|匹配(?:论文|参考)|保持为",
+        re.I,
+    ),
+}
 TIME_FACTORS_SECONDS = {
     "fs": 1e-15,
     "ps": 1e-12,
@@ -219,6 +248,54 @@ def analysis_window_candidates(root: Path) -> dict[str, Any]:
     }
 
 
+def simulation_parameter_candidates(root: Path) -> dict[str, Any]:
+    mentions = []
+    for record in contract_text_records(root):
+        matched = [
+            pattern_id
+            for pattern_id, pattern in SIMULATION_PARAMETER_PATTERNS.items()
+            if pattern.search(record["text"])
+        ]
+        if matched:
+            mentions.append(
+                {
+                    **record,
+                    "candidate_types": matched,
+                    "quote": record["text"].strip(),
+                    "candidate_only": True,
+                }
+            )
+    present = {
+        pattern_id
+        for mention in mentions
+        for pattern_id in mention["candidate_types"]
+    }
+    return {
+        "mentions": mentions,
+        "candidate_types_present": sorted(present),
+        "coordinate_dependency_candidate": {
+            "candidate_only": True,
+            "present": {
+                "CARTESIAN_AXIS_REFERENCE",
+                "CRYSTALLOGRAPHIC_REFERENCE",
+            }.issubset(present),
+        },
+        "upstream_downstream_dependency_candidate": {
+            "candidate_only": True,
+            "present": bool(
+                present
+                & {"SOLVER_CHOICE_LANGUAGE", "DERIVED_PARAMETER_LANGUAGE"}
+            )
+            and "FIXED_TARGET_LANGUAGE" in present,
+        },
+        "limitation": (
+            "Lexical hits cannot establish completeness or inconsistency. "
+            "The Agent must read the full paper and package and build the "
+            "simulation parameter dependency matrix even when no hits occur."
+        ),
+    }
+
+
 def gold_provenance_risk_candidates(root: Path) -> list[dict[str, Any]]:
     candidates = []
     for top in ("tests",):
@@ -269,6 +346,30 @@ def instruction_contract(path: Path | None) -> dict[str, Any]:
         "output_mentions": [{"file": name, "mentions": refs} for name, refs in sorted(mentions.items())],
         "urls": sorted(set(URL_RE.findall(text))), "resource_candidates": resources,
         "limitations": ["Output extraction is lexical; Agent must adjudicate roles, aliases, and prose equivalence."],
+    }
+
+
+def resources_contract(path: Path | None) -> dict[str, Any]:
+    if path is None:
+        return {"status": "MISSING", "path": None, "url_candidates": [], "limitations": []}
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return {
+            "status": "PARSE_ERROR",
+            "path": path.name,
+            "url_candidates": [],
+            "limitations": [f"JSON parse failed: {exc}"],
+        }
+    candidates = []
+    for item in _json_text_records(value):
+        for url in URL_RE.findall(item["text"]):
+            candidates.append({"url": url, "locator": item["locator"]})
+    return {
+        "status": "PARSED",
+        "path": path.name,
+        "url_candidates": candidates,
+        "limitations": [],
     }
 
 
@@ -409,7 +510,15 @@ def probe_url(url: str, timeout: float) -> dict[str, Any]:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return {"url": url, "status": "REACHABLE", "http_status": response.status, "content_type": response.headers.get("Content-Type"), "content_length": response.headers.get("Content-Length"), "limitation": "Reachability does not prove identity or sufficiency."}
     except urllib.error.HTTPError as exc:
-        return {"url": url, "status": "HTTP_ERROR", "http_status": exc.code}
+        return {
+            "url": url,
+            "status": (
+                "CONFIRMED_MISSING"
+                if exc.code in {404, 410}
+                else "INCONCLUSIVE_HTTP_ERROR"
+            ),
+            "http_status": exc.code,
+        }
     except Exception as exc:
         return {"url": url, "status": "PROBE_ERROR", "error": f"{type(exc).__name__}: {exc}"}
 
@@ -419,25 +528,59 @@ def collect(root: Path, *, probe_urls: bool = False, timeout: float = 10.0) -> d
     if not root.is_dir(): raise ValueError("package root must be a directory")
     files, limitations = inventory(root)
     instruction = locate(root, ("instruction.md", "task.md", "README.md"))
+    resources_path = locate(root, ("resources.json",))
     grading_path = locate(root, ("tests/grading_spec.json", "grading_spec.json"))
     checker_path = locate(root, ("tests/checker.py", "checker.py"))
     instruction_data = instruction_contract(instruction)
+    resources_data = resources_contract(resources_path)
     grading_data = grading_contract(grading_path)
     checker_data = checker_facts(checker_path, grading_data)
-    urls = instruction_data.get("urls", [])
+    url_candidates = [
+        {
+            "url": url,
+            "path": instruction_data.get("path"),
+            "locator": f"line {item['line']}",
+        }
+        for item in instruction_data.get("resource_candidates", [])
+        for url in item.get("urls", [])
+    ] + [
+        {
+            "url": item["url"],
+            "path": resources_data.get("path"),
+            "locator": item["locator"],
+        }
+        for item in resources_data.get("url_candidates", [])
+    ]
+    urls = sorted({item["url"] for item in url_candidates})
+    url_probes = []
+    if probe_urls:
+        for url in urls:
+            observation = probe_url(url, timeout)
+            observation["declared_at"] = [
+                {
+                    "path": item["path"],
+                    "locator": item["locator"],
+                }
+                for item in url_candidates
+                if item["url"] == url
+            ]
+            url_probes.append(observation)
     return {
         "schema_version": SCHEMA, "package_root": str(root),
         "authority": "MECHANICAL_EVIDENCE_ONLY", "may_decide_findings_or_verdict": False,
         "inventory": files, "package_structure": package_structure(root),
         "instruction_contract_candidates": instruction_data,
+        "resources_contract_candidates": resources_data,
         "cross_step_parameter_candidates": {
-            "analysis_window": analysis_window_candidates(root)
+            "analysis_window": analysis_window_candidates(root),
+            "simulation_parameter": simulation_parameter_candidates(root),
         },
         "gold_provenance_risk_candidates": gold_provenance_risk_candidates(root),
         "grading_contract_facts": grading_data, "checker_ast_facts": checker_data,
         "resource_candidates": instruction_data.get("resource_candidates", []),
-        "url_probes": [probe_url(url, timeout) for url in urls] if probe_urls else [],
-        "limitations": limitations + ([{"stage": "url_probe", "reason": "URL probing not requested."}] if urls and not probe_urls else []),
+        "url_candidates": url_candidates,
+        "url_probes": url_probes,
+        "limitations": limitations + resources_data.get("limitations", []),
     }
 
 

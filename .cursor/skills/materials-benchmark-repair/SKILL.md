@@ -31,8 +31,9 @@ paper-xxx/
     └── solve.sh           # 参考解法（Review/Repair 完全忽略）
 ```
 
-- `instruction.md` 和 `resources.json` 会交付给求解者；结合两者修复完整性，仅依据 `instruction.md` 修复泄露问题。
-- `resources.json` 声明资源及其定位信息；它不会自动交付资源内容，也不构成泄露面。
+- 求解者直接收到的题面只有 `instruction.md`，所需资源在其中的 `assets` 中声明；仅依据 `instruction.md` 修复公开合同和泄露问题。
+- `resources.json` 是出题方和 Playground 的上游资源定位/部署声明，不交付给求解者。Repair 不调用 Playground 拉取资源，不验证平台部署或挂载，也不把资源内容作为泄露面；但必须轻量检查声明中明确 HTTP(S) URL 的状态，避免保留稳定的 `404/410`。
+- 输入修复处理 `instruction.md` 的 `assets` 声明、其与题包内 `resources.json` 的标识/版本/角色/映射一致性，以及经 Review 确认失效且有来源依据的 URL；不得猜测替代地址。
 - `solution/` 是可选目录，但完全排除在 Review/Repair 范围外；若存在，只随题包原样保留，不读取、不运行、不扫描、不引用、不修改。
 - `tests/` 对求解者不可见；`checker.py`、`grading_spec.json`、`test.sh` 和其中的 Gold 文件共同定义评分。`tests/test.sh` 是核心格式必需的标准评分入口；`environment/`、图片清单或其他扩展文件可以存在。
 - `paper/`、`manifest.json`、`steps.json` 和 `task.toml` 用于溯源或运行时，不会交付给求解者。
@@ -70,22 +71,25 @@ Repair 的 `ABANDONED` 仅表示题包已经合法进入 Repair，但在修复�
 ## 工作流程
 
 1. 先执行 Repair 准入 Gate，再验证源决策仍为当前版本，且每个修复目标仍未关闭。源决策必须已经使用原始 probe observations 完成交叉验证；历史 schema、缺少任务特定探针或存在“决策 PASS、原始证据 `NOT_ASSESSED`”时，必须先重新 Review，不能直接进入 Repair。任何足以决定最终结论且 disposition 为 `ABANDON` 的 Hard Gate 均不得进入修复流程。
-2. 按“仅限最终结果”的边界重新裁决现有发现，并执行一次**修复前独立缺陷发现轮次**，不得只复述源决策。使用论文、题面、`steps.json`、`grading_spec.json`、checker 和资源重新搜索遗漏问题，并重新裁决审核 skill 定义的全部 `scientific_risk_patterns`。移除仅基于未读取的过程或轨迹产物，或仅基于宿主机与容器路径不一致的发现。将其余每项已确认缺陷分类为 `AUTO_FIX`、`ASSISTED_FIX` 或 `ABANDON`。
+2. 按“仅限最终结果”的边界重新裁决现有发现，并执行一次**修复前独立缺陷发现轮次**，不得只复述源决策。使用论文、题面、`steps.json`、`grading_spec.json`、checker 和资源重新搜索遗漏问题，并重新裁决审核 skill 定义的全部 `scientific_risk_patterns`。对模拟题必须重新建立 `simulation_parameter_matrix.json`，沿“体系/初态 → 前序参数 → 派生参数 → 后序步骤 → 分析 → Gold/容差 → checker”检查闭包；坐标问题只是该依赖链的一种表现。移除仅基于未读取的过程或轨迹产物，或仅基于宿主机与容器路径不一致的发现。将其余每项已确认缺陷分类为 `AUTO_FIX`、`ASSISTED_FIX` 或 `ABANDON`。
 3. 在 Harbor 问题包之外，将源包复制为不可变的 `snapshot/` 和可编辑的 `candidate/`。
-4. 构建最终核心输出评分映射、`scientific_claim_matrix.md` 和 `probe_plan.json`。对快照运行审核 skill 的机械收集器、必要资源可达性检查及所有适用探针；运行每项目标回归测试，并要求出现预期失败，作为“修复前失败、修复后通过”证据中修复前失败的一半。仅能在容器中复现、而本地无法复现的行为应记录为自动化限制，不得认定为缺陷。
+4. 构建最终核心输出评分映射、`scientific_claim_matrix.md`、`simulation_parameter_matrix.json` 和 `probe_plan.json`。对快照运行审核 skill 的机械收集器，核对 `instruction.md` 的 `assets` 与题包内 `resources.json` 的声明一致性；存在明确 HTTP(S) URL 时使用 `--probe-urls` 做轻量状态检查，并运行所有适用 checker 探针。不得调用 Playground 拉取资源或下载资源正文。若存在 `ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE`，立即终止：该包本应为 `SCREENED_OUT`，不得创建或继续 candidate。运行每项目标回归测试，并要求出现预期失败，作为“修复前失败、修复后通过”证据中修复前失败的一半。仅能在容器中复现、而本地无法复现的行为应记录为自动化限制，不得认定为缺陷。
 5. 为每个拟修改字段建立影响矩阵：
 
    ```text
-   论文/公开证据 → instruction → steps → resources/task 配置
-   → grading_spec/Gold → checker
+   论文/公开证据 → 体系与初始状态 → instruction/前序步骤
+   → 派生参数 → 后序步骤 → 分析协议
+   → resources/task 配置 → grading_spec/Gold/容差 → checker
    ```
+
+   只允许以下闭包动作：复制论文明确值；按论文信息唯一推导并记录公式、输入、单位；同步题包已有定义；以物理不变量或显式变换保留表示等价；以收敛/不变性证据保留 solver-selectable 参数。禁止只把 `z` 改成 `x`、凭经验补值、采用软件默认值/其他论文值、放宽容差或修改 checker 掩盖欠定合同。
 
    合同修复必须按科学与公开证据决定，不能仅把题面改成迎合现有 checker。任何受影响文件未同步或未明确证明无需修改，都视为未完成。
 6. 仅应用有证据支持且映射到已确认缺陷的变更。唯一确定的检查器防御、路径声明同步、奖励接线和公开评分契约一致性均属于可修复范围。修复若需要选择晶体学定义、物理条件、Gold 或容差，必须使用论文/权威公开证据并归类为 `ASSISTED_FIX`；证据不能唯一决定时不得猜测。对于方法—论文绝对值错配或合成 Gold，可选择两条证据化路径：把题面、输入、Gold 和 checker 一起修正为论文一致的绝对值复现；或在原核心科学目标本来就是比较趋势/排序时，改为直接评分论文或权威来源支持、且对缩小体系仍有适用依据的关系。不得只替换 Gold 数字、用拟合数值冒充计算真值，或未经授权把绝对值任务改成不同的关系任务。
 7. 记录变更路径、变更前后哈希、理由、证据、影响矩阵和补丁。
-8. 对候选包运行相同的收集器、目标回归测试和探针；要求修复后通过，并保留前后证据对比。通用样例必须保留，同时为每个核心自变量、主键、坐标、单位和边界运行任务特定变体。
+8. 对候选包运行相同的收集器、目标回归测试和探针；要求修复后通过，并保留前后证据对比。通用样例必须保留，同时为每个核心自变量、主键、坐标、单位、边界和评分敏感参数依赖运行任务特定变体。适用时至少包含 `semantic_equivalence:rotated-frame`、`minimal_exploit:wrong-physical-direction` 和 `component_isolation:upstream-choice`。
    非有限数值、错误类型、缺失字段、空或格式错误的输出、重复标识符、不安全格式、随机或常量结果，以及与任务相关且明显错误的最终结果，必须得到零分或保持在通过阈值以下。此前有效的最终输出必须保持相同分数或获得更符合科学合理性的分数。
-9. 对候选包执行一次**从空白结论开始的完整复审**，不得复制源决策的 criterion/probe/pattern rationale。复审必须重新阅读论文，按检查责任矩阵重新执行所有 Hybrid 检查，并重新评估全部 2.1–2.8、C01–C07、五个硬门槛、全部科学问题 pattern、参数、Gold/容差、评分链和资源；机械候选为零不构成通过证据。使用候选包新生成的 observations；仍不得读取或检查 `solution/`。
+9. 对候选包执行一次**从空白结论开始的完整复审**，不得复制源决策的 criterion/probe/pattern rationale。复审必须重新阅读论文，重建模拟参数矩阵，按检查责任矩阵重新执行所有 Hybrid 检查，并重新评估全部 2.1–2.8、C01–C07、六个硬门槛、全部科学问题 pattern、四类参数、Gold/容差、评分链和资源；机械候选为零不构成通过证据。使用候选包新生成的 observations；仍不得读取或检查 `solution/`。
 10. 使用审核验证器和所有候选 observations 验证新的 `agent_final_decision.json`：
 
     ```bash

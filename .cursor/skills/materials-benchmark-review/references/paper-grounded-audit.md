@@ -6,6 +6,14 @@ Only an already-established `NON_MATERIALS_TASK` may skip the paper.
 Classify intent as `EXACT_REPRODUCTION`, `METHOD_REIMPLEMENTATION` (default), or
 `SCIENTIFIC_EXTENSION`.
 
+`METHOD_REIMPLEMENTATION` does not by itself authorize missing source
+parameters. `PACKAGE_DEFINED` parameters and independent Gold are acceptable
+only when the public task defines a self-contained computational contract and
+the Gold was independently generated or validated under those exact package
+conditions. Paper-derived, fitted, interpolated, perturbed, or guessed values
+do not become independent Gold by relabeling the task. Whenever the task scores
+the paper's absolute result, paper alignment is required.
+
 ## Fixed or source-required parameters
 
 Supply or unambiguously derive any value that defines the target, physical
@@ -34,6 +42,53 @@ supercells, optimizers, and search settings may be chosen only when:
 
 These are not automatically free choices in exact reproduction or when results
 materially depend on them.
+
+## Simulation parameter closure
+
+For every simulation task, create
+`evidence/simulation_parameter_matrix.json` after reading the paper in full.
+Cover:
+
+1. system definition and initial state;
+2. coordinate frame, symmetry, and equivalent representations;
+3. interaction, electronic-structure, or constitutive model;
+4. initialization, relaxation, and preparation history;
+5. boundary conditions, loads, fields, and constrained regions;
+6. evolution algorithm, timestep/rate, and convergence;
+7. ensemble, thermodynamic controls, stochastic policy, and replicates;
+8. equilibration, production extent, stopping, and sampling;
+9. analysis, reference state, normalization, fitting, and uncertainty;
+10. derived parameters and their upstream/downstream dependencies;
+11. affected final outputs, Gold, tolerances, and checker branches.
+
+Classify every parameter as `PAPER_EXPLICIT`, `PAPER_DERIVED`,
+`PACKAGE_DEFINED`, `REPRESENTATION_EQUIVALENT`, `SOLVER_SELECTABLE`, or
+`MISSING`. Record:
+
+- `parameter_id`, category, and introduction locations;
+- source value or unique derivation rule;
+- `depends_on` and `downstream_consumers`;
+- `execution_required`, `scoring_sensitive`, affected scored outputs, and
+  whether paper reference values require this parameter;
+- resolution and exact evidence.
+
+Use the four decision buckets `fixed_or_source_required`,
+`derived_or_coupled`, `representation_equivalent`, and `solver_selectable`.
+The dependency graph must be complete and acyclic.
+
+Do not minimize freedom indiscriminately. A Cartesian axis label, symmetry
+operation, equivalent supercell representation, or converged numerical choice
+may remain free when a documented transform or invariance keeps the physical
+target and checker unchanged. Conversely, a seemingly routine choice is not
+solver-selectable when downstream values or paper Gold depend on it.
+
+If a paper-based task needs a parameter to execute, define its target, or
+support paper-derived scoring, but the paper/supplement/declared authority
+neither states nor uniquely determines it, trigger
+`ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE`: `REJECT`, non-repairable
+`ABANDON`, and no Repair candidate. A package author cannot cure missing paper
+evidence by guessing a customary value. A self-contained scientific extension
+may instead supply its own explicit contract and independently validated Gold.
 
 ## Paper fidelity checklist
 

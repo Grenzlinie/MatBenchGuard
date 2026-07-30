@@ -157,6 +157,35 @@ def validate(value: Any, *, report_path: Path | None = None) -> dict[str, Any]:
         review_validator = _review_validator()
         source_value = json.loads(source_path.read_text(encoding="utf-8"))
         review_validator.validate(source_value)
+
+        controlling_abandon_gates = [
+            gate.get("code")
+            for gate in source_value.get("hard_gates", [])
+            if gate.get("status") == "FAIL" and gate.get("disposition") == "ABANDON"
+        ]
+        controlling_abandon_findings = [
+            finding.get("finding_id")
+            for finding in source_value.get("open_confirmed_findings", [])
+            if finding.get("hard_gate")
+            and finding.get("disposition") == "ABANDON"
+        ]
+        if controlling_abandon_gates or controlling_abandon_findings:
+            raise ValueError(
+                "source decision is SCREENED_OUT by a controlling ABANDON Hard Gate; "
+                "a repair report/candidate must not exist"
+            )
+        if source_value.get("verdict") == "PASS":
+            raise ValueError("PASS source decision has no Repair entry")
+        source_repair_findings = {
+            finding.get("finding_id")
+            for finding in source_value.get("open_confirmed_findings", [])
+            if finding.get("disposition") == "REPAIR"
+        }
+        if not source_repair_findings:
+            raise ValueError(
+                "Repair entry requires at least one source finding with disposition REPAIR"
+            )
+
         re_value = json.loads(re_path.read_text(encoding="utf-8"))
         review_validator.validate(re_value)
 

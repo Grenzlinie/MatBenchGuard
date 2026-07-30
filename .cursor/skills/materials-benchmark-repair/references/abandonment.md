@@ -9,6 +9,9 @@ cases are:
   disposition `ABANDON`; do not route it into Repair);
 - scientifically invalid or unanswerable target;
 - missing target-defining parameter that cannot be sourced;
+- `ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE`: the paper-based simulation
+  requires an execution/target/scoring parameter absent from all allowed
+  sources and not uniquely derivable;
 - indispensable data or pretrained model permanently unavailable and no valid
   equivalent is allowed;
 - Gold/tolerance cannot be verified or contradicts the paper;

@@ -74,6 +74,52 @@ class MaterialsSkillPolicyBoundariesTest(unittest.TestCase):
         self.assertIn("SCREENED_OUT/DONE", orchestration)
         self.assertIn("terminal state is `SCREENED_OUT`", playbook)
         self.assertIn("`NOT_ASSESSABLE` is never DONE", playbook)
+        self.assertIn(
+            "--probe-observations OUT/evidence/checker_observations.json",
+            playbook,
+        )
+        self.assertIn("validate_lifecycle.py", orchestration)
+        self.assertIn("不得手工创建 `.done`", orchestration)
+
+    def test_playground_resource_deployment_is_outside_qa_scope(self) -> None:
+        review = self.read(REVIEW / "SKILL.md")
+        readiness = self.read(REVIEW / "references/resource-readiness.md")
+        leakage = self.read(REVIEW / "references/task-types-and-leakage.md")
+        repair = self.read(REPAIR / "SKILL.md")
+        playbook = self.read(ORCHESTRATION / "assets/PLAYBOOK.md")
+
+        self.assertIn("求解者直接收到的题面只有 `instruction.md`", review)
+        self.assertIn("`assets`", review)
+        self.assertIn("不审核平台部署或挂载结果", review)
+        mechanical = self.read(REVIEW / "references/mechanical-evidence.md")
+        self.assertIn("Add `--probe-urls` whenever", mechanical)
+        self.assertIn("must not call Playground", readiness)
+        self.assertIn("confirmed `404/410`", readiness)
+        self.assertIn("not solver-facing", leakage)
+        self.assertIn("不调用 Playground 拉取资源", repair)
+        self.assertIn("Do not call Playground", playbook)
+        self.assertIn("confirmed `404/410`", playbook)
+
+    def test_simulation_parameter_closure_is_mandatory_and_not_repaired_by_guessing(
+        self,
+    ) -> None:
+        review = self.read(REVIEW / "SKILL.md")
+        patterns = self.read(REVIEW / "references/scientific-defect-patterns.md")
+        parameter_policy = self.read(
+            REVIEW / "references/paper-grounded-audit.md"
+        )
+        repair = self.read(REPAIR / "references/repair-policy.md")
+        playbook = self.read(ORCHESTRATION / "assets/PLAYBOOK.md")
+
+        self.assertIn("simulation_parameter_matrix.json", review)
+        self.assertIn("机械候选为零不能免除", review)
+        self.assertIn("SIMULATION_CONTRACT_UNDERDETERMINED", patterns)
+        self.assertIn("SIMULATION_PARAMETER_DEPENDENCY_BROKEN", patterns)
+        self.assertIn(
+            "ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE", parameter_policy
+        )
+        self.assertIn("Software\ndefaults", repair)
+        self.assertIn("non-repairable `ABANDON`", playbook)
 
 
 if __name__ == "__main__":

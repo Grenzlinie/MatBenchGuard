@@ -12,7 +12,9 @@ python .cursor/skills/materials-benchmark-review/scripts/collect_package_evidenc
   <package> --output <evidence-dir>/mechanical_evidence.json
 ```
 
-Add `--probe-urls` only when external access checks are appropriate.
+Add `--probe-urls` whenever `instruction.md` or `resources.json` contains an
+explicit HTTP(S) URL. This performs only a lightweight status check; it does not
+call Playground to pull a resource, download its body, or verify deployment.
 
 The collector records:
 
@@ -21,6 +23,9 @@ The collector records:
 - lexical instruction output/resource candidates with exact lines;
 - repeated final/last analysis-window candidates across instruction, steps, and
   grading files;
+- lexical Cartesian/crystallographic directions, solver-choice language,
+  derived-parameter language, and fixed-target language. These only index
+  possible simulation dependencies; zero hits never prove parameter closure;
 - the raw-compatible grading output contract, steps, weights, threshold, and
   unsupported-shape limitations;
 - checker AST functions, literal file access calls, scorer registries, constant
@@ -29,7 +34,8 @@ The collector records:
 - lexical Gold-provenance risk candidates in `tests/` for random,
   interpolated/fitted, smoke, synthetic, dummy, or placeholder reference
   generation;
-- instruction-declared data/model/URL candidates and optional URL observations.
+- instruction- and `resources.json`-declared data/model/URL candidates, plus
+  optional lightweight URL status observations.
 
 Lexical mismatch, missing expected keys, or unsupported shapes are limitations
 or candidates—not schema findings. The Agent must adjudicate output roles,
@@ -41,6 +47,11 @@ negative fixture, robustness test, declared analysis, or reduced runner rather
 than Gold generation; retain the exact line and adjudicate its data flow into
 the acceptance rule. The collector must skip `solution/**` entirely: no content
 read, hash, lexical candidate, or evidence record.
+
+For every simulation task, the Agent must still read the complete paper and
+package and create `simulation_parameter_matrix.json`. Mechanical evidence
+cannot decide whether a parameter is necessary, source-required, uniquely
+derived, representation-equivalent, solver-selectable, or missing.
 
 ## Dynamic observations
 

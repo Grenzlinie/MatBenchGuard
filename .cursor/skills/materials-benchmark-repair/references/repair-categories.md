@@ -23,6 +23,11 @@ quote, identity/hash, applicability, derivation, and affected paths. Examples
 include correcting paper-inconsistent units, fixed parameters, data identity,
 Gold transcription, or evidenced tolerances.
 
+Simulation parameter closure is `ASSISTED_FIX` only when every added value or
+rule is paper-explicit, uniquely paper-derived, already package-defined, or a
+proved representation-equivalent transform. Synchronize the full dependency
+chain; do not patch one downstream step or Cartesian axis in isolation.
+
 This category also covers `METHOD_REFERENCE_MISMATCH` and
 `UNSUPPORTED_SYNTHETIC_GOLD` through either of these evidence-backed repairs:
 
@@ -44,3 +49,8 @@ endpoint, fabricating unavailable scientific data/model/Gold/target/tolerance,
 or when the final core scientific result itself cannot be fairly scored. Parser
 defenses, NaN/Inf rejection, type/field/format checks, duplicate handling, and
 container-helper limitations are never sufficient reasons by themselves.
+
+Always `ABANDON` `ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE`: a required
+paper-reproduction parameter is missing from the paper, supplement, and
+declared authoritative sources and cannot be uniquely derived. Repair must not
+invent it.

@@ -52,8 +52,9 @@ paper-xxx/
 
 文件角色与交付契约：
 
-- `instruction.md` 和 `resources.json` 会交付给求解者。应结合两者判断任务完整性；答案泄露仅依据 `instruction.md` 判断。
-- `resources.json` 是资源及其定位信息的声明，不代表资源内容会自动交付。审核 2.8 时应结合 `instruction.md` 使用；不得为了检查泄露而访问定位地址或公共资源。
+- 求解者直接收到的题面只有 `instruction.md`；所需资源在其中的 `assets` 中声明。审核公开合同和答案泄露时只以 `instruction.md` 为求解者可见文本。
+- `resources.json` 是出题方和 Playground 用于定位、部署资源的上游声明，不会作为题面交付给求解者。Review/Repair 不调用 Playground 拉取资源，不审核平台部署或挂载结果，也不把资源内容作为答案泄露面。
+- 审核 2.8 时检查 `instruction.md` 的 `assets` 是否完整、明确地声明必需输入，并用题包内 `resources.json` 核对标识、版本、角色和映射的一致性。若任一声明包含明确的 HTTP(S) URL，还必须做轻量可达性检查；这不是通过 Playground 拉取资源，也不得下载或检查资源正文。
 - `solution/` 是可选目录，但完全排除在 Review/Repair 范围外；若存在，只随题包原样保留，不读取、不运行、不扫描、不引用。
 - `tests/` 对求解者不可见；`checker.py`、`grading_spec.json`、`test.sh` 和其中的 Gold 文件共同定义评分。`tests/test.sh` 是核心格式必需的标准评分入口；`environment/`、图片清单或其他扩展文件可以存在。
 - `paper/`、`manifest.json`、`steps.json` 和 `task.toml` 用于编写、审核或运行时溯源，不会交付给求解者。
@@ -71,9 +72,9 @@ paper-xxx/
 审核采用从便宜到昂贵的分阶段 Gate，并为每一阶段保留独立证据：
 
 - **Phase 0 · 结构与版本**：全部核心文件（包括 `tests/test.sh`）的存在性、可解析性、角色映射、跨文件输出合同和文件哈希；
-- **Phase 1 · 资源与预算**：必要资源的身份、版本、可达性、许可、算力、时间和存储预算；
+- **Phase 1 · 资源与预算**：`instruction.md` 的 `assets` 声明完整性、与 `resources.json` 的标识/版本/角色一致性、明确 URL 的轻量可达性，以及算力、时间和存储预算；
 - **Phase 2 · 题面与 checker 静态审计**：输入/输出合同、评分链、重复键、坐标、单位、权重和能力声明；
-- **Phase 3 · 论文精读**：晶体学/物理定义、方法与固定参数、Gold、容差和论文忠实度；
+- **Phase 3 · 论文精读与模拟参数闭包**：全文阅读论文，建立体系、模型、坐标、初始化、边界/加载、演化、采样、分析、派生参数到 Gold/checker 的完整依赖矩阵；
 - **Phase 4 · 动态验证**：有效正例、通用负例、任务特定攻击、质量梯度、语义等价和组件隔离；
 - **Phase 5 · 证据一致性**：决策 JSON、原始探针、发现、分数、硬门槛和发布结论的交叉校验。
 
@@ -81,11 +82,11 @@ paper-xxx/
 
 任何阶段发现不可修复硬门槛时可以提前停止昂贵执行，但必须保留已执行阶段、停止理由和缺失证据；可修复缺陷不得用于跳过后续阶段并提前缩小修复范围。
 
-1. 运行机械证据收集器。检查其 `facts`、`candidates` 和 `limitations`；收集器无权直接生成缺陷结论。网络允许且存在必要外部资源时必须使用 `--probe-urls`，但资源内容不得作为泄露判断依据。
+1. 运行机械证据收集器。检查其 `facts`、`candidates` 和 `limitations`；收集器无权直接生成缺陷结论。若 `instruction.md` 或 `resources.json` 含明确 HTTP(S) URL，必须使用 `--probe-urls` 做轻量状态检查；不得调用 Playground CLI/API 拉取资源，也不得下载或读取资源正文。
 2. 判定材料科学资格与复现意图。
-3. 提取科学目标、必需输入、固定参数、求解者可选参数、**最终核心科学输出**、答案类型和所声称的能力。生成 `evidence/scientific_claim_matrix.md`，逐项记录“公开声明 → 论文证据 → 必需参数 → 最终输出 → checker 观察量 → 动态测试”。判断该能力是否需要实质性科学推理，而非纯信息抽取或纯代数计算。明确将推荐方法、执行轨迹、训练日志和中间产物排除在核心输出映射之外。
+3. 提取科学目标、必需输入、固定参数、求解者可选参数、**最终核心科学输出**、答案类型和所声称的能力。生成 `evidence/scientific_claim_matrix.md`，逐项记录“公开声明 → 论文证据 → 必需参数 → 最终输出 → checker 观察量 → 动态测试”。对每道模拟题复制 `assets/simulation_parameter_matrix_template.json` 生成 `evidence/simulation_parameter_matrix.json`，完整执行 `paper-grounded-audit.md` 的参数闭包：覆盖体系、坐标/对称性、模型、初始化、边界/加载、演化、热力学/采样、运行范围、分析、派生参数和评分依赖；将每项归入 `fixed_or_source_required`、`derived_or_coupled`、`representation_equivalent` 或 `solver_selectable`，并把相同参数项写入决策的 `parameter_assessment`。机械候选为零不能免除该矩阵。判断该能力是否需要实质性科学推理，而非纯信息抽取或纯代数计算。明确将推荐方法、执行轨迹、训练日志和中间产物排除在核心输出映射之外。
 4. 检查工作流程、输出契约和评分之间的提示自洽性。逐项裁决 `scientific-defect-patterns.md`，尤其比较各步骤重复出现的分析时间窗、温度、载荷、单位、坐标、截断、采样区间和输出行数；例如“最后 15 ns”与“最后 5 ns”必须作为 `CROSS_STEP_PARAMETER_CONTRADICTION` 处理，不能以步骤独立为由忽略。
-5. 对照论文核验任务说明、数据、方法、参数和 Gold。先明确评分目标是绝对数值、容差区间、相对排序、单调趋势还是定性关系，再判断证据是否支持该目标。如果题目改变了原论文的体系、方法或条件，却仍要求匹配论文绝对数值，裁决 `METHOD_REFERENCE_MISMATCH`。缩小体系、缩短轨迹或 smoke 计算不自动构成缺陷：若 checker 只评价论文或权威来源支持、且对声明体系有适用依据的趋势/排序，不伪装成绝对值复现，则可以通过。`tests/` 中的随机、拟合、插值、smoke/dummy 等词法命中只能作为 provenance 候选；只有其被当作无可靠依据的真值、阈值或趋势时，才裁决 `UNSUPPORTED_SYNTHETIC_GOLD`。不得打开或检查 `solution/`。
+5. 对照论文核验任务说明、数据、方法、参数和 Gold。先明确评分目标是绝对数值、容差区间、相对排序、单调趋势还是定性关系，再判断证据是否支持该目标。如果题目改变了原论文的体系、方法或条件，却仍要求匹配论文绝对数值，裁决 `METHOD_REFERENCE_MISMATCH`。逐项沿参数依赖图检查：上游自由选择不得被下游固定方向、数值、公式或论文 Gold 暗中锁定；坐标标签可自由，但物理方向、边界、分析和 checker 必须通过明确变换保持等价。若论文复现所必需的执行/目标/评分参数在论文、补充材料和声明权威来源中均缺失且不可唯一推导，裁决 `SIMULATION_CONTRACT_UNDERDETERMINED` 并触发 `ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE`：`REJECT + ABANDON`，不得进入 Repair。缩小体系、缩短轨迹或 smoke 计算不自动构成缺陷：若 checker 只评价论文或权威来源支持、且对声明体系有适用依据的趋势/排序，不伪装成绝对值复现，则可以通过。`tests/` 中的随机、拟合、插值、smoke/dummy 等词法命中只能作为 provenance 候选；只有其被当作无可靠依据的真值、阈值或趋势时，才裁决 `UNSUPPORTED_SYNTHETIC_GOLD`。不得打开或检查 `solution/`。
 6. 追踪每个最终核心科学输出：
 
    ```text
@@ -95,9 +96,9 @@ paper-xxx/
 
    不得在该链路中增加对过程或轨迹的读取要求。
 7. 先编写 `evidence/probe_plan.json`，把每个核心科学自变量、主键、坐标、单位、边界、容差和能力声明映射到至少一个正例或攻击。随后实际运行机械探针。所有十一类均允许 Agent 提供任务特定变体，例如 `--case minimal_exploit:wrong-time-axis=<dir>`；通用样例不得替代任务特定攻击。
-8. 结合 `instruction.md` 与 `resources.json`，确认每项必需的数据、模型、软件、环境和访问条件均为必要、声明充分且在审核时可验证。网络允许时必须探测必要定位地址；确认的 `404/410`、身份不匹配或内容不足属于资源缺陷，瞬时网络失败才属于自动化限制。
+8. 以 `instruction.md` 的 `assets` 为求解者资源合同，确认每项必需的数据、模型、软件和环境均已清楚声明，并与题包内 `resources.json` 的标识、版本、角色和映射保持一致。对两处声明中的明确 HTTP(S) URL 做轻量状态检查：确认的 `404/410` 对必需资源构成缺陷；`401/403/405`、DNS/TLS、超时、限流或审核机网络失败不能证明资源不存在，应记为 `AUTOMATION_LIMITATION`/待补证；成功响应只证明地址可达，不证明资源身份或内容充分。不得调用 Playground 拉取资源、下载正文或检查部署结果。
 9. 审核泄露、安全性、可行性和可复现性。核对能力声明与最终可观察结果：如果查值、硬编码或极小合成输出可与真实科学工作同分，必须在 2.5/2.7 或 `SCIENTIFIC_REASONING_ABSENT` 中处理，不能以“不审核过程”为由忽略。
-10. 独立评估 2.1–2.8，给出 C01–C07 评分，裁决全部五个硬门槛和全部必查科学问题模式，并用精确证据记录发现。每个失败 pattern 必须对应一项已确认 finding；不适用的 pattern 必须说明原因。
+10. 独立评估 2.1–2.8，给出 C01–C07 评分，裁决全部六个硬门槛和全部必查科学问题模式，并用精确证据记录发现。每个失败 pattern 必须对应一项已确认 finding；不适用的 pattern 必须说明原因。
 11. 对每项自动化诊断使用 `CONFIRMED`、`DISMISSED_FALSE_POSITIVE` 或 `AUTOMATION_LIMITATION`。只有已确认缺陷会影响审核结论。
     本地辅助工具无法复现声明的容器路径时，应标记为 `AUTOMATION_LIMITATION`；只有证据证明声明的容器布局、挂载或路径本身无效时，才可认定为缺陷。
 12. 使用 `assets/agent_final_decision_template.json` 编写 `agent_final_decision.json`，然后将所有原始探针文件交给验证器：

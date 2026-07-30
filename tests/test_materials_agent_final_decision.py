@@ -28,6 +28,33 @@ def evidence(result: str = "verified") -> list[dict[str, str]]:
     ]
 
 
+def parameter_item(
+    parameter_id: str,
+    *,
+    source_status: str = "PAPER_EXPLICIT",
+    resolution: str = "FIXED_TO_SOURCE",
+    depends_on: list[str] | None = None,
+    scoring_sensitive: bool = False,
+    execution_required: bool = True,
+    paper_reference_required: bool = True,
+) -> dict:
+    return {
+        "parameter_id": parameter_id,
+        "category": "simulation protocol",
+        "introduced_at": ["instruction.md:Step 1"],
+        "source_status": source_status,
+        "value_or_rule": "Source-backed value or explicit unresolved marker.",
+        "depends_on": depends_on or [],
+        "downstream_consumers": ["instruction.md:Step 2"],
+        "affects_scored_outputs": ["result.json"] if scoring_sensitive else [],
+        "scoring_sensitive": scoring_sensitive,
+        "execution_required": execution_required,
+        "paper_reference_required": paper_reference_required,
+        "resolution": resolution,
+        "evidence": evidence(parameter_id),
+    }
+
+
 def decision() -> dict:
     criteria = {
         key: {
@@ -86,7 +113,7 @@ def decision() -> dict:
             "evidence": evidence(name),
             "items": [],
         }
-        for name in ("fixed_or_source_required", "solver_selectable")
+        for name in module.PARAMETER_BUCKETS
     }
     patterns = {
         pattern_id: {
@@ -186,6 +213,123 @@ class AgentFinalDecisionTests(unittest.TestCase):
         value["parameter_assessment"]["fixed_or_source_required"]["status"] = "FAIL"
         value["verdict"] = "CONDITIONAL"
         self.assertEqual(module.validate(value)["verdict"], "CONDITIONAL")
+
+    def test_parameter_assessment_requires_all_2_3_buckets(self) -> None:
+        value = decision()
+        del value["parameter_assessment"]["derived_or_coupled"]
+        with self.assertRaisesRegex(ValueError, "derived_or_coupled"):
+            module.validate(value)
+
+    def test_representation_equivalent_parameter_can_pass(self) -> None:
+        value = decision()
+        value["parameter_assessment"]["representation_equivalent"]["items"] = [
+            parameter_item(
+                "orientation_mapping",
+                source_status="REPRESENTATION_EQUIVALENT",
+                resolution="EQUIVALENCE_TRANSFORM",
+                scoring_sensitive=True,
+                execution_required=True,
+                paper_reference_required=False,
+            )
+        ]
+        self.assertEqual(module.validate(value)["verdict"], "PASS")
+
+    def test_solver_selectable_convergence_parameter_can_pass(self) -> None:
+        value = decision()
+        value["parameter_assessment"]["solver_selectable"]["items"] = [
+            parameter_item(
+                "scf_convergence",
+                source_status="SOLVER_SELECTABLE",
+                resolution="SOLVER_CHOICE_JUSTIFIED",
+                scoring_sensitive=False,
+                execution_required=True,
+                paper_reference_required=False,
+            )
+        ]
+        self.assertEqual(module.validate(value)["verdict"], "PASS")
+
+    def test_self_contained_extension_parameter_can_pass(self) -> None:
+        value = decision()
+        value["reproduction_intent"] = "SCIENTIFIC_EXTENSION"
+        value["parameter_assessment"]["fixed_or_source_required"]["items"] = [
+            parameter_item(
+                "extension_temperature",
+                source_status="PACKAGE_DEFINED",
+                resolution="PACKAGE_SELF_CONTAINED",
+                scoring_sensitive=True,
+                execution_required=True,
+                paper_reference_required=False,
+            )
+        ]
+        self.assertEqual(module.validate(value)["verdict"], "PASS")
+
+    def test_parameter_dependency_cycle_is_rejected(self) -> None:
+        value = decision()
+        value["parameter_assessment"]["derived_or_coupled"]["items"] = [
+            parameter_item(
+                "strain_axis",
+                source_status="PAPER_DERIVED",
+                resolution="UNIQUE_DERIVATION",
+                depends_on=["cell_orientation"],
+            ),
+            parameter_item(
+                "cell_orientation",
+                source_status="PAPER_DERIVED",
+                resolution="UNIQUE_DERIVATION",
+                depends_on=["strain_axis"],
+            ),
+        ]
+        with self.assertRaisesRegex(ValueError, "contains a cycle"):
+            module.validate(value)
+
+    def test_essential_missing_paper_parameter_requires_abandon_gate(self) -> None:
+        value = decision()
+        value["parameter_assessment"]["fixed_or_source_required"].update(
+            {
+                "status": "FAIL",
+                "items": [
+                    parameter_item(
+                        "loading_rate",
+                        source_status="MISSING",
+                        resolution="UNRESOLVED",
+                        scoring_sensitive=True,
+                    )
+                ],
+            }
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            "ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE Gate must agree",
+        ):
+            module.validate(value)
+
+        value["criteria"]["2.3"]["status"] = "FAIL"
+        value["scientific_risk_patterns"]["SIMULATION_CONTRACT_UNDERDETERMINED"][
+            "status"
+        ] = "FAIL"
+        gate = next(
+            item
+            for item in value["hard_gates"]
+            if item["code"] == "ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE"
+        )
+        gate.update({"status": "FAIL", "disposition": "ABANDON"})
+        value["open_confirmed_findings"] = [
+            {
+                "finding_id": "F-ESSENTIAL-PARAMETER",
+                "title": "Paper omits an essential loading rate.",
+                "pattern_id": "SIMULATION_CONTRACT_UNDERDETERMINED",
+                "severity": "FATAL",
+                "dimension": "C03",
+                "repairable": False,
+                "hard_gate": True,
+                "hard_gate_code": "ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE",
+                "disposition": "ABANDON",
+                "failure_modes": [],
+                "evidence": evidence("paper and supplement omit loading rate"),
+            }
+        ]
+        value["verdict"] = "REJECT"
+        self.assertEqual(module.validate(value)["verdict"], "REJECT")
 
     def test_all_scientific_risk_patterns_are_required(self) -> None:
         value = decision()
@@ -401,10 +545,10 @@ class AgentFinalDecisionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "expected REJECT"):
             module.validate(value)
 
-    def test_version_2_1_is_rejected(self) -> None:
+    def test_version_2_2_is_rejected(self) -> None:
         value = decision()
-        value["schema_version"] = "materials-agent-final-decision/2.1"
-        with self.assertRaisesRegex(ValueError, "2.2"):
+        value["schema_version"] = "materials-agent-final-decision/2.2"
+        with self.assertRaisesRegex(ValueError, "2.3"):
             module.validate(value)
 
 

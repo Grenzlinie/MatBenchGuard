@@ -15,7 +15,7 @@ Commands:
   status                      -> print counts as JSON
   reap                        -> force-reap stale (>STALE_SEC) unfinished claims
 """
-import fcntl, json, os, sys, time
+import fcntl, json, os, subprocess, sys, time
 
 ROOT = os.environ.get("QA_ROOT", "/personal/qa_review")
 STATE = os.path.join(ROOT, "state")
@@ -87,7 +87,13 @@ def claim(agent_id, count):
 
 
 def done(pkg):
+    lifecycle = os.path.join(os.path.dirname(__file__), "validate_lifecycle.py")
+    subprocess.run([sys.executable, lifecycle, pkg], check=True)
     with Locked():
+        marker = os.path.join(ROOT, pkg, ".done")
+        os.makedirs(os.path.dirname(marker), exist_ok=True)
+        with open(marker, "w"):
+            pass
         d = _load(DONE); d[pkg] = {"ts": time.time()}; _save(DONE, d)
         a = _load(ASSIGNED); a.pop(pkg, None); _save(ASSIGNED, a)
     print("ok")

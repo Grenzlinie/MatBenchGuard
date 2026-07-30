@@ -72,15 +72,16 @@ invented trend-shaped pseudo-numbers.
 
 ## 2.7 No answer leakage or exploit
 
-Leakage is judged ONLY against `instruction.md`. `resources.json` is delivered
-as a resource declaration, but its locators and the contents of public resources
-are not a leakage surface. Everything else (`paper/**`, `tests/**`,
-`manifest.json`, `metadata`) is reviewer/harness-side or
-human-reference material. Therefore Gold, numeric results, hidden acceptance
-values, or tolerances outside `instruction.md` are by design and are NOT
-leakage. Do NOT open a leakage finding or Hard Gate solely because an answer
-appears in the paper, checker, resource declaration, or metadata. `solution/`
-is outside the audit and must not be opened for leakage review.
+Leakage is judged ONLY against `instruction.md`, including its `assets`
+declarations. `resources.json` is authoring/Playground-side provenance and is
+not solver-facing; its locators and resource contents are outside the leakage
+audit. Everything else (`paper/**`, `tests/**`, `manifest.json`,
+`metadata`) is reviewer/harness-side or human-reference material. Therefore
+Gold, numeric results, hidden acceptance values, or tolerances outside
+`instruction.md` are by design and are NOT leakage. Do NOT open a leakage
+finding or Hard Gate solely because an answer appears in the paper, checker,
+resource declaration, or metadata. `solution/` is outside the audit and must
+not be opened for leakage review.
 
 Within `instruction.md`, the prompt must not disclose numeric answers, hidden
 acceptance values, or paper identity that permits answer lookup instead of
@@ -90,15 +91,14 @@ report it there, not as leakage.
 
 ## 2.8 Inputs and reproducibility ready
 
-Assess `instruction.md` and `resources.json` together to determine whether
-prerequisite data, pretrained models/weights, indispensable software,
-environment requirements, and legal access are necessary to the task and
-sufficiently declared. Solver-generated models/structures/intermediates are
-outputs, not missing prerequisites. When network access is permitted, probe
-indispensable locators for publication readiness while keeping their contents
-outside the leakage audit. A confirmed 404/410, identity mismatch, or
-insufficient artifact is a resource defect; transient audit-host failure is an
-automation limitation. See `resource-readiness.md`.
+Use `instruction.md` `assets` as the solver-facing resource contract. Check that
+required inputs are completely and unambiguously declared and internally
+consistent with the identifiers, versions, roles, and mappings in
+`resources.json`. QA does not call Playground, download resource bodies, audit
+deployment, or inspect resource contents. It does perform a lightweight status
+probe for explicit HTTP(S) URLs so stable `404/410` resources are not accepted.
+Solver-generated models/structures/intermediates are outputs, not missing
+prerequisites. See `resource-readiness.md`.
 
 ## C01–C07 score
 
@@ -116,19 +116,35 @@ Each dimension has a 0–100 normalized score and positive evidence. Weighted
 total is `sum(weight × normalized / 100)`. Attribute each finding to one
 dimension only.
 
-Exactly five Hard Gates exist:
+Exactly six Hard Gates exist:
 
 - `NON_MATERIALS_TASK` → C01;
 - `SCIENTIFIC_TARGET_INVALID` → C03;
 - `SCIENTIFIC_REASONING_ABSENT` → C03;
 - `CHECKER_CORE_TASK_UNASSESSED` → C04;
-- `INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE` → C06.
+- `INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE` → C06;
+- `ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE` → C03.
 
 `PASS` requires all eight criteria PASS, total ≥80, all Hard Gates PASS, all
 applicable required probes pass, and no open confirmed repairable HIGH/FATAL.
 `CONDITIONAL` requires no failed Hard Gate and either total 60–79 or a confirmed
 repairable defect. `REJECT` follows a failed Hard Gate, total <60, or
 unrecoverable FATAL. `NOT_ASSESSABLE` is only genuine temporary evidence loss.
+
+## Essential simulation parameter Hard Gate
+
+`ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE` fails when a paper-based
+simulation requires a parameter to execute, define the target, or justify a
+scored paper result, but the paper, supplement, and declared authoritative
+sources neither state nor uniquely determine it. Multiple scientifically
+reasonable choices must be capable of changing the simulation or accepted
+result. Record the parameter as scoring-sensitive or execution-required
+`MISSING`, fail `SIMULATION_CONTRACT_UNDERDETERMINED`, and create a matching
+non-repairable `ABANDON` finding.
+
+Do not trigger this Gate for a representation-equivalent coordinate choice, a
+converged numerical parameter that does not redefine the target, or a
+self-contained scientific extension with independently validated Gold.
 
 ## Scientific reasoning absence Hard Gate
 

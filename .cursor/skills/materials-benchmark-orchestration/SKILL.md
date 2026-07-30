@@ -101,5 +101,7 @@ uv run --python 3.12 python <this>/scripts/verify_harbor.py   # 必须输出 RES
 - 修复可能合理地新增已声明但缺失的必要输入或 Gold 文件，例如 CSV 或 JSON。这些文件属于问题包内容，应予保留。
 - 每个工作 Agent 必须裁决 Review skill 的全部 `scientific_risk_patterns`；`tests/` 中随机、插值、拟合或 smoke 相关词法命中只能作为候选。缩小体系的 smoke 题若直接评分论文或权威来源支持、且有适用性依据的趋势/排序，可以通过；不得把拟合出的伪数值因“趋势看起来正确”而当作绝对 Gold。不得打开 `solution/`。
 - 每个工作 Agent 必须遵循 Review skill 的检查责任矩阵。机械事实用于低成本筛查和定位；进入论文深审后必须执行真实文件 Hybrid 复核，并主动检查自动化未命中的同义表达、隐含定义和跨文件数据流。
+- 每道模拟题进入 Phase 3 后必须全文阅读论文并生成 `simulation_parameter_matrix.json`，覆盖体系、坐标/对称性、模型、初始化、边界/加载、演化、采样、分析、派生参数和评分依赖。若论文复现缺少不可唯一推导的必要参数，必须以 `ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE` 终止为 `SCREENED_OUT`，不得进入 Repair。
 - Review 后必须执行统一状态转换：`PASS → DONE`；决定性非修复型 `REJECT → SCREENED_OUT/DONE`；存在可修目标且无决定性 `ABANDON` Hard Gate → `REPAIR`；`NOT_ASSESSABLE → RELEASE`。`SCREENED_OUT` 保留已验证 Review 决策但不生成 candidate/repair report，发布脚本必须忽略它。
+- 不得手工创建 `.done`。`queue.py done` 会先调用 `validate_lifecycle.py`，机器校验 Review/Repair 终态；模拟题还必须存在与决策参数项一致的完整 `simulation_parameter_matrix.json`。只有校验通过后才写入 `.done` 和队列完成状态。
 - `queue.py status` 会统计 `.done` 标记，因此即使其他会话编辑了状态文件，其结果仍然准确。

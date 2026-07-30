@@ -165,6 +165,42 @@ window, uncertainty estimator, and periodic-coordinate handling when they
 materially affect the result. Fail only when the paper/package fixes the method
 or the checker expects a unique value that depends on an omitted choice.
 
+### `SIMULATION_CONTRACT_UNDERDETERMINED` → 2.3 / C03
+
+For every simulation task, read the full paper and package and build the
+simulation parameter matrix required by `paper-grounded-audit.md`. Fail when an
+execution-required, target-defining, or scoring-sensitive parameter is absent
+or unresolved and multiple scientifically reasonable choices can change the
+simulation or accepted result.
+
+This applies across MD, DFT, Monte Carlo, phase-field, finite-element, and other
+simulation methods. Check system definition, reference frame, model,
+initialization, boundary/load, evolution, thermodynamic control, run extent,
+analysis, and derived parameters. Zero lexical candidates never establish
+completeness.
+
+When a task uses paper methods, conditions, or absolute Gold and an essential
+parameter is neither stated nor uniquely derivable from the paper, supplement,
+or declared authoritative source, fail
+`ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE`. The finding is non-repairable
+`ABANDON`. Do not import a software default, customary value, or value from a
+different paper. A self-contained scientific extension with independently
+validated Gold may define a value that the source paper did not use.
+
+### `SIMULATION_PARAMETER_DEPENDENCY_BROKEN` → 2.3 / C03
+
+Trace each parameter from the step that introduces it through every downstream
+consumer and scored output. Fail when an upstream structure, orientation,
+model, boundary, or computed value is free or incomplete but a later step uses
+a fixed direction, number, formula, paper Gold, or checker branch valid only
+for one upstream choice.
+
+Coordinate labels are one example, not a special case. Mapping a physical
+direction such as `{111}` to `x` rather than `z` is allowed when the complete
+orientation mapping, load, boundary, analysis, output conversion, Gold, and
+checker remain physically equivalent. Merely changing `z` to `x` without
+updating the dependency chain is not a repair.
+
 ## Gold provenance evidence
 
 For every scored absolute or relational reference record:

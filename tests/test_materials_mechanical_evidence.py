@@ -5,6 +5,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -160,6 +161,42 @@ class MechanicalEvidenceTests(unittest.TestCase):
             self.assertEqual(len(candidate["mentions"]), 2)
             self.assertTrue(candidate["candidate_only"])
 
+    def test_simulation_parameter_dependencies_are_collected_as_candidates(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = make_package(Path(temporary))
+            (package / "steps.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "id": "build",
+                            "action": (
+                                "Choose any reasonable mapping of the {111} plane "
+                                "to a Cartesian axis."
+                            ),
+                        },
+                        {
+                            "id": "load",
+                            "action": "Apply fixed strain epsilon_zz.",
+                        },
+                        {
+                            "id": "score",
+                            "action": "The target value must equal the paper value.",
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = collector.collect(package)
+            candidate = result["cross_step_parameter_candidates"][
+                "simulation_parameter"
+            ]
+            self.assertTrue(candidate["coordinate_dependency_candidate"]["present"])
+            self.assertTrue(
+                candidate["upstream_downstream_dependency_candidate"]["present"]
+            )
+            self.assertTrue(candidate["mentions"])
+            self.assertIn("candidate_only", candidate["mentions"][0])
+
     def test_random_and_interpolated_gold_generation_are_risk_candidates(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             package = make_package(Path(temporary))
@@ -218,6 +255,58 @@ class MechanicalEvidenceTests(unittest.TestCase):
     def test_url_probe_blocks_private_network(self) -> None:
         observed = collector.probe_url("http://127.0.0.1/private", 1)
         self.assertEqual(observed["status"], "BLOCKED")
+
+    def test_resources_json_urls_are_collected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = make_package(Path(temporary))
+            (package / "resources.json").write_text(
+                json.dumps(
+                    {
+                        "resources": [
+                            {
+                                "id": "potential",
+                                "url": "https://example.org/potential.eam",
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = collector.collect(package)
+            self.assertIn(
+                {
+                    "url": "https://example.org/potential.eam",
+                    "path": "resources.json",
+                    "locator": "$.resources[0].url",
+                },
+                result["url_candidates"],
+            )
+
+    def test_404_url_is_confirmed_missing_without_reading_body(self) -> None:
+        error = collector.urllib.error.HTTPError(
+            "https://example.org/missing", 404, "Not Found", None, None
+        )
+        address = [(None, None, None, None, ("93.184.216.34", 0))]
+        with (
+            mock.patch.object(collector.socket, "getaddrinfo", return_value=address),
+            mock.patch.object(collector.urllib.request, "urlopen", side_effect=error),
+        ):
+            observed = collector.probe_url("https://example.org/missing", 1)
+        self.assertEqual(observed["status"], "CONFIRMED_MISSING")
+        self.assertEqual(observed["http_status"], 404)
+
+    def test_skipped_url_probe_is_not_a_review_limitation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = make_package(Path(temporary))
+            (package / "instruction.md").write_text(
+                "# Task\n\nAsset: https://play.bohrium.com/data/example\n",
+                encoding="utf-8",
+            )
+            result = collector.collect(package)
+            self.assertEqual(result["url_probes"], [])
+            self.assertFalse(
+                any(item.get("stage") == "url_probe" for item in result["limitations"])
+            )
 
     def test_probe_runner_records_observations_only(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -56,6 +56,21 @@ class RepairReportTests(unittest.TestCase):
             source_decision = review_test.decision()
             source_decision["criteria"]["2.2"]["status"] = "FAIL"
             source_decision["verdict"] = "CONDITIONAL"
+            source_decision["open_confirmed_findings"] = [
+                {
+                    "finding_id": "F-1",
+                    "title": "The public contract and checker disagree.",
+                    "pattern_id": None,
+                    "severity": "HIGH",
+                    "dimension": "C02",
+                    "repairable": True,
+                    "hard_gate": False,
+                    "hard_gate_code": None,
+                    "disposition": "REPAIR",
+                    "failure_modes": [],
+                    "evidence": review_test.evidence("contract/checker mismatch"),
+                }
+            ]
             for name in review_test.module.PROBES:
                 source_decision["checker_probes"][name]["evidence"] = [
                     {
@@ -144,6 +159,83 @@ class RepairReportTests(unittest.TestCase):
 
             report["regressions"][0]["before_passed"] = True
             with self.assertRaisesRegex(ValueError, "fail before"):
+                repair.validate(report, report_path=root / "report.json")
+
+    def test_controlling_abandon_source_cannot_create_repair_report(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = review_test.decision()
+            source["parameter_assessment"]["fixed_or_source_required"].update(
+                {
+                    "status": "FAIL",
+                    "items": [
+                        review_test.parameter_item(
+                            "loading_rate",
+                            source_status="MISSING",
+                            resolution="UNRESOLVED",
+                            scoring_sensitive=True,
+                        )
+                    ],
+                }
+            )
+            source["criteria"]["2.3"]["status"] = "FAIL"
+            source["scientific_risk_patterns"][
+                "SIMULATION_CONTRACT_UNDERDETERMINED"
+            ]["status"] = "FAIL"
+            gate = next(
+                item
+                for item in source["hard_gates"]
+                if item["code"] == "ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE"
+            )
+            gate.update({"status": "FAIL", "disposition": "ABANDON"})
+            source["open_confirmed_findings"] = [
+                {
+                    "finding_id": "F-ESSENTIAL",
+                    "title": "Essential simulation parameter is unavailable.",
+                    "pattern_id": "SIMULATION_CONTRACT_UNDERDETERMINED",
+                    "severity": "FATAL",
+                    "dimension": "C03",
+                    "repairable": False,
+                    "hard_gate": True,
+                    "hard_gate_code": "ESSENTIAL_SIMULATION_PARAMETER_UNAVAILABLE",
+                    "disposition": "ABANDON",
+                    "failure_modes": [],
+                    "evidence": review_test.evidence("paper does not define it"),
+                }
+            ]
+            source["verdict"] = "REJECT"
+            (root / "source.json").write_text(json.dumps(source), encoding="utf-8")
+
+            report = {
+                "schema_version": repair.SCHEMA,
+                "source_package": "source",
+                "candidate_package": "candidate",
+                "source_decision": "source.json",
+                "reaudit_decision": "never-read.json",
+                "source_probe_observations": ["never-read-source.json"],
+                "candidate_probe_observations": ["never-read-candidate.json"],
+                "reaudit_verdict": "REJECT",
+                "outcome": "ABANDONED",
+                "publishable": False,
+                "targets": [
+                    {
+                        "finding_id": "F-ESSENTIAL",
+                        "decision": "ABANDON",
+                        "rationale": "Unavailable evidence cannot be repaired.",
+                        "resolved": False,
+                    }
+                ],
+                "changes": [],
+                "regressions": [],
+                "impact_matrix": [],
+                "fresh_review": {
+                    "status": "COMPLETE",
+                    "evidence": "Entry gate should stop before candidate creation.",
+                },
+                "unresolved_findings": ["F-ESSENTIAL"],
+                "limitations": [],
+            }
+            with self.assertRaisesRegex(ValueError, "SCREENED_OUT"):
                 repair.validate(report, report_path=root / "report.json")
 
     def test_conditional_candidate_is_never_publishable(self) -> None:
