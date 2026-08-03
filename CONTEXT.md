@@ -1,6 +1,6 @@
 # Materials Benchmark Quality Assurance
 
-本文件定义当前 Review/Repair 使用的核心术语。具体 Gate、schema 和 validator 以两个材料 Skill 为准。
+本文件定义当前 Authoring/Review/Repair 使用的核心术语。具体 Gate、schema 和 validator 以三个材料 Skill 为准。
 
 ## 核心文件角色
 
@@ -28,7 +28,7 @@
 
 **paper-reported 必要信息**：论文已给且定义目标、连接 Workflow、产生必要中间产物或影响评分的参数、公式、步骤和数据；题面漏写时必须补齐。
 
-**SOLVER_SEARCHABLE 参数**：论文未报告唯一值、但可通过 mesh search、扫描、优化、收敛或合理算法选择确定的数值/执行项。它们即使影响结果也不构成不可复现证据，不得由 Review/Repair 猜值或被 checker 暗中固定。
+**SOLVER_SEARCHABLE 参数**：论文未报告唯一值、但可通过 mesh search、扫描、优化、收敛或合理算法选择确定的数值/执行项。它们即使影响结果也不构成不可复现证据，不得由 Authoring/Review/Repair 猜值或被 checker 暗中固定。
 
 **TARGET_DEFINING 参数**：决定材料体系、物理状态或研究条件；缺失后无法判断研究对象时题目失败。
 
@@ -58,4 +58,4 @@ Review verdict：
 
 PASS 另分 `BASELINE_CORRECT` 与 `RESULT_ENHANCED`。checker 成本作为独立 operational gate：最多 32 CPU 核或单卡 H100、600 秒，不读完整大体积轨迹，不重跑主要科学计算。超预算不改变科学 verdict，但不可发布。
 
-v2 源题包不可变；Review/Repair/candidate/evidence 留在题包外；v3 只保存独立 Review 为 PASS 的 candidate。`corpus_review_tracking.json` 是唯一 corpus 进度记录，不使用 dispatcher、lock 或第二套 lifecycle 状态。
+v2 源题包不可变；Authoring/Review/Repair workspace、candidate 和 evidence 留在题包外；v3 只保存独立 Review 为 PASS 的 candidate。`corpus_review_tracking.json` 是唯一 corpus 进度记录，不使用 dispatcher、lock 或第二套 lifecycle 状态。

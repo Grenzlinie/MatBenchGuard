@@ -30,8 +30,9 @@ rg --no-ignore --files materials_science_questions
 
 ## 材料基准技能
 
-本仓库提供两个互补的材料基准技能：
+本仓库提供三个互补的材料基准技能：
 
+- `materials-benchmark-authoring`：从论文构建 solution-free 的增强型 Harbor 题包；先闭合论文证据、Gold、资源和轻量结果检查，再交给独立 Review，只有 `PASS + RESULT_ENHANCED` 才发布。
 - `materials-benchmark-review`：先审题目/答案正确性并给出 `BASELINE_CORRECT`，再可选评估 `RESULT_ENHANCED`；checker 成本是独立发布门槛，不让高级 hacking 风险反向否决正确题包。
 - `materials-benchmark-repair`：Stage A 先修到独立复审的 Baseline；Stage B 才能增加轻量结果关系、分层评分和按实际风险选择的探针。增强失败回退 Baseline。
 
@@ -39,4 +40,6 @@ rg --no-ignore --files materials_science_questions
 
 语料进度只由 `materials_science_questions/corpus_review_tracking.json` 记录并由人工 prompt 协调；仓库不提供第二套 lifecycle/orchestration dispatcher。
 
-开始审查或修复题包前，请先阅读 `AGENTS.md`，再阅读 `CONTEXT.md`。
+Authoring 系统设计见 [`output/system_design/materials-benchmark-authoring/materials_benchmark_authoring_system_design.pdf`](output/system_design/materials-benchmark-authoring/materials_benchmark_authoring_system_design.pdf)。
+
+开始创建、审查或修复题包前，请先阅读 `AGENTS.md`，再阅读 `CONTEXT.md`。

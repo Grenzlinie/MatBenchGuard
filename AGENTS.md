@@ -12,7 +12,7 @@ Use the five canonical triage roles with their default label names. See `docs/ag
 
 This repository uses a single-context domain model. See `docs/agents/domain.md`.
 
-### Review/Repair coordination
+### Authoring/Review/Repair coordination
 
 `materials_science_questions/` is a local, Git-ignored corpus containing
 materials-science Harbor-format question packages and their review results. It
@@ -20,11 +20,12 @@ is available to agents in the workspace but must not be added to Git. Since the
 directory is ignored, search it explicitly when needed (for example,
 `rg --no-ignore --files materials_science_questions`).
 
-Review/Repair work is coordinated by human prompts. Track corpus status directly
+Authoring/Review/Repair work is coordinated by human prompts. Track corpus status directly
 in `materials_science_questions/corpus_review_tracking.json`; preserve existing
 human-updated fields when adding or revising package records. There is no separate
 tracking generator or dispatcher.
 
-Audit, repair, candidate, and evidence artifacts must stay outside Harbor
-packages. Use the Agent-primary Review and Repair skills; there is no lifecycle,
-lock, digest, pending/resume, or deterministic-contract dispatcher.
+Authoring workspaces and audit, repair, candidate, and evidence artifacts must
+stay outside Harbor packages. Use the Agent-primary Authoring, Review, and Repair
+skills; there is no lifecycle, lock, digest, pending/resume, or deterministic-contract
+dispatcher.
