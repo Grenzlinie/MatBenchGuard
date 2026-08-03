@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 VERIFY = (
     ROOT
-    / ".cursor/skills/materials-benchmark-orchestration/scripts/verify_harbor.py"
+    / ".cursor/skills/materials-benchmark-review/scripts/verify_harbor.py"
 )
 CORE = {
     "instruction.md",

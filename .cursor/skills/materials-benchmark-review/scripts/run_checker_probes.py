@@ -12,6 +12,7 @@ import csv
 import json
 import math
 import os
+import resource
 import shutil
 import subprocess
 import sys
@@ -20,23 +21,48 @@ import time
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "materials-checker-probe-observations/1.1"
-BUILTINS = (
-    "missing_output",
-    "empty_output",
-    "malformed_output",
-    "random_or_constant",
-    "duplicate_records",
-    "non_finite_values",
-    "minimal_exploit",
+SCHEMA = "materials-checker-probe-observations/2.1"
+PROBE_CLASSES = (
+    "valid_positive",
+    "tolerance_boundary",
+    "missing_or_malformed",
+    "non_finite_and_duplicate",
+    "wrong_science",
+    "minimal_fabrication",
+    "quality_gradient",
+    "cross_condition_group_mismatch",
 )
+BUILTIN_VARIANTS = {
+    "missing_or_malformed": ("missing_output", "empty_output", "malformed_output"),
+    "non_finite_and_duplicate": ("non_finite_values", "duplicate_records"),
+    "minimal_fabrication": ("random_or_constant", "minimal_exploit"),
+}
 AGENT_CASES = (
     "valid_positive",
+    "tolerance_boundary",
+    "wrong_science",
     "quality_gradient",
-    "semantic_equivalence",
-    "component_isolation",
+    "cross_condition_group_mismatch",
 )
-PROBE_CLASSES = (*BUILTINS, *AGENT_CASES)
+BASELINE_PROBE_CLASSES = (
+    "valid_positive", "tolerance_boundary", "missing_or_malformed",
+    "non_finite_and_duplicate", "wrong_science",
+)
+ENHANCEMENT_PROBE_CLASSES = (
+    "minimal_fabrication", "quality_gradient", "cross_condition_group_mismatch",
+)
+
+
+def peak_child_rss_mb() -> float:
+    """Return the observed child-process RSS high-water mark in MiB.
+
+    macOS reports ru_maxrss in bytes while Linux reports KiB.  The value is a
+    conservative process-family upper bound when several probes run in one
+    invocation, which is suitable for the publication budget record.
+    """
+    raw = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
+    divisor = 1024 * 1024 if sys.platform == "darwin" else 1024
+    return round(raw / divisor, 3)
 
 
 def load_contract(package: Path) -> list[dict[str, Any]]:
@@ -197,6 +223,7 @@ def run_one(
     timeout: float,
     *,
     probe_class: str | None = None,
+    generation_case: str | None = None,
 ) -> dict[str, Any]:
     probe_class = probe_class or case_id.split(":", 1)[0]
     started = time.monotonic()
@@ -221,7 +248,7 @@ def run_one(
                 if p.is_file()
             )
         else:
-            created = write_case(outputs, load_contract(package), probe_class)
+            created = write_case(outputs, load_contract(package), generation_case or probe_class)
         rewritten = rewrite_paths(tests, outputs, logs)
         entrypoint = tests / "test.sh"
         if not entrypoint.is_file():
@@ -272,6 +299,10 @@ def run_one(
                 "stderr": completed.stderr[-8000:],
                 "rewritten_test_files": rewritten,
                 "duration_seconds": round(time.monotonic() - started, 3),
+                "input_bytes_read_upper_bound": sum(
+                    p.stat().st_size for p in outputs.rglob("*") if p.is_file()
+                ),
+                "peak_child_rss_mb_upper_bound": peak_child_rss_mb(),
                 "limitations": limitations,
             }
         except subprocess.TimeoutExpired as exc:
@@ -320,6 +351,11 @@ def run(
             "package_root": str(package),
             "authority": "MECHANICAL_OBSERVATIONS_ONLY",
             "may_decide_findings_or_verdict": False,
+            "probe_policy": {
+                "baseline_required": list(BASELINE_PROBE_CLASSES),
+                "enhancement_optional": list(ENHANCEMENT_PROBE_CLASSES),
+                "note": "Optional enhancement probes do not determine BASELINE_CORRECT.",
+            },
             "observations": [
                 {
                     "case_id": name,
@@ -335,24 +371,32 @@ def run(
                 "Checker code was not executed because --no-execute was requested."
             ],
         }
-    observations = [
-        run_one(package, name, None, timeout, probe_class=name) for name in BUILTINS
-    ]
-    for name in AGENT_CASES:
-        observations.append(
-            run_one(package, name, supplied[name], timeout, probe_class=name)
-            if name in supplied
-            else {
-                "case_id": name,
-                "probe_class": name,
-                "status": "NOT_ASSESSED",
-                "limitations": ["Agent-supplied case directory was not provided."],
-            }
-        )
+    observations = []
+    for probe_class, variants in BUILTIN_VARIANTS.items():
+        for variant in variants:
+            observations.append(
+                run_one(
+                    package,
+                    f"{probe_class}:{variant}",
+                    None,
+                    timeout,
+                    probe_class=probe_class,
+                    generation_case=variant,
+                )
+            )
+    supplied_classes = {case_id.split(":", 1)[0] for case_id in supplied}
+    for probe_class in AGENT_CASES:
+        if probe_class not in supplied_classes:
+            observations.append(
+                {
+                    "case_id": probe_class,
+                    "probe_class": probe_class,
+                    "status": "NOT_ASSESSED",
+                    "limitations": ["Agent-supplied case directory was not provided."],
+                }
+            )
     for case_id, source_dir in supplied.items():
         probe_class = case_id.split(":", 1)[0]
-        if case_id in AGENT_CASES:
-            continue
         custom_id = case_id if ":" in case_id else f"{case_id}:agent"
         observations.append(
             run_one(
@@ -368,6 +412,11 @@ def run(
         "package_root": str(package),
         "authority": "MECHANICAL_OBSERVATIONS_ONLY",
         "may_decide_findings_or_verdict": False,
+        "probe_policy": {
+            "baseline_required": list(BASELINE_PROBE_CLASSES),
+            "enhancement_optional": list(ENHANCEMENT_PROBE_CLASSES),
+            "note": "Optional enhancement probes do not determine BASELINE_CORRECT.",
+        },
         "observations": observations,
         "global_limitations": [
             "Path rewriting runs an isolated local approximation of the Harbor checker. Agent must assess environment equivalence and scientific meaning."

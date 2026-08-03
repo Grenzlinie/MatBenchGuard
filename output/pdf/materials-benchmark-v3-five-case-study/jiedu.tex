@@ -1,0 +1,209 @@
+\documentclass[11pt,fontset=none]{ctexart}
+\setCJKmainfont{Songti SC}
+\setCJKsansfont{Heiti SC}
+\setCJKmonofont[Path=/System/Library/Fonts/Supplemental/]{Arial Unicode.ttf}
+\usepackage[a4paper,margin=2.15cm]{geometry}
+\usepackage{amsmath,amssymb,booktabs,longtable,tabularx,array,graphicx}
+\graphicspath{{figs/}}
+\usepackage{xcolor,enumitem,titlesec,fancyhdr,hyperref}
+\usepackage[most]{tcolorbox}
+\setlist{itemsep=2pt,topsep=3pt}
+\titleformat{\section}{\large\bfseries\color{black!85}}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries\color{black!75}}{\thesubsection}{0.6em}{}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\small Materials Benchmark v3.3}
+\fancyhead[R]{\small Baseline-First Review / Repair}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+\definecolor{accent}{RGB}{40,90,150}
+\definecolor{passgreen}{RGB}{47,133,90}
+\newtcolorbox{keybox}{colback=blue!3,colframe=accent!60,boxrule=0.5pt,arc=2pt,left=6pt,right=6pt,top=4pt,bottom=4pt}
+\newtcolorbox{paperbox}{colback=gray!4,colframe=black!35,title=论文声称,boxrule=0.5pt,arc=2pt}
+\newtcolorbox{evidencebox}{colback=green!3,colframe=passgreen!55,title=实际证据,boxrule=0.5pt,arc=2pt}
+\newtcolorbox{judgementbox}{colback=orange!4,colframe=orange!65!black,title=独立判断,boxrule=0.5pt,arc=2pt}
+\hypersetup{colorlinks=true,linkcolor=accent,urlcolor=accent}
+\setlength{\emergencystretch}{3em}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\studyfig}[3][0.94]{\begin{center}\includegraphics[width=#1\textwidth]{#2}\\[3pt]{\small\itshape #3}\end{center}}
+\renewcommand{\arraystretch}{1.2}
+
+\title{\textbf{Materials Benchmark v3.3：Baseline-First 全流程解读}\\[4pt]\large 如何先保证题目与答案正确，再做轻量结果增强}
+\author{}\date{2026年8月3日}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\begin{keybox}\small
+\textbf{范围}：解读\code{materials-benchmark-review}与\code{materials-benchmark-repair}，并用Ferronematic、SSH、ta-C KMC、RbC60、FK五类case验证。\\
+\textbf{边界}：\code{instruction.md}是唯一solver-visible题面；\code{paper.md}只供Review/Repair；不读\code{solution/**}，不运行Harbor+Codex。\\
+\textbf{核心改变}：没有额外checkpoint也可成为\code{BASELINE_CORRECT}；增强失败回退Baseline；checker成本单独决定能否发布。\\
+\textbf{当前结果}：Ferronematic与SSH均保留Baseline和Enhanced两层candidate，发布最佳Enhanced版本；其余case分别为Reauthor、Reject和Blocked。
+\end{keybox}
+
+\section{新版为什么是 Baseline First}
+
+旧流程把完整anti-hacking探针和公开中间检查点绑定到PASS，导致题目、Gold和容差已经正确的题包仍被否决。v3.3改为固定顺序：
+
+\begin{enumerate}
+  \item 研究问题、方法、必要过程与论文可给参数是否正确；
+  \item Gold/关系是否来自同一论文条件或唯一推导；
+  \item 正确答案能否在合理容差内通过，明显错误是否失败；
+  \item checker是否满足资源预算；
+  \item 最后才增加质量梯度和额外结果检查。
+\end{enumerate}
+
+\studyfig{fig1_five_routes.png}{图1：Stage A先产出可独立发布的Baseline；Stage B是可选增强，失败时回退。}
+
+Review schema为\code{materials-core-review/3.3}，同时记录\code{correctness_assessment}、\code{enhancement_assessment}和\code{checker_cost_record}。Repair schema为\code{materials-core-repair/2.3}，明确\code{BASELINE_CORRECTNESS}与\code{RESULT_ENHANCEMENT}两个stage。
+
+\begin{judgementbox}\small
+\code{PASS + BASELINE_CORRECT}已经表示题目和答案正确。\code{RESULT_ENHANCED}只表示在此之上加入了低成本的结果关系、不变量或质量梯度；它不是“更正确的Gold”。
+\end{judgementbox}
+
+\section{一个题包是什么：选手看什么，Reviewer看什么}
+
+\studyfig{fig2_ssh_condition_groups.png}{图2：科学权威与文件可见性的单向依赖。}
+
+做题者只看\code{instruction.md}。所以题面必须把论文研究抽成独立科学问题，不能写“请看原文”“读取Fig.~2”“根据paper.md找参数”。\code{paper/paper.md}保存论文证据但不给做题者；\code{tests}隐藏Gold、精确容差和实现，不能隐藏新的提交要求；\code{steps.json}、manifest、task和resources只能镜像题面。
+
+\begin{paperbox}\small
+论文决定研究对象、方法、固定条件、可直接使用的结果与支持关系；论文没有报告的普通执行细节，不会自动变成题目缺陷。
+\end{paperbox}
+
+Review执行“拿走论文测试”：去掉\code{paper/}后，\code{instruction.md}仍应完整说明体系、方法边界、参数、Workflow、输出路径、schema、单位、条件组和评分对象。
+
+\section{题目正确性：参数不是只有“给了/没给”}
+
+v3.3把参数分为四类：
+
+\begin{longtable}{p{0.22\textwidth}p{0.43\textwidth}p{0.25\textwidth}}
+\toprule
+类别 & 含义 & 处理\\\midrule
+\code{PAPER_FIXED} & 论文已报告且与任务相关 & 题面必须保留；按\code{PAPER_VALUE}\\
+\code{SOLVER_SEARCHABLE} & 论文未给唯一值，但可mesh search、扫描、优化、收敛或论证 & 不补值、不否决；checker不得暗中固定\\
+\code{TARGET_DEFINING} & 决定材料体系、物理状态或研究条件 & 缺失后无法辨认目标则失败\\
+\code{INDISPENSABLE_ASSET} & 数据集、模型、势、不可重建的固定结构快照、特定代码等输入 & 必须有文件、URL、运行时供给或合法替代\\
+\bottomrule
+\end{longtable}
+
+结构文件不是默认必需资产。论文只报告成分、晶系/空间群、晶格参数、Wyckoff信息或构造/弛豫方法时，题面保留这些信息即可；solver可自行建模、优化或论证合理构型，checker以容差、关系或区间接受合法差异。只有Gold明确绑定一个不可从论文描述重建、且不允许等价构型的固定无定形快照、无序占位、缺陷/界面registry、实验坐标或亚稳态构型时，才要求精确结构文件。缺少CIF本身不能拒绝题包。
+
+每条参数还记录论文是否给唯一值、题面是否要求唯一值、checker是否要求唯一值。这样可以直接识别“题面说solver自行收敛，但checker暗中只接受$8\times8\times8$”的错误。
+
+\subsection{论文没写k-grid，但论文结果事实上来自$8\times8\times8$}
+
+只要论文没有披露这个值，Reviewer不能把它伪称成论文参数。题面公开研究体系和论文条件，把k-grid留作\code{SOLVER_SEARCHABLE/CONVERGENCE}；paper value仍可作为同体系同条件Gold中心，合理实现差异由容差吸收。只有checker暗中要求精确$8\times8\times8$选择时，才修checker。
+
+\subsection{论文给出的步骤能否删除}
+
+论文中与做题有关的必要方法、公式、参数和Workflow必须保留或补齐。若删除会让中间产物消失、producer/consumer断裂或题意歧义，就禁止删除。完整保留后如果只剩信息摘录或代数代入，回到Q0拒绝，不能删信息来人为制造难度。
+
+\section{两类硬拒绝与计算机可复现边界}
+
+\begin{itemize}
+  \item \code{PURE_INFORMATION_EXTRACTION}：核心评分只是从论文捞数值；
+  \item \code{PURE_ALGEBRAIC_COMPUTATION}：题面给完公式和参数，只剩代入、算数值或直接解方程；
+  \item 实际实验操作；
+  \item 只有一次给定公式换算的简单实验数据分析。
+\end{itemize}
+
+题目仍须可用计算机复现。模型选择、非平凡拟合、优化、收敛、结构/轨迹分析、误差分析、候选比较和材料机理判断可以通过；不要求实验室操作。
+
+\section{答案正确性与“改条件”的明确含义}
+
+Gold只能是\code{PAPER_DIRECT}、\code{UNIQUE_DERIVATION}或有文字依据的\code{PAPER_SUPPORTED_RELATION}。每个数值Gold绑定体系、方法、参数组、单位与论文locator；多组条件分别用不同Gold，不能缩成“任选一组”。
+
+\subsection{Q1里的“改条件”是什么}
+
+“改条件”不是换求解器、网格或收敛阈值，而是修改会改变科学目标的条件，例如材料组成、Hamiltonian、温度/压力、边界条件、尺寸或paper明确使用的参数组。
+
+如果原文参数存在，直接复现任务应优先修回原文条件并保持paper Gold中心。只有题目明确设计为smoke/缩小体系/趋势复现，且论文证据支持关系对新条件仍适用时，才保留改条件并评分符号、排序或趋势。改变条件后仍强求论文绝对数值，Q1/A3失败。
+
+\begin{judgementbox}\small
+同一论文包含多组条件时，不是“必须选一组”，而是每组建立condition signature并检查自己的Gold。这样扩大检查面，也避免复制、换标签和跨组混配。
+\end{judgementbox}
+
+容差不改变Gold中心。依据可为论文不确定度/有效数字、可审计数字化、独立复算、收敛、跨实现，或Reviewer明确写出的单位、尺度与边界理由；执行$T-\epsilon,T,T+\epsilon$探针。
+
+\section{Stage A 与 Stage B 到底修什么}
+
+\subsection{Stage A：BASELINE\_CORRECTNESS}
+
+Stage A补回论文必要内容、修参数冲突与派生文件、标记solver-searchable、删除tests里猜测的唯一执行值、修Gold/条件组/容差/核心输出覆盖，并验证五类基础probe：valid、tolerance boundary、missing/malformed、non-finite/duplicate、wrong-science。
+
+完成后必须由独立Agent从空白结论复审为\code{BASELINE_CORRECT}。
+
+\subsection{Stage B：RESULT\_ENHANCEMENT}
+
+Stage B只接收已通过独立复审的Baseline。它可以从已有最终表格重算廉价派生量，检查守恒、归一化、符号、排序、残差、跨文件关系或曲线少量代表点。Gold占60--80\%，结果检查占20--40\%。
+
+禁止改科学目标、paper Gold中心、必要参数/公式/步骤；禁止固定solver-searchable项；禁止checker重跑完整DFT/MD/训练/大规模搜索或逐帧比较完整大体积MD轨迹。
+
+\section{Ferronematic：两阶段都可以独立成立}
+
+\studyfig{fig3_ferronematic_before_after.png}{图3：题目正确性修复与结果增强严格分开。}
+
+\begin{paperbox}\small
+论文Eq.~(13)给出用于分支稳定性比较的自由能，Eqs.~(21)--(24)给出平均场自洽关系；正文报告两个$\widetilde\kappa$最大值与三个triple point。
+\end{paperbox}
+
+源题只有自洽驻点方程而缺自由能，无法判断哪个分支稳定。Stage A补回论文方程、材料常数和稳定性规则；保留quadrature、初值、scan resolution和求解器为solver-searchable；严格检查2个$\widetilde\kappa$组与3个$\omega$组。Baseline只比较两份paper-Gold结果，valid=1.0、wrong-science=0，约0.12秒，因此已经正确且可发布。
+
+Stage B才增加\code{mean_field_checkpoints.json}，用$\eta,S$重算自洽残差和$\widetilde\kappa$关系；Gold权重0.6，结果检查0.4。valid=1.0、quality-gradient=0.7、跨组交换=0，约0.14秒。增强没有改变Gold中心或论文条件。
+
+\section{SSH：离线reference，运行时不重复大计算}
+
+旧checker在多个$\lambda$点重复对角化$1220\times1220$矩阵，且\code{ln_gap}未被独立数值覆盖。新版把昂贵reference生成移到题包外：独立脚本依据paper Eqs.~(1)--(8)，在两组条件、完整61点$\lambda$网格生成winding、ln-gap和Lyapunov reference；122点离线生成约15.7秒。
+
+运行时Baseline checker不对角化：它检查两份CSV的完整网格、唯一有限行，在61点计算廉价Lyapunov公式，并比较每组6个代表点的冻结winding/gap Gold。valid=1.0、wrong-science=0.210，约0.05秒。
+
+Enhanced再用0.3权重检查论文文本支持的re-entrant sequence和转变附近低gap/低Lyapunov关系。valid=0.925、quality-gradient=0.785、wrong-science=0.147、跨组交换=0.224，均与0.6阈值形成梯度。
+
+\studyfig{fig4_kmc_hacking.png}{图4：两题checker远低于成本上限；SSH结果层检查形成分层。}
+
+\section{另外三条路由}
+
+\subsection{ta-C KMC：Reauthor}
+
+缺少可搜索执行参数本身不失败。真正问题是题面加入论文不支持的Manhattan邻域、逐次平均和拟合流程，并且三行手写单调数据即可通过。不能靠补参数或加严数值区间修好，必须从论文重新定义科学目标。
+
+\subsection{RbC60：Reject}
+
+论文公式和参数应完整保留；保留后核心工作只剩代入与制表，因此触发\code{PURE_ALGEBRAIC_COMPUTATION}。答案来自论文不等于题目考查科学能力。
+
+\subsection{FK nanocluster：Blocked + Abandoned}
+
+题目与checker都不应读论文图。题面给出FK模型，solver独立计算activation energy、critical force和maximum spring force三条曲线。timestep、扫描分辨率和depinning判据可为\code{SOLVER_SEARCHABLE}，不是blocker。
+
+真正问题是数值Gold只在Fig.~2/7/8，而当前\code{paper.md}只有图片占位、实际图片不可用，正文也无对应数值。因而Gold中心本身无法从现有原文资源审计，而不只是容差证据不足。不能要求做题者“从图中得到”，也不能用旧grading spec自证，故保持\code{BLOCKED + ABANDONED}。
+
+\section{Checker资源门槛}
+
+\code{checker_cost_record}使用真实规模输出记录CPU/GPU、wall time、峰值内存、读取字节、是否读完整轨迹、是否重新模拟。发布门槛：最多32 CPU核，或最多单GPU；GPU型号必须记录且能力不超过H100；wall time不超过600秒；不读完整大体积MD轨迹；不重新执行主科学计算。
+
+超预算时科学verdict仍可为PASS，但\code{operational_status=FAIL}、\code{publishable=false}，路由\code{REPAIR_CHECKER_COST}。若唯一可想到的checkpoint超预算，就不做Enhancement，保留Baseline。
+
+\studyfig[0.86]{fig5_assurance_boundary.png}{图5：科学正确性、质量层级与运行成本是三个独立判定。}
+
+\section{最终保证边界}
+
+\begin{evidencebox}\small
+新版validator与测试覆盖：可mesh/search/converge的缺失参数允许Baseline；checker暗中固定时失败；不可替代资产不能伪装为搜索项；无checkpoint的Baseline可PASS；完整轨迹、重新模拟、超过CPU/GPU/600秒或非真实规模成本记录不可发布；增强失败保留源Baseline。
+
+独立复审后又增加事实交叉验证：Review以\code{--package}核对真实grading tier、权重和\code{tolerance\_contract}；Repair以\code{--verify-files}重算变更SHA256。Ferronematic数值容差逐字段记录为$10^{-4}$，Enhanced权重为Gold/result $0.6/0.4$；SSH按observable分别记录Lyapunov $0.01$、winding $0.1$、\code{ln\_gap} $0.05$，权重为$0.7/0.3$。Stage B记录真实quality gradient，不再虚构fail-before/pass-after。修正后独立Agent复审结论为PASS，无剩余P0/P1。
+\end{evidencebox}
+
+“至少题目和答案正确”在本流程中的准确含义是：题面研究问题、方法、论文可给参数和必要Workflow定位到同一\code{paper.md}；Gold/关系来自同一条件或唯一推导；正确答案被合理容差接受，明显错误失败；所有核心输出被读取。它保证可审计的论文忠实性与评分正确性，不证明论文自身绝对正确，也不穷举所有未来攻击。
+
+\section{产物入口}
+
+\begin{itemize}
+  \item 规则：\code{.cursor/skills/materials-benchmark-review}、\code{materials-benchmark-repair}
+  \item 五类case：\code{material_v3_question_review_processing/five_case_study}
+  \item 当前发布：\code{material_v3_question}中的Ferronematic与SSH
+  \item 历史：\code{MATERIAL_QUESTION_VERSION_HISTORY.md}
+  \item 状态：\code{corpus_review_tracking.json}
+\end{itemize}
+
+\end{document}

@@ -30,10 +30,13 @@ rg --no-ignore --files materials_science_questions
 
 ## 材料基准技能
 
-本仓库提供以下三个互补的材料基准技能：
+本仓库提供两个互补的材料基准技能：
 
-- `materials-benchmark-review`：面向单个 Harbor 材料题包的审查技能。它结合论文核验、科学有效性、任务说明完整性、评分器覆盖与区分度、Gold 可信度、资源可用性以及安全性检查，形成有证据支撑的审查结论。
-- `materials-benchmark-repair`：面向已确认缺陷的修复技能。它依据审查证据在隔离副本中实施不改变核心科学契约的修复，保留修复前后回归证据，并以同等深度复审决定是否可以发布修复后的题包。
-- `materials-benchmark-orchestration`：面向大型题包集合的编排技能，用于协调多个工作者并行执行审查与修复。使用时仍须遵守本仓库的人工协调和语料跟踪约定，不将调度状态、审计结果或修复产物写入原始 Harbor 题包。
+- `materials-benchmark-review`：先审题目/答案正确性并给出 `BASELINE_CORRECT`，再可选评估 `RESULT_ENHANCED`；checker 成本是独立发布门槛，不让高级 hacking 风险反向否决正确题包。
+- `materials-benchmark-repair`：Stage A 先修到独立复审的 Baseline；Stage B 才能增加轻量结果关系、分层评分和按实际风险选择的探针。增强失败回退 Baseline。
+
+现行 v3.3 流程和五类案例见 [`output/pdf/materials-benchmark-v3-five-case-study/jiedu.pdf`](output/pdf/materials-benchmark-v3-five-case-study/jiedu.pdf)。
+
+语料进度只由 `materials_science_questions/corpus_review_tracking.json` 记录并由人工 prompt 协调；仓库不提供第二套 lifecycle/orchestration dispatcher。
 
 开始审查或修复题包前，请先阅读 `AGENTS.md`，再阅读 `CONTEXT.md`。

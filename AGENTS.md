@@ -20,10 +20,10 @@ is available to agents in the workspace but must not be added to Git. Since the
 directory is ignored, search it explicitly when needed (for example,
 `rg --no-ignore --files materials_science_questions`).
 
-Review/Repair work is coordinated by human prompts. Track corpus status in
-`materials_science_questions/corpus_review_tracking.json`, regenerated or merged
-with `python tools/init_corpus_review_tracking.py` (use `--merge` to preserve
-human-updated fields while resyncing packages).
+Review/Repair work is coordinated by human prompts. Track corpus status directly
+in `materials_science_questions/corpus_review_tracking.json`; preserve existing
+human-updated fields when adding or revising package records. There is no separate
+tracking generator or dispatcher.
 
 Audit, repair, candidate, and evidence artifacts must stay outside Harbor
 packages. Use the Agent-primary Review and Repair skills; there is no lifecycle,
