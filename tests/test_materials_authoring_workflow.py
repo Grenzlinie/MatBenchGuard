@@ -442,6 +442,27 @@ class AuthoringWorkspaceAndPackageTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("mapping missing resource_unique_key", result.stdout)
 
+    def test_inherited_assets_package_locator_is_accepted_and_safe(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = self.init_workspace(Path(directory))
+            package = self.make_complete_package(workspace)
+            source = package / "resources" / "input.csv"
+            asset = package / "assets" / "source" / "input.csv"
+            asset.parent.mkdir(parents=True)
+            source.replace(asset)
+            resources_path = package / "resources.json"
+            resources = json.loads(resources_path.read_text())
+            resources["resources"][0]["access"]["package"] = "assets/source/input.csv"
+            resources_path.write_text(json.dumps(resources), encoding="utf-8")
+            result = self.validate_package(package, workspace / "authoring_record.json")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+            resources["resources"][0]["access"]["package"] = "../input.csv"
+            resources_path.write_text(json.dumps(resources), encoding="utf-8")
+            result = self.validate_package(package, workspace / "authoring_record.json")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("package locator is invalid or missing", result.stdout)
+
     def test_package_validator_rejects_solution_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = self.init_workspace(Path(directory))

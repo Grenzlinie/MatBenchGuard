@@ -217,7 +217,19 @@ def main() -> int:
                     if not isinstance(filename, str) or PurePath(filename).name != filename:
                         errors.append(f"bundled resource {resource_id} needs basename access.filename")
                         continue
-                    if not (package / "resources" / filename).is_file():
+                    declared_package = access.get("package")
+                    if declared_package:
+                        relative = PurePosixPath(str(declared_package))
+                        if (
+                            relative.is_absolute()
+                            or ".." in relative.parts
+                            or relative.name != filename
+                            or not (package / Path(*relative.parts)).is_file()
+                        ):
+                            errors.append(
+                                f"bundled resource package locator is invalid or missing: {declared_package}"
+                            )
+                    elif not (package / "resources" / filename).is_file():
                         errors.append(f"bundled resource file missing: resources/{filename}")
                     if not isinstance(mapping, dict):
                         errors.append(f"bundled resource {resource_id} needs non-null positional mapping")

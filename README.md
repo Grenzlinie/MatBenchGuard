@@ -40,6 +40,6 @@ rg --no-ignore --files materials_science_questions
 
 语料进度只由 `materials_science_questions/corpus_review_tracking.json` 记录并由人工 prompt 协调；仓库不提供第二套 lifecycle/orchestration dispatcher。
 
-Authoring 中文系统解读见 [`output/system_design/materials-benchmark-authoring/materials_benchmark_authoring_system_design.pdf`](output/system_design/materials-benchmark-authoring/materials_benchmark_authoring_system_design.pdf)。
+开始使用 Authoring/Review/Repair skills 前，建议先阅读中文 [`system_design.pdf`](output/system_design/materials-benchmark-authoring/materials_benchmark_authoring_system_design.pdf)，了解从论文 PDF 到 Harbor 题包的整体架构、证据映射、候选门禁、Gold/Checker 设计、独立复审和发布流程。
 
 开始创建、审查或修复题包前，请先阅读 `AGENTS.md`，再阅读 `CONTEXT.md`。

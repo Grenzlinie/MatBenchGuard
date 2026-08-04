@@ -100,6 +100,10 @@ Then synchronize `instruction.md -> steps.json/manifest.json/resources.json/task
 Read [package-profile.md](references/package-profile.md).
 
 - Store each author-provided indispensable file at `candidate/resources/<filename>`.
+- For an inherited Harbor package whose established layout stores the file under
+  `assets/`, preserve that layout only when `access.package` gives a safe
+  package-relative locator ending in the same `access.filename`; do not create
+  a duplicate second source of truth under `resources/`.
 - In `instruction.md`, mention only `<filename>` and its scientific role.
 - In `resources.json`, use `access.method = "bundled"`, `access.filename = "<filename>"`, and a positional non-null `resources_mapping` entry with `resource_type` plus `resource_unique_key`.
 - Do not add a Dockerfile `COPY` for authoring-time resources. Deployment may later materialize the resource through Playground/Bohrium; a local runner may receive an explicit resource root from a human.
