@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static validation for a solution-free Paper2Arm authoring candidate."""
+"""Static validation for a complete Paper2Arm authoring candidate."""
 
 from __future__ import annotations
 
@@ -26,6 +26,7 @@ REQUIRED_FILES = (
     "resources.json",
     "task.toml",
     "environment/Dockerfile",
+    "solution/solve.sh",
     "tests/grading_spec.json",
     "tests/checker.py",
     "tests/test.sh",
@@ -121,16 +122,6 @@ def main() -> int:
 
     if not package.is_dir():
         errors.append(f"package is not a directory: {package}")
-    if (package / "solution").exists():
-        errors.append("solution/ is prohibited in authoring candidates")
-    for child in package.rglob("*") if package.is_dir() else ():
-        try:
-            relative_parts = child.relative_to(package).parts
-        except ValueError:
-            continue
-        if any(part.lower() == "solution" for part in relative_parts):
-            errors.append(f"solution path component is prohibited: {child.relative_to(package)}")
-            break
     for rel in REQUIRED_FILES:
         if not (package / rel).is_file():
             errors.append(f"missing required file: {rel}")
@@ -273,6 +264,45 @@ def main() -> int:
         errors.append("environment/Dockerfile must begin with the standard FROM and WORKDIR")
     if any(line.upper().startswith("COPY ") and "RESOURCE" in line.upper() for line in docker_lines):
         errors.append("do not bind authoring resources through Dockerfile COPY")
+    if any(line.upper().startswith("COPY ") and "SOLUTION" in line.upper() for line in docker_lines):
+        errors.append("do not copy the Harbor Oracle fixture into the environment image")
+
+    solve_sh = package / "solution" / "solve.sh"
+    solve_text = solve_sh.read_text(encoding="utf-8")
+    solution_dir = package / "solution"
+    solution_entries = sorted(
+        child.relative_to(solution_dir).as_posix()
+        for child in solution_dir.rglob("*")
+    )
+    if solution_entries != ["solve.sh"]:
+        errors.append("solution/ must contain exactly one entry: solve.sh")
+    if not (solve_sh.stat().st_mode & stat.S_IXUSR):
+        errors.append("solution/solve.sh must be executable")
+    if not solve_text.startswith("#!/usr/bin/env bash\n"):
+        errors.append("solution/solve.sh must start with #!/usr/bin/env bash")
+    if "set -euo pipefail" not in solve_text:
+        errors.append("solution/solve.sh must enable set -euo pipefail")
+    if "CHECKER_FULL_SCORE_FIXTURE" not in solve_text:
+        errors.append("solution/solve.sh must declare CHECKER_FULL_SCORE_FIXTURE")
+    if not re.search(
+        r"\bpython3\b[^\n]*<<\s*['\"]?[A-Za-z_][A-Za-z0-9_]*['\"]?",
+        solve_text,
+    ):
+        errors.append("solution/solve.sh must generate outputs with inline Python")
+    if "/app/outputs" not in solve_text:
+        errors.append("solution/solve.sh must write under /app/outputs")
+    forbidden_solution_patterns = {
+        r"/tests(?:/|\b)": "solution/solve.sh must not read /tests",
+        r"checker\.py": "solution/solve.sh must not read or import checker code",
+        r"\b(?:from|import)\s+tests\b": "solution/solve.sh must not import tests",
+        r"\bpip(?:3)?\s+install\b": "solution/solve.sh must not install packages at runtime",
+        r"\b(?:curl|wget)\b": "solution/solve.sh must not access the network",
+    }
+    for pattern, message in forbidden_solution_patterns.items():
+        if re.search(pattern, solve_text, re.IGNORECASE):
+            errors.append(message)
+    if "TODO: materialize every declared standard correct output" in solve_text:
+        errors.append("solution/solve.sh is still the placeholder")
 
     grading = load_json(package / "tests" / "grading_spec.json", errors)
     if isinstance(grading, dict):

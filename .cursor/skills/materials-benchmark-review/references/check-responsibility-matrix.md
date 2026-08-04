@@ -11,4 +11,4 @@
 | 轻量结果增强 | 公开新结果 | 方程/不变量依据 | 实现 | 可选评估 | Stage B |
 | checker 性能 | 不涉及 | 不涉及 | 实际成本 | 独立发布门槛 | 降成本 |
 
-`solution/**` 在所有列均无责任，完全排除。
+`solution/**` 作为 Harbor Oracle full-score fixture 保留在完整题包中，但在 Review/Repair 的所有责任列均为 `OUT_OF_SCOPE`：不得读取、运行、扫描、哈希、引用或修改。其生成和“标准正确提交能否满分”的 Oracle sanity check 属于 Authoring/Harbor 责任，不能作为真实科学执行证据。

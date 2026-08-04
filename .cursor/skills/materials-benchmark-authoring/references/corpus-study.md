@@ -24,6 +24,12 @@ The base image was identical in all 1,878 source packages and 1,027 of 1,029 pas
 
 `dp-harbor-registry.cn-zhangjiakou.cr.aliyuncs.com/public/paper2arm-env:v1.0-20260708`
 
+## Legacy `solve.sh` evidence
+
+All 1,878 source packages contained `solution/solve.sh`. The median script length was 32 lines. Overlapping implementation patterns included 709 scripts that directly emitted literal JSON/CSV/TXT, 526 with inline Python heredocs, and 482 that invoked extra files under `/solution`. Four contained explicit placeholder/no-output language. None referenced `/app/resources`, and the local corpus copies had no executable bit set.
+
+Use this only as migration evidence. The new profile retains the common single-script/inline-Python shape but closes the legacy ambiguity: `solution/` contains only executable `solve.sh`; the file is a deterministic `CHECKER_FULL_SCORE_FIXTURE`; helper files, runtime installs, network access, checker introspection, and claims of real scientific execution are prohibited.
+
 ## Inconsistencies not to copy
 
 - Resource `access.method` uses many ad hoc values.

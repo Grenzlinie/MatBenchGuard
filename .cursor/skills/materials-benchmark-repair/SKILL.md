@@ -1,6 +1,6 @@
 ---
 name: materials-benchmark-repair
-description: 根据 v3.3 Review 分两阶段修复论文型材料科学题包：Stage A 先得到 BASELINE_CORRECT，独立复审后 Stage B 才可做轻量结果增强；保持论文 Gold 中心，限制 checker 成本，solution/ 完全排除。
+description: 根据 v3.3 Review 分两阶段修复论文型材料科学题包：Stage A 先得到 BASELINE_CORRECT，独立复审后 Stage B 才可做轻量结果增强；保持论文 Gold 中心，限制 checker 成本；保留题包中的 Harbor Oracle full-score fixture solution/，但完全不检查或修复它。
 ---
 
 # 材料科学题包 Repair（Baseline First）
@@ -17,7 +17,7 @@ source
   -> publish enhanced, or fall back to baseline
 ```
 
-`solution/` 完全排除。源题包不可变；candidate、Review、Repair、evidence 都在题包外。必须先改 `instruction.md`，再同步派生文件，最后改 tests。
+完整题包中的 `solution/` 必须随 source 复制并保留在 candidate 中，但 Repair 将它视为不透明的 Oracle full-score fixture：不得读取、运行、扫描、哈希、引用、修改、删除或重建，也不得把任何 `solution/**` 路径写入 finding、change 或 evidence。该 fixture 的满分不代表真实科学执行。Repair 不负责判断其缺失、正确性或质量；若 Authoring/Harbor Oracle 报告 solution 问题，应路由回 Authoring，而不是在 Repair 中处理。源题包不可变；candidate、Review、Repair、evidence 都在题包外。必须先改 `instruction.md`，再同步派生文件，最后改 tests。
 
 ## 必读资料
 

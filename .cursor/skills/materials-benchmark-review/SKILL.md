@@ -1,6 +1,6 @@
 ---
 name: materials-benchmark-review
-description: 审核论文型材料科学 Harbor 题包。先判计算科学准入，再分别审查题目/答案正确性、可选结果增强和 checker 资源成本；固定 /app/outputs，solution/ 完全排除。
+description: 审核论文型材料科学 Harbor 题包。先判计算科学准入，再分别审查题目/答案正确性、可选结果增强和 checker 资源成本；固定 /app/outputs；题包保留 Harbor Oracle full-score fixture solution/，但 Review 完全不读取、不运行、不评价它。
 ---
 
 # 材料科学题包 Review（Baseline First）
@@ -15,7 +15,7 @@ description: 审核论文型材料科学 Harbor 题包。先判计算科学准�
 
 高级 hacking 风险不影响 `BASELINE_CORRECT`。增强失败只能降级，不能把题目和答案都正确的题包改判为科学失败。
 
-`solution/` 完全排除：不得读取、运行、哈希、扫描或引用。
+完整 Harbor 题包在本项目中必须保留 `solution/` 作为 Oracle full-score fixture，但它完全排除在 Review 范围之外：不得读取、运行、哈希、扫描、引用或据此判断 Gold、可解性与 publishability。该 fixture 只由 Authoring 用于确认标准正确提交可获满分，不代表真实科学执行。Review 不因 `solution/` 的存在而删除它，也不负责判断其缺失、正确性或质量；这些属于 Authoring/Harbor Oracle 门禁。
 
 ## 必读资料
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a solution-free materials benchmark authoring workspace."""
+"""Create a materials authoring workspace with a single-file Oracle fixture."""
 
 from __future__ import annotations
 
@@ -49,9 +49,6 @@ def main() -> int:
         parser.error("--task-name must use org/name form")
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", args.paper_id):
         parser.error("--paper-id must be one safe path component using letters, digits, dot, underscore, or hyphen")
-    if args.paper_id.lower() == "solution":
-        parser.error("--paper-id must not use the reserved solution path component")
-
     workspace = args.output_root.expanduser().resolve() / args.paper_id
     if workspace.exists():
         parser.error(f"workspace already exists: {workspace}")
@@ -104,6 +101,8 @@ def main() -> int:
     test_sh.chmod(test_sh.stat().st_mode | 0o111)
     checker = candidate / "tests" / "checker.py"
     checker.chmod(checker.stat().st_mode | 0o111)
+    solve_sh = candidate / "solution" / "solve.sh"
+    solve_sh.chmod(solve_sh.stat().st_mode | 0o111)
 
     print(workspace)
     print(f"pdf_sha256={pdf_hash}")

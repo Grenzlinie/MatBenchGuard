@@ -1,6 +1,6 @@
 ---
 name: materials-benchmark-authoring
-description: Create a paper-grounded enhanced materials-science Harbor task from a local or public PDF. Use when an Agent must parse a paper with UniParser, select a non-trivial computational-science question, preserve paper Gold and parameter provenance, close bundled-resource dependencies, generate the Paper2Arm package files and lightweight checker, and drive an independent materials-benchmark-review to PASS + RESULT_ENHANCED without using solution/.
+description: Create a paper-grounded enhanced materials-science Harbor task from a local or public PDF. Use when an Agent must parse a paper with UniParser, select a non-trivial computational-science question, preserve paper Gold and parameter provenance, close bundled-resource dependencies, generate a complete Paper2Arm package including a single-file Harbor Oracle full-score fixture and lightweight checker, and drive an independent materials-benchmark-review to PASS + RESULT_ENHANCED.
 ---
 
 # Materials Benchmark Authoring
@@ -16,7 +16,8 @@ Target `PASS + RESULT_ENHANCED` from an independent `materials-benchmark-review`
 - Require at least one affordable result-layer checkpoint before selecting a candidate.
 - Keep checker weights at Gold 60--80% and result checks 20--40%.
 - Keep all solver outputs under `/app/outputs`.
-- Never create, read, scan, run, hash, or cite `solution/`.
+- Include exactly one executable `solution/solve.sh` as the Harbor Oracle `CHECKER_FULL_SCORE_FIXTURE`; use inline Python to materialize the standard correct outputs and require reward `1.0` from the same verifier without running the primary scientific computation.
+- Keep `solution/` out of Review and Repair evidence: those Skills preserve it in the package but never read, run, hash, cite, or modify it.
 - Keep authoring records and evidence outside the Harbor candidate package.
 
 If no candidate satisfies all gates, return `NO_ENHANCED_CANDIDATE`; do not emit a weak package merely to finish.
@@ -29,7 +30,7 @@ If no candidate satisfies all gates, return `NO_ENHANCED_CANDIDATE`; do not emit
    - `../materials-benchmark-review/references/correctness-gates.md`
    - `../materials-benchmark-review/references/hidden-checkpoints.md`
    - `../materials-benchmark-review/assets/instruction_template.md`
-3. Use Harbor's current `create-task` guidance for generic task structure. When scaffolding with Harbor, always pass `--no-solution`.
+3. Use Harbor's current `create-task` guidance for generic task structure and retain its `solution/solve.sh` Oracle entrypoint.
 4. Use `materials-benchmark-review` as an independent final gate. Do not use Repair as the normal authoring loop.
 
 ## Workflow
@@ -93,7 +94,7 @@ Start from the Review instruction template. Make `instruction.md` self-contained
 - Refer to bundled inputs by stable filename only, never by `/app/resources/...`, package-relative path, dataset ID, or platform mount.
 - Do not leak Gold values unless the scientific task itself requires a public target value; never score a publicly disclosed answer as the sole core result.
 
-Then synchronize `instruction.md -> steps.json/manifest.json/resources.json/task.toml -> tests` in that order.
+Then synchronize `instruction.md -> steps.json/manifest.json/resources.json/task.toml -> tests and solution` in that order. Derive tests and the Oracle fixture independently from the frozen Gold and output contract; never derive Gold from the solution or extract solution values from checker code.
 
 ### 6. Close resources without binding the instruction to deployment
 
@@ -123,7 +124,11 @@ Before writing the checker, freeze:
 
 Do not use the checker, an old answer, or a prior solution as Gold provenance.
 
-### 8. Generate and probe the checker
+### 8. Generate the Oracle full-score fixture, checker, and probes
+
+Read [oracle-full-score-fixture.md](references/oracle-full-score-fixture.md). Keep `solution/` to one executable, non-interactive file: `solution/solve.sh`. Put task-specific standard correct values and all output generation in an inline Python heredoc inside that file. It must deterministically materialize every declared output under `/app/outputs` without helper files, runtime package installation, network access, `/tests` access, checker imports, or a primary DFT/MD/training/search run.
+
+The fixture is a positive scoring witness only: reward `1.0` proves that a standard correct submission can receive full credit from the packaged verifier. It does not prove scientific Gold correctness, task solvability, or execution of the requested scientific workflow. Freeze Gold, tolerance, condition groups, and enhanced relations from paper evidence or an independent derivation before implementing either checker or fixture.
 
 The checker may read hidden Gold and solver final outputs only. It must not rerun the main DFT, MD, training, or large search.
 
@@ -147,13 +152,16 @@ python3 .cursor/skills/materials-benchmark-authoring/scripts/validate_package.py
   <processing>/candidate \
   --authoring-record <processing>/authoring_record.json
 harbor check <processing>/candidate  # when Harbor is installed
+harbor run -p <processing>/candidate -a oracle  # require reward 1.0 and every component full
 ```
 
-The local validators are structural guardrails, not scientific approval.
+Record purpose `CHECKER_FULL_SCORE_FIXTURE`, `scientific_execution_performed = false`, expected and actual reward `1.0`, full component status, command, and external evidence in `authoring_record.oracle_validation`. Keep Oracle logs and job artifacts outside the candidate package.
+
+The local validators and Oracle run are package/scoring-compatibility guardrails, not scientific approval. An Oracle failure produces `BLOCKED_ORACLE_VALIDATION` and blocks publication until Authoring fixes the fixture, environment, output paths, or verifier; it must not be routed to Review or Repair as a `solution/` edit.
 
 ### 10. Request independent Review and publish only after PASS
 
-Run `materials-benchmark-review` on the candidate with `solution/` excluded. A successful authoring outcome requires:
+Run `materials-benchmark-review` on the complete candidate while explicitly excluding `solution/` from the Review input and evidence. The directory remains in the candidate package. A successful authoring outcome requires:
 
 - `verdict = PASS`;
 - `publishable = true`;
@@ -170,10 +178,11 @@ The publish validator reads the JSON at `independent_review.artifact_path`, runs
 - [paper-evidence-and-candidate-selection.md](references/paper-evidence-and-candidate-selection.md): evidence ledger and candidate ranking.
 - [package-profile.md](references/package-profile.md): canonical Paper2Arm files, environment defaults, and resource semantics.
 - [gold-checker-enhancement.md](references/gold-checker-enhancement.md): Gold, tolerance, weights, probes, and cost.
+- [oracle-full-score-fixture.md](references/oracle-full-score-fixture.md): single-file `solve.sh` contract and inline-Python template.
 - [authoring-record-schema.md](references/authoring-record-schema.md): external record fields and invariants.
 - [corpus-study.md](references/corpus-study.md): empirical conventions and failure signals from `material_v2_question`.
 - `assets/authoring_record_template.json`: record template.
-- `assets/package-template/`: solution-free package scaffold.
+- `assets/package-template/`: complete package scaffold including the single-file Oracle fixture entrypoint.
 - `scripts/init_authoring_workspace.py`: immutable-source and candidate scaffold.
 - `scripts/validate_authoring_record.py`: semantic authoring gate validator.
 - `scripts/validate_package.py`: package/resource/static-checker validator.

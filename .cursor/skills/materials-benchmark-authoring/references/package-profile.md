@@ -14,13 +14,28 @@ candidate/
 ├── resources/                  # only when author-provided files are needed
 ├── task.toml
 ├── environment/Dockerfile
+├── solution/
+│   └── solve.sh                 # the only Oracle file; full-score fixture
 └── tests/
     ├── grading_spec.json
     ├── checker.py
     └── test.sh
 ```
 
-Any `solution` path component anywhere under the candidate is prohibited. Authoring records, probes, source PDF, and Review outputs live beside `candidate/`, not inside it.
+The complete candidate must retain `solution/solve.sh`. It must be the only entry under `solution/`. Authoring owns and validates this Oracle full-score fixture; Review and Repair treat the entire directory as opaque and out of scope. Authoring records, probes, source PDF, and Review outputs live beside `candidate/`, not inside it.
+
+## Oracle full-score fixture
+
+- Make `solution/solve.sh` executable and non-interactive.
+- Keep it as the only file under `solution/`; do not add helper scripts, fixtures, manifests, or dependencies.
+- Mark it `CHECKER_FULL_SCORE_FIXTURE` and use an inline Python heredoc to write every declared standard correct output under `/app/outputs`.
+- Do not run the primary scientific computation, install packages at runtime, access the network, read `/tests`, import checker code, or copy `solution/` into the environment image.
+- Derive both checker and fixture from the previously frozen Gold/output contract, but implement them independently. Never establish Gold by reading checker code or the fixture.
+- Run the package with Harbor's `oracle` agent and require reward `1.0` plus full credit for every component before publication.
+- Treat Oracle success only as evidence that a standard correct submission, paths, environment, and verifier are compatible. It is not evidence of scientific correctness, task solvability, or real workflow execution.
+- Keep `solution/` present but completely excluded from Review and Repair reading, evidence, hashing, execution, and edits.
+
+Read [oracle-full-score-fixture.md](oracle-full-score-fixture.md) before writing the file.
 
 ## Instruction section order
 
@@ -108,9 +123,10 @@ instruction.md
  -> tests/grading_spec.json
  -> tests/checker.py
  -> tests/test.sh
+ -> solution/solve.sh
 ```
 
-Derived files may mirror but never add a scientific requirement.
+Derived files may mirror but never add a scientific requirement. Generate tests and the Oracle fixture as independent consumers of the frozen instruction/Gold contract; do not let either one self-certify the other.
 
 Use `quality_tier = "RESULT_ENHANCED"` in `tests/grading_spec.json`. The legacy lowercase `scoring_tier` spelling is rejected so package-aware Review validation cannot silently skip tier consistency.
 

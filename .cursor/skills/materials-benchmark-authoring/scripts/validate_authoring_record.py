@@ -10,11 +10,12 @@ import math
 from pathlib import Path, PurePath, PurePosixPath
 from typing import Any
 
-SCHEMA = "materials-benchmark-authoring/1.0"
+SCHEMA = "materials-benchmark-authoring/1.1"
 STATUSES = {
     "DRAFT",
     "BLOCKED_SOURCE_PARSE",
     "BLOCKED_RESOURCE",
+    "BLOCKED_ORACLE_VALIDATION",
     "NO_ENHANCED_CANDIDATE",
     "READY_FOR_REVIEW",
     "REVIEW_FAILED",
@@ -222,8 +223,6 @@ class Validator:
         package_path = str(self.data.get("package_path", ""))
         if not package_path:
             self.error("package_path is required")
-        if any(part.lower() == "solution" for part in PurePath(package_path).parts):
-            self.error("package_path must not contain solution")
 
         if self.stage in {"review-ready", "publish"}:
             self.validate_review_ready(candidates, resources, gold, workflows, outputs)
@@ -244,9 +243,6 @@ class Validator:
                 if not artifact_path:
                     self.error("publish requires independent_review.artifact_path")
                 else:
-                    artifact_parts = PurePath(str(artifact_path)).parts
-                    if any(part.lower() == "solution" for part in artifact_parts):
-                        self.error("review artifact path must not contain solution")
                     resolved = Path(str(artifact_path))
                     if not resolved.is_absolute():
                         resolved = self.path.parent / resolved
@@ -375,6 +371,41 @@ class Validator:
             self.error(f"missing passing Baseline probes: {sorted(missing)}")
         if not (ENHANCED_PROBES & probe_types):
             self.error("missing passing enhancement probe")
+
+        oracle = self.data.get("oracle_validation")
+        if not isinstance(oracle, dict):
+            self.error("review-ready requires oracle_validation")
+        else:
+            if oracle.get("purpose") != "CHECKER_FULL_SCORE_FIXTURE":
+                self.error(
+                    "oracle_validation.purpose must be CHECKER_FULL_SCORE_FIXTURE"
+                )
+            if oracle.get("scientific_execution_performed") is not False:
+                self.error(
+                    "oracle_validation.scientific_execution_performed must be false"
+                )
+            if oracle.get("status") != "PASS":
+                self.error("oracle_validation.status must be PASS")
+            for field in ("expected_reward", "actual_reward"):
+                value = oracle.get(field)
+                if (
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not math.isclose(float(value), 1.0, abs_tol=1e-12)
+                ):
+                    self.error(f"oracle_validation.{field} must be 1.0")
+            if oracle.get("all_components_full_score") is not True:
+                self.error(
+                    "oracle_validation.all_components_full_score must be true"
+                )
+            command = oracle.get("command")
+            if not isinstance(command, str) or "-a oracle" not in command:
+                self.error("oracle_validation.command must record a Harbor oracle run")
+            evidence = oracle.get("evidence")
+            if not isinstance(evidence, list) or not evidence or not all(
+                isinstance(item, str) and item.strip() for item in evidence
+            ):
+                self.error("oracle_validation.evidence must contain external run evidence")
 
         cost = self.data.get("checker_cost_record")
         if not isinstance(cost, dict) or cost.get("status") != "PASS":

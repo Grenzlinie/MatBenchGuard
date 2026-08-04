@@ -16,7 +16,7 @@ paper-xxx/
 │   ├── checker.py
 │   ├── test.sh
 │   └── Gold/fixture
-└── solution/                     # Review/Repair 完全排除
+└── solution/                     # Harbor Oracle full-score fixture；保留但 Review/Repair 完全排除
 ```
 
 本 profile 固定输出根目录为 `/app/outputs`。`test.sh` 必须向 `/logs/verifier/reward.txt` 或 `reward.json` 写数值 reward。
@@ -30,7 +30,9 @@ paper-xxx/
 | `steps.json` 等派生视图 | 否 | 是 | 实现题面，不得补题 |
 | `resources.json` | 否 | 是 | 资源身份、locator 和部署映射 |
 | `tests/**` | 否 | 是 | 隐藏验收、Gold、精确容差 |
-| `solution/**` | 否 | 否 | 完全排除 |
+| `solution/**` | 否 | 否 | 题包保留的 Harbor Oracle full-score fixture；Review/Repair 完全排除 |
+
+`solution/` 属于完整题包，但不是 Review/Repair 的证据源。Reviewer 和 Repair Agent 不读取、运行、扫描、哈希、引用或修改它，也不根据它判断 Gold、题目可解性、checker 正确性或发布状态。Authoring 负责用单文件 fixture 验证标准正确提交能否得到 reward `1.0` 和全部组件满分；该结果不代表真实科学执行。Review/Repair 只确保自己的 scope、finding、change 和 evidence 不触及该目录。
 
 冲突处理顺序：论文裁决科学事实；先修/重写 `instruction.md`；再同步派生视图；最后生成 grading、Gold、checker 和 test。
 

@@ -1,8 +1,8 @@
-from pathlib import Path
 import unittest
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+AUTHORING = ROOT / ".cursor/skills/materials-benchmark-authoring"
 REVIEW = ROOT / ".cursor/skills/materials-benchmark-review"
 REPAIR = ROOT / ".cursor/skills/materials-benchmark-repair"
 
@@ -91,11 +91,22 @@ class MaterialsSkillPolicyBoundariesTest(unittest.TestCase):
         self.assertIn("不重跑 SCF", review)
         self.assertIn("不要求 Harbor+Codex", repair)
 
-    def test_solution_exclusion_and_only_new_schema(self) -> None:
+    def test_solution_is_preserved_but_out_of_review_and_repair_scope(self) -> None:
+        authoring = self.read(AUTHORING / "SKILL.md")
+        oracle_contract = self.read(
+            AUTHORING / "references/oracle-full-score-fixture.md"
+        )
         review = self.read(REVIEW / "SKILL.md")
         repair = self.read(REPAIR / "SKILL.md")
-        self.assertIn("`solution/` 完全排除", review)
-        self.assertIn("`solution/` 完全排除", repair)
+        self.assertIn("CHECKER_FULL_SCORE_FIXTURE", authoring)
+        self.assertIn("exactly one executable `solution/solve.sh`", authoring)
+        self.assertIn("Use `solution/solve.sh` only", oracle_contract)
+        self.assertIn("It is not a reference scientific execution", oracle_contract)
+        self.assertIn("必须保留 `solution/`", review)
+        self.assertIn("完全排除在 Review 范围之外", review)
+        self.assertIn("只由 Authoring 用于确认标准正确提交可获满分", review)
+        self.assertIn("必须随 source 复制并保留在 candidate 中", repair)
+        self.assertIn("Repair 将它视为不透明的 Oracle full-score fixture", repair)
         self.assertIn("core_review_template.json", review)
         self.assertIn("core_repair_template.json", repair)
         for obsolete in ("agent_final_decision", "repair_report_template", "lifecycle dispatcher"):

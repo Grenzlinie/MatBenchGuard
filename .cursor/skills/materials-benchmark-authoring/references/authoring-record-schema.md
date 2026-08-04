@@ -4,7 +4,7 @@
 
 ## Top-level fields
 
-- `schema_version`: `materials-benchmark-authoring/1.0`.
+- `schema_version`: `materials-benchmark-authoring/1.1`.
 - `authoring_id`: stable local ID.
 - `status`: authoring state.
 - `source`: PDF path, SHA-256, UniParser metadata, and Markdown path.
@@ -21,6 +21,7 @@
 - `enhancement`: weights, result checks, and affordability.
 - `probe_records`: baseline and enhancement probes.
 - `checker_cost_record`: real-scale resource measurement.
+- `oracle_validation`: full-score-fixture purpose, no-scientific-execution attestation, Harbor Oracle reward/components, command, and external evidence.
 - `package_path`: candidate path.
 - `independent_review`: final Review result and artifact.
 - `blockers`: unresolved blockers.
@@ -46,6 +47,7 @@ Additionally requires:
 - at least one enhanced result check;
 - five Baseline probes plus one enhancement probe;
 - real-scale checker cost pass.
+- the only `solution/` entry is executable `solve.sh`, and its `CHECKER_FULL_SCORE_FIXTURE` has passed Harbor Oracle with reward `1.0`, every component full, and retained evidence outside the candidate package.
 
 ### `publish`
 
@@ -58,9 +60,11 @@ Additionally requires an independent, complete `materials-core-review/3.3` JSON 
 - Every condition group maps to at least one core target.
 - Every core target maps to at least one condition group and one public result.
 - Every `INDISPENSABLE_ASSET` points to a ready resource record.
-- No package subtree, package path, or artifact path contains a `solution` path component.
+- The candidate package contains `solution/solve.sh`; Review artifacts remain outside the entire candidate package.
+- `oracle_validation.purpose = CHECKER_FULL_SCORE_FIXTURE` and `scientific_execution_performed = false`.
+- `oracle_validation.status = PASS`, `expected_reward = actual_reward = 1.0`, `all_components_full_score = true`, and non-empty evidence are required before Review.
 - Every output path is canonical under `/app/outputs`; `..`, backslashes, and directory-only paths are invalid.
-- `paper_id` is one safe path component, never a path, and cannot use the reserved name `solution` in any case.
+- `paper_id` is one safe path component, never a path.
 - `resource_records`, `resources.json`, positional mappings, and bundled files agree by resource ID, type, and filename.
 - Package and Review use `quality_tier = RESULT_ENHANCED`, not the legacy lowercase `scoring_tier` alias.
 - A GPU cost record uses `hardware_class = SINGLE_GPU`, names exactly one GPU, and explicitly attests `h100_equivalent_or_less = true`.

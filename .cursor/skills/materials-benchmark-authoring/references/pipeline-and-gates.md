@@ -10,6 +10,7 @@ PDF
  -> CANDIDATES_GATED
  -> ENHANCED_CANDIDATE_SELECTED
  -> PACKAGE_AUTHORED
+ -> ORACLE_VALIDATED
  -> LOCAL_GATES_PASS
  -> INDEPENDENT_REVIEW
  -> REVIEW_PASSED_ENHANCED
@@ -82,6 +83,9 @@ If absent, reject that candidate and try another. If all candidates fail, return
 - Correct output passes; malformed, non-finite, duplicate, and wrong-science outputs fail.
 - Gold remains 60--80% of reward; enhancement remains 20--40%.
 - Checker cost passes on real-scale input.
+- `solution/solve.sh` is the only entry under `solution/`, is executable, uses inline Python as a `CHECKER_FULL_SCORE_FIXTURE`, and remains outside the environment image.
+- Harbor Oracle reports reward `1.0` and full credit for every scoring component without running the primary scientific computation.
+- Oracle evidence is stored outside the candidate package and is never reused as Gold provenance, solvability evidence, or proof of scientific execution.
 
 ### G8 Independent Review
 
@@ -96,6 +100,7 @@ Only an independent `materials-benchmark-review` can sign off scientific publica
 | `NO_ENHANCED_CANDIDATE` | Paper offers no affordable enhanced candidate | no |
 | `BLOCKED_SOURCE_PARSE` | Load-bearing paper content was not parsed | no |
 | `BLOCKED_RESOURCE` | Indispensable asset is unavailable | no |
+| `BLOCKED_ORACLE_VALIDATION` | Oracle fixture, environment, paths, or verifier do not produce reward `1.0` with every component full | no |
 | `REVIEW_FAILED` | Independent Review found defects | no |
 
 Revise `REVIEW_FAILED` work in the authoring workspace. Do not publish and then invoke Repair to finish routine authoring.

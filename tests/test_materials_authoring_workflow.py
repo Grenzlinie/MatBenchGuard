@@ -1,16 +1,17 @@
+from __future__ import annotations
+
 import json
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
-from typing import Optional
 import unittest
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT / "tests") not in sys.path:
     sys.path.insert(0, str(ROOT / "tests"))
 from test_materials_core_workflow_v3 import baseline_review
+
 AUTHORING = ROOT / ".cursor/skills/materials-benchmark-authoring"
 VALIDATE_RECORD = AUTHORING / "scripts/validate_authoring_record.py"
 INIT_WORKSPACE = AUTHORING / "scripts/init_authoring_workspace.py"
@@ -19,7 +20,7 @@ VALIDATE_PACKAGE = AUTHORING / "scripts/validate_package.py"
 
 def enhanced_record() -> dict:
     return {
-        "schema_version": "materials-benchmark-authoring/1.0",
+        "schema_version": "materials-benchmark-authoring/1.1",
         "authoring_id": "author-test-paper",
         "status": "REVIEW_PASSED_ENHANCED",
         "source": {
@@ -108,6 +109,17 @@ def enhanced_record() -> dict:
             "cost_rationale": "measured on expected full-size result.json",
             "status": "PASS",
         },
+        "oracle_validation": {
+            "purpose": "CHECKER_FULL_SCORE_FIXTURE",
+            "scientific_execution_performed": False,
+            "status": "PASS",
+            "command": "harbor run -p candidate -a oracle",
+            "expected_reward": 1.0,
+            "actual_reward": 1.0,
+            "all_components_full_score": True,
+            "evidence": ["jobs/oracle/trial/result.json: reward=1"],
+            "notes": [],
+        },
         "package_path": "candidate",
         "independent_review": {
             "schema_version": "materials-core-review/3.3",
@@ -125,7 +137,7 @@ class AuthoringRecordContractTests(unittest.TestCase):
         self,
         record: dict,
         stage: str = "publish",
-        artifact_overrides: Optional[dict] = None,
+        artifact_overrides: dict | None = None,
         write_artifact: bool = True,
         artifact_stub: bool = False,
         package_legacy_tier: bool = False,
@@ -232,12 +244,42 @@ class AuthoringRecordContractTests(unittest.TestCase):
         result = self.validate(record, stage="review-ready")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_solution_path_is_rejected_even_at_draft_stage(self) -> None:
+    def test_review_ready_requires_passing_oracle_evidence(self) -> None:
+        record = enhanced_record()
+        record["status"] = "READY_FOR_REVIEW"
+        record["oracle_validation"] = {
+            "purpose": "CHECKER_FULL_SCORE_FIXTURE",
+            "scientific_execution_performed": False,
+            "status": "PENDING",
+            "command": "harbor run -p candidate -a oracle",
+            "expected_reward": 1.0,
+            "actual_reward": 0.0,
+            "all_components_full_score": False,
+            "evidence": [],
+            "notes": [],
+        }
+        result = self.validate(record, stage="review-ready")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("oracle_validation.status must be PASS", result.stdout)
+        self.assertIn("oracle_validation.actual_reward must be 1.0", result.stdout)
+        self.assertIn("oracle_validation.all_components_full_score", result.stdout)
+        self.assertIn("oracle_validation.evidence", result.stdout)
+
+    def test_review_ready_requires_fixture_purpose_and_no_scientific_execution(self) -> None:
+        record = enhanced_record()
+        record["status"] = "READY_FOR_REVIEW"
+        record["oracle_validation"]["purpose"] = "REFERENCE_EXECUTION"
+        record["oracle_validation"]["scientific_execution_performed"] = True
+        result = self.validate(record, stage="review-ready")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("purpose must be CHECKER_FULL_SCORE_FIXTURE", result.stdout)
+        self.assertIn("scientific_execution_performed must be false", result.stdout)
+
+    def test_package_path_may_have_solution_as_an_external_parent_name(self) -> None:
         record = enhanced_record()
         record["package_path"] = "solution/candidate"
         result = self.validate(record, stage="draft")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("package_path must not contain solution", result.stdout)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_output_path_cannot_escape_app_outputs(self) -> None:
         record = enhanced_record()
@@ -401,6 +443,22 @@ class AuthoringWorkspaceAndPackageTests(unittest.TestCase):
         (package / "tests" / "checker.py").write_text(
             "#!/usr/bin/env python3\nprint(1.0)\n", encoding="utf-8"
         )
+        solve_sh = package / "solution" / "solve.sh"
+        solve_sh.write_text(
+            "#!/usr/bin/env bash\n"
+            "set -euo pipefail\n"
+            "readonly OUTDIR=/app/outputs\n"
+            "mkdir -p \"$OUTDIR\"\n"
+            "# CHECKER_FULL_SCORE_FIXTURE\n"
+            "python3 - \"$OUTDIR\" <<'PYEOF'\n"
+            "import json, sys\n"
+            "from pathlib import Path\n"
+            "outdir = Path(sys.argv[1])\n"
+            "(outdir / 'result.json').write_text(json.dumps({}) + '\\n')\n"
+            "PYEOF\n",
+            encoding="utf-8",
+        )
+        solve_sh.chmod(solve_sh.stat().st_mode | 0o100)
         return package
 
     def validate_package(self, package: Path, record: Path) -> subprocess.CompletedProcess[str]:
@@ -417,10 +475,19 @@ class AuthoringWorkspaceAndPackageTests(unittest.TestCase):
             text=True,
         )
 
-    def test_init_workspace_is_solution_free_and_uses_v33_review_bridge(self) -> None:
+    def test_init_workspace_includes_oracle_solution_and_uses_v33_review_bridge(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = self.init_workspace(Path(directory))
-            self.assertFalse((workspace / "candidate" / "solution").exists())
+            solve_sh = workspace / "candidate" / "solution" / "solve.sh"
+            self.assertTrue(solve_sh.is_file())
+            self.assertTrue(solve_sh.stat().st_mode & 0o100)
+            self.assertEqual(
+                sorted(path.name for path in solve_sh.parent.iterdir()),
+                ["solve.sh"],
+            )
+            solve_text = solve_sh.read_text(encoding="utf-8")
+            self.assertIn("CHECKER_FULL_SCORE_FIXTURE", solve_text)
+            self.assertIn("python3 -", solve_text)
             record = json.loads((workspace / "authoring_record.json").read_text())
             self.assertIn("quality_tier", record["independent_review"])
             self.assertNotIn("correctness_level", record["independent_review"])
@@ -463,28 +530,90 @@ class AuthoringWorkspaceAndPackageTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("package locator is invalid or missing", result.stdout)
 
-    def test_package_validator_rejects_solution_directory(self) -> None:
+    def test_package_validator_requires_solution_script(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = self.init_workspace(Path(directory))
             package = self.make_complete_package(workspace)
-            (package / "solution").mkdir()
+            (package / "solution" / "solve.sh").unlink()
             result = self.validate_package(package, workspace / "authoring_record.json")
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("solution/ is prohibited", result.stdout)
+            self.assertIn("missing required file: solution/solve.sh", result.stdout)
 
-    def test_package_validator_rejects_nested_solution_directory(self) -> None:
+    def test_package_validator_rejects_placeholder_solution(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = self.init_workspace(Path(directory))
             package = self.make_complete_package(workspace)
-            nested = package / "evidence" / "solution"
-            nested.mkdir(parents=True)
-            (nested / "oracle.txt").write_text("hidden", encoding="utf-8")
+            (package / "solution" / "solve.sh").write_text(
+                "#!/usr/bin/env bash\n"
+                "set -euo pipefail\n"
+                "# CHECKER_FULL_SCORE_FIXTURE\n"
+                "python3 - <<'PYEOF'\n"
+                "raise SystemExit('TODO: materialize every declared standard correct output')\n"
+                "PYEOF\n",
+                encoding="utf-8",
+            )
             result = self.validate_package(package, workspace / "authoring_record.json")
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("solution path component", result.stdout)
+            self.assertIn("solution/solve.sh is still the placeholder", result.stdout)
+
+    def test_package_validator_requires_single_file_inline_python_fixture(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = self.init_workspace(Path(directory))
+            package = self.make_complete_package(workspace)
+            helper = package / "solution" / "generate.py"
+            helper.write_text("print('not allowed')\n", encoding="utf-8")
+            result = self.validate_package(package, workspace / "authoring_record.json")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("must contain exactly one entry", result.stdout)
+
+            helper.unlink()
+            solve_sh = package / "solution" / "solve.sh"
+            solve_sh.write_text(
+                "#!/usr/bin/env bash\n"
+                "set -euo pipefail\n"
+                "# CHECKER_FULL_SCORE_FIXTURE\n"
+                "mkdir -p /app/outputs\n"
+                "printf '{}\\n' > /app/outputs/result.json\n",
+                encoding="utf-8",
+            )
+            result = self.validate_package(package, workspace / "authoring_record.json")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("must generate outputs with inline Python", result.stdout)
+
+    def test_package_validator_rejects_checker_access_and_runtime_install(self) -> None:
+        forbidden_cases = {
+            "cat /tests/checker.py": "must not read /tests",
+            "python3 -m pip install numpy": "must not install packages",
+            "curl https://example.invalid": "must not access the network",
+        }
+        for command, expected in forbidden_cases.items():
+            with self.subTest(command=command), tempfile.TemporaryDirectory() as directory:
+                workspace = self.init_workspace(Path(directory))
+                package = self.make_complete_package(workspace)
+                solve_sh = package / "solution" / "solve.sh"
+                solve_sh.write_text(
+                    solve_sh.read_text(encoding="utf-8") + command + "\n",
+                    encoding="utf-8",
+                )
+                result = self.validate_package(package, workspace / "authoring_record.json")
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(expected, result.stdout)
+
+    def test_package_validator_rejects_copying_solution_into_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = self.init_workspace(Path(directory))
+            package = self.make_complete_package(workspace)
+            dockerfile = package / "environment" / "Dockerfile"
+            dockerfile.write_text(
+                dockerfile.read_text(encoding="utf-8") + "COPY solution/ /solution/\n",
+                encoding="utf-8",
+            )
+            result = self.validate_package(package, workspace / "authoring_record.json")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("do not copy the Harbor Oracle fixture", result.stdout)
 
     def test_init_rejects_unsafe_paper_id(self) -> None:
-        for paper_id in ("../escape", "solution/x", "/absolute", "solution", "Solution"):
+        for paper_id in ("../escape", "solution/x", "/absolute"):
             with self.subTest(paper_id=paper_id), tempfile.TemporaryDirectory() as directory:
                 result = self.run_init(Path(directory), paper_id)
                 self.assertNotEqual(result.returncode, 0)

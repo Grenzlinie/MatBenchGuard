@@ -2,7 +2,7 @@
 
 ## Stage A：Baseline Correctness
 
-1. 冻结源包哈希，不读 `solution/**`。
+1. 冻结 Review/Repair 可见范围的源文件；将 `solution/**` 作为题包内不透明目录原样保留到 candidate，但不读取、运行、扫描、哈希、引用或修改。
 2. 从 `paper.md` 恢复必要问题、方法、参数、公式和 Workflow。
 3. 建参数表；论文未给唯一值但可搜索/收敛/优化的项标为 `SOLVER_SEARCHABLE`，不补值。
 4. 同步 instruction -> 派生视图 -> tests。
