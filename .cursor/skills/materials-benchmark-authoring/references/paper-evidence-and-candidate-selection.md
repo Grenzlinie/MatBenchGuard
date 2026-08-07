@@ -13,7 +13,7 @@ Create records before drafting prose:
 | Gold candidate | target ID, policy, value/relation, units, applicability, locator |
 | resource | ID, role, indispensability, availability, filename/locator |
 | workflow edge | producer step/output, consumer step/input |
-| checkpoint candidate | output, relation/invariant, cost, attack addressed |
+| checkpoint candidate | output, scientific basis, attack addressed, wrong-science discrimination, cost compliance |
 
 Use exact Markdown headings, table labels, equation labels, or distinctive text spans as locators. Do not use vague provenance such as "the paper".
 
@@ -58,9 +58,9 @@ Rank lexicographically, not by a single averaged score:
 2. Paper alignment and Gold provenance are complete.
 3. Indispensable assets are closed.
 4. Output contract can be self-contained.
-5. At least one affordable enhanced checkpoint exists.
-6. Compute fits the solver environment.
-7. The task retains meaningful solver agency.
+5. Compute fits the solver environment.
+6. The task retains meaningful solver agency.
+7. Optionally, a high-value Enhanced checkpoint satisfies all four value gates.
 
 A lower-ranked but fully evidenced candidate beats a more impressive candidate with guessed parameters or missing inputs.
 

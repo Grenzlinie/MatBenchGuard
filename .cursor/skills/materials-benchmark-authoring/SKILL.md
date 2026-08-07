@@ -1,6 +1,6 @@
 ---
 name: materials-benchmark-authoring
-description: Create a paper-grounded enhanced materials-science Harbor task from a local or public PDF. Use when an Agent must parse a paper with UniParser, select a non-trivial computational-science question, preserve paper Gold and parameter provenance, close bundled-resource dependencies, generate a complete Paper2Arm package including a single-file Harbor Oracle full-score fixture and lightweight checker, and drive an independent materials-benchmark-review to PASS + RESULT_ENHANCED.
+description: Create a complete paper-grounded materials-science Harbor task from a local or public PDF. Use when an Agent must parse a paper with UniParser, select a non-trivial computational-science question, preserve paper Gold and parameter provenance, close bundled-resource dependencies, generate an initial Paper2Arm package with checker and single-file Harbor Oracle full-score fixture, and submit it to an independent materials-benchmark-review.
 ---
 
 # Materials Benchmark Authoring
@@ -9,18 +9,18 @@ Author one review-ready task from a paper. Treat this as evidence-backed compila
 
 ## Non-negotiable outcome
 
-Target `PASS + RESULT_ENHANCED` from an independent `materials-benchmark-review`.
+Target at least `PASS + BASELINE_CORRECT` from an independent `materials-benchmark-review`. Use `RESULT_ENHANCED` only when the paper naturally supports a high-value materials-science checkpoint.
 
 - Keep the paper Gold center.
 - Require a non-trivial computational-science task.
-- Require at least one affordable result-layer checkpoint before selecting a candidate.
-- Keep checker weights at Gold 60--80% and result checks 20--40%.
+- Require the five Baseline probes for every selected candidate.
+- For Enhanced only, keep checker weights at Gold 60--80% and result checks 20--40%.
 - Keep all solver outputs under `/app/outputs`.
 - Include exactly one executable `solution/solve.sh` as the Harbor Oracle `CHECKER_FULL_SCORE_FIXTURE`; use inline Python to materialize the standard correct outputs and require reward `1.0` from the same verifier without running the primary scientific computation.
 - Keep `solution/` out of Review and Repair evidence: those Skills preserve it in the package but never read, run, hash, cite, or modify it.
 - Keep authoring records and evidence outside the Harbor candidate package.
 
-If no candidate satisfies all gates, return `NO_ENHANCED_CANDIDATE`; do not emit a weak package merely to finish.
+The absence of a high-value checkpoint is not an authoring failure: produce a complete Baseline package. If no candidate satisfies the scientific, Gold, workflow, and resource gates, do not emit a weak package merely to finish.
 
 ## Required dependencies
 
@@ -31,7 +31,7 @@ If no candidate satisfies all gates, return `NO_ENHANCED_CANDIDATE`; do not emit
    - `../materials-benchmark-review/references/hidden-checkpoints.md`
    - `../materials-benchmark-review/assets/instruction_template.md`
 3. Use Harbor's current `create-task` guidance for generic task structure and retain its `solution/solve.sh` Oracle entrypoint.
-4. Use `materials-benchmark-review` as an independent final gate. Do not use Repair as the normal authoring loop.
+4. Use `materials-benchmark-review` as the independent first gate. After that Review, consume its existing verdict and route; do not edit the scientific task inside Authoring.
 
 ## Workflow
 
@@ -79,9 +79,9 @@ Select only a candidate with:
 - at least one core Gold record with matching condition group;
 - closed indispensable assets;
 - a complete producer/consumer workflow;
-- an affordable, non-arbitrary result checkpoint based on final outputs.
+- a complete Baseline checker design based on declared final outputs.
 
-Use `NO_ENHANCED_CANDIDATE` when none qualifies. Read [pipeline-and-gates.md](references/pipeline-and-gates.md) for exact gates and outcomes.
+A candidate may additionally qualify for Enhanced only when its checkpoint has scientific support, addresses a concrete fabrication risk, discriminates wrong materials science, and stays within the checker budget. Read [pipeline-and-gates.md](references/pipeline-and-gates.md) for exact gates and outcomes.
 
 ### 5. Author the public scientific contract
 
@@ -110,7 +110,7 @@ Read [package-profile.md](references/package-profile.md).
 - Do not add a Dockerfile `COPY` for authoring-time resources. Deployment may later materialize the resource through Playground/Bohrium; a local runner may receive an explicit resource root from a human.
 - Keep the standard environment image and task defaults unless the external authoring record contains a justified override.
 
-### 7. Freeze Gold, tolerance, and enhancement design
+### 7. Freeze Gold, tolerance, and optional enhancement design
 
 Read [gold-checker-enhancement.md](references/gold-checker-enhancement.md).
 
@@ -119,7 +119,7 @@ Before writing the checker, freeze:
 - Gold policy, value/relation, units, applicability, condition groups, provenance, and independent check;
 - tolerance basis and inclusive boundary behavior;
 - public output-to-hidden target mapping;
-- result checks and weights;
+- result checks, value evidence, and weights when Enhanced is selected;
 - expected real-scale output size and checker budget.
 
 Do not use the checker, an old answer, or a prior solution as Gold provenance.
@@ -139,7 +139,7 @@ Run at least:
 - `missing_or_malformed`;
 - `non_finite_and_duplicate`;
 - `wrong_science`;
-- one risk-matched enhancement probe: `minimal_fabrication`, `quality_gradient`, or `cross_condition_group_mismatch`.
+- for Enhanced only, one risk-matched probe: `minimal_fabrication`, `quality_gradient`, or `cross_condition_group_mismatch`.
 
 Measure cost on real-scale output. Require at most 32 CPU cores or one H100, at most 600 seconds, no full large trajectory scan, and no new primary simulation.
 
@@ -166,9 +166,10 @@ Run `materials-benchmark-review` on the complete candidate while explicitly excl
 - `verdict = PASS`;
 - `publishable = true`;
 - Baseline question and answer gates pass;
-- enhanced result checks and checker-cost gate pass.
+- `quality_tier = BASELINE_CORRECT` or `RESULT_ENHANCED`;
+- checker-cost gate pass.
 
-Record the review artifact in `authoring_record.json`, then validate with `--stage publish`. If Review fails, revise inside the authoring workspace from the cited evidence. Use Repair only for already-published or inherited packages when explicitly requested.
+Record the review artifact in `authoring_record.json`. For a publishable `PASS`, set `status = REVIEW_PASSED` and validate with `--stage publish`. For `REPAIR_REQUIRED`, `REAUTHOR_REQUIRED`, `REJECTED`, `BLOCKED`, or a scientific PASS blocked by checker cost, set `status = REVIEW_HANDOFF`, retain the Review artifact, and stop Authoring. Existing Review/Repair semantics decide the next action. Only Oracle fixture, environment, output-path, or Harbor full-score failures remain inside Authoring because Review and Repair cannot inspect or edit `solution/`.
 
 The publish validator reads the JSON at `independent_review.artifact_path`, runs the real Review 3.3 validator (including package-aware tier, weight, and tolerance checks), and then matches its verdict, quality tier, and publishability against the summary. A four-field stub is not a Review artifact. Do not copy a favorable summary without retaining the complete Review artifact outside the candidate package.
 

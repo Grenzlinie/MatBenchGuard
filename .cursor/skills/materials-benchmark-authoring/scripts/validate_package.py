@@ -17,6 +17,7 @@ except ModuleNotFoundError:  # Python 3.10 and older
 
 
 BASE_IMAGE = "dp-harbor-registry.cn-zhangjiakou.cr.aliyuncs.com/public/paper2arm-env:v1.0-20260708"
+QUALITY_TIERS = {"BASELINE_CORRECT", "RESULT_ENHANCED"}
 REQUIRED_FILES = (
     "instruction.md",
     "paper/paper.md",
@@ -306,10 +307,29 @@ def main() -> int:
 
     grading = load_json(package / "tests" / "grading_spec.json", errors)
     if isinstance(grading, dict):
-        if grading.get("quality_tier") != "RESULT_ENHANCED":
-            errors.append("grading_spec.quality_tier must be RESULT_ENHANCED")
+        tier = grading.get("quality_tier")
+        if tier not in QUALITY_TIERS:
+            errors.append("grading_spec.quality_tier must be BASELINE_CORRECT or RESULT_ENHANCED")
         if "scoring_tier" in grading:
             errors.append("grading_spec must use quality_tier, not legacy scoring_tier")
+        weights = grading.get("weights")
+        if not isinstance(weights, dict):
+            errors.append("grading_spec.weights must be an object")
+        else:
+            gold = weights.get("gold")
+            result = weights.get("result_checks")
+            if tier == "BASELINE_CORRECT" and (gold != 1.0 or result != 0.0):
+                errors.append("BASELINE_CORRECT weights must be Gold 1.0 and result_checks 0.0")
+            if tier == "RESULT_ENHANCED" and (
+                isinstance(gold, bool)
+                or not isinstance(gold, (int, float))
+                or isinstance(result, bool)
+                or not isinstance(result, (int, float))
+                or not 0.60 <= gold <= 0.80
+                or not 0.20 <= result <= 0.40
+                or abs(gold + result - 1.0) > 1e-9
+            ):
+                errors.append("RESULT_ENHANCED weights must be Gold 60-80% and result_checks 20-40%")
         outputs = output_items(grading)
         if not outputs:
             errors.append("grading_spec.output_contract must be non-empty")

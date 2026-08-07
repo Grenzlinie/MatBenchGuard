@@ -20,9 +20,9 @@ VALIDATE_PACKAGE = AUTHORING / "scripts/validate_package.py"
 
 def enhanced_record() -> dict:
     return {
-        "schema_version": "materials-benchmark-authoring/1.1",
+        "schema_version": "materials-benchmark-authoring/1.2",
         "authoring_id": "author-test-paper",
-        "status": "REVIEW_PASSED_ENHANCED",
+        "status": "REVIEW_PASSED",
         "source": {
             "pdf_path": "source/paper.pdf",
             "pdf_sha256": "a" * 64,
@@ -83,6 +83,10 @@ def enhanced_record() -> dict:
             "gold_weight": 0.7,
             "result_weight": 0.3,
             "result_checks": ["checkpoint-1"],
+            "scientific_basis": "Paper-supported conservation relation.",
+            "hacking_risk": "A fabricated target can match Gold but violate conservation.",
+            "wrong_science_discrimination": "The residual rejects that fabricated result.",
+            "cost_compliant": True,
         },
         "probe_records": [
             {"probe_type": probe_type, "status": "PASS"}
@@ -132,6 +136,26 @@ def enhanced_record() -> dict:
     }
 
 
+def baseline_record() -> dict:
+    record = enhanced_record()
+    record["candidate_records"][0]["checkpoint_ids"] = []
+    record["enhancement"] = {
+        "status": "NOT_SELECTED",
+        "gold_weight": 1.0,
+        "result_weight": 0.0,
+        "result_checks": [],
+        "scientific_basis": None,
+        "hacking_risk": None,
+        "wrong_science_discrimination": None,
+        "cost_compliant": True,
+    }
+    record["probe_records"] = [
+        item for item in record["probe_records"] if item["probe_type"] != "quality_gradient"
+    ]
+    record["independent_review"]["quality_tier"] = "BASELINE_CORRECT"
+    return record
+
+
 class AuthoringRecordContractTests(unittest.TestCase):
     def validate(
         self,
@@ -147,16 +171,22 @@ class AuthoringRecordContractTests(unittest.TestCase):
             path.write_text(json.dumps(record), encoding="utf-8")
             package_tests = Path(directory) / "candidate" / "tests"
             package_tests.mkdir(parents=True)
+            tier = record.get("independent_review", {}).get("quality_tier") or "BASELINE_CORRECT"
             tier_fields = (
                 {"scoring_tier": "result_enhanced"}
                 if package_legacy_tier
-                else {"quality_tier": "RESULT_ENHANCED"}
+                else {"quality_tier": tier}
+            )
+            weights = (
+                {"gold": 0.7, "result_checks": 0.3}
+                if tier == "RESULT_ENHANCED"
+                else {"gold": 1.0, "result_checks": 0.0}
             )
             (package_tests / "grading_spec.json").write_text(
                 json.dumps(
                     {
                         **tier_fields,
-                        "weights": {"gold": 0.7, "result_checks": 0.3},
+                        "weights": weights,
                         "tolerance_contract": {"result": 0.01},
                     }
                 ),
@@ -172,7 +202,7 @@ class AuthoringRecordContractTests(unittest.TestCase):
                         if key in record["independent_review"]
                     }
                     if artifact_stub
-                    else baseline_review(enhanced=True)
+                    else baseline_review(enhanced=tier == "RESULT_ENHANCED")
                 )
                 artifact.update(artifact_overrides or {})
                 artifact_path.write_text(json.dumps(artifact), encoding="utf-8")
@@ -194,6 +224,30 @@ class AuthoringRecordContractTests(unittest.TestCase):
         result = self.validate(legacy)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("quality_tier", result.stdout)
+
+    def test_publish_accepts_complete_baseline_without_checkpoint(self) -> None:
+        result = self.validate(baseline_record())
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_enhanced_requires_materials_science_value_evidence(self) -> None:
+        for field in (
+            "scientific_basis",
+            "hacking_risk",
+            "wrong_science_discrimination",
+            "cost_compliant",
+        ):
+            with self.subTest(field=field):
+                record = enhanced_record()
+                record["enhancement"][field] = False if field == "cost_compliant" else ""
+                result = self.validate(record, stage="review-ready")
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(field, result.stdout)
+
+        record = enhanced_record()
+        record["candidate_records"][0]["checkpoint_ids"] = []
+        result = self.validate(record, stage="review-ready")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("checkpoint_ids", result.stdout)
 
     def test_publish_rejects_non_v33_review_artifact(self) -> None:
         record = enhanced_record()
@@ -243,6 +297,24 @@ class AuthoringRecordContractTests(unittest.TestCase):
         }
         result = self.validate(record, stage="review-ready")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_review_handoff_records_non_publishable_review_artifact(self) -> None:
+        record = baseline_record()
+        record["status"] = "REVIEW_HANDOFF"
+        record["independent_review"] = {
+            "schema_version": "materials-core-review/3.3",
+            "verdict": "REPAIR_REQUIRED",
+            "quality_tier": None,
+            "publishable": False,
+            "artifact_path": "independent_review/core_review.json",
+        }
+        result = self.validate(record, stage="draft")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+        record["independent_review"]["artifact_path"] = None
+        result = self.validate(record, stage="draft")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("REVIEW_HANDOFF", result.stdout)
 
     def test_review_ready_requires_passing_oracle_evidence(self) -> None:
         record = enhanced_record()
@@ -423,6 +495,7 @@ class AuthoringWorkspaceAndPackageTests(unittest.TestCase):
             json.dumps(
                 {
                     "quality_tier": "RESULT_ENHANCED",
+                    "weights": {"gold": 0.7, "result_checks": 0.3},
                     "output_contract": [{"path": "/app/outputs/result.json"}],
                 }
             ),
@@ -489,6 +562,8 @@ class AuthoringWorkspaceAndPackageTests(unittest.TestCase):
             self.assertIn("CHECKER_FULL_SCORE_FIXTURE", solve_text)
             self.assertIn("python3 -", solve_text)
             record = json.loads((workspace / "authoring_record.json").read_text())
+            self.assertEqual(record["schema_version"], "materials-benchmark-authoring/1.2")
+            self.assertEqual(record["enhancement"]["status"], "NOT_SELECTED")
             self.assertIn("quality_tier", record["independent_review"])
             self.assertNotIn("correctness_level", record["independent_review"])
             self.assertTrue((workspace / "candidate" / "tests" / "test.sh").stat().st_mode & 0o100)
@@ -508,6 +583,29 @@ class AuthoringWorkspaceAndPackageTests(unittest.TestCase):
             result = self.validate_package(package, record)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("mapping missing resource_unique_key", result.stdout)
+
+    def test_package_accepts_baseline_and_enforces_enhanced_weights(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = self.init_workspace(Path(directory))
+            package = self.make_complete_package(workspace)
+            spec_path = package / "tests" / "grading_spec.json"
+            spec = json.loads(spec_path.read_text())
+            spec.update({"quality_tier": "BASELINE_CORRECT", "weights": {"gold": 1.0, "result_checks": 0.0}})
+            spec_path.write_text(json.dumps(spec), encoding="utf-8")
+            result = self.validate_package(package, workspace / "authoring_record.json")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+            spec.update({"quality_tier": "RESULT_ENHANCED", "weights": {"gold": 0.9, "result_checks": 0.1}})
+            spec_path.write_text(json.dumps(spec), encoding="utf-8")
+            result = self.validate_package(package, workspace / "authoring_record.json")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("RESULT_ENHANCED weights", result.stdout)
+
+            spec.pop("weights")
+            spec_path.write_text(json.dumps(spec), encoding="utf-8")
+            result = self.validate_package(package, workspace / "authoring_record.json")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("grading_spec.weights", result.stdout)
 
     def test_inherited_assets_package_locator_is_accepted_and_safe(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

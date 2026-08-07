@@ -35,6 +35,8 @@ Record metric, `atol`, `rtol`, units, inclusive/exclusive boundary, and `T-epsil
 
 ## Enhanced result checks
 
+Enhancement is optional. Select it only when the record documents all four gates: a paper/physics/materials-model/independent-reference basis, a concrete fabrication risk, an explanation of how the check discriminates wrong materials science, and checker-cost compliance. A cheap format or self-consistency check is not sufficient. Otherwise keep the complete task at `BASELINE_CORRECT`.
+
 Prefer checks that reuse required final outputs:
 
 - recomputed derived quantities;
@@ -49,6 +51,7 @@ Do not score logs, iteration counts, claims of execution, or full process traces
 
 ## Weighting
 
+- Baseline: Gold 1.0, result checks 0.0.
 - Gold: 0.60--0.80.
 - Enhanced result checks: 0.20--0.40.
 - Total: 1.0.

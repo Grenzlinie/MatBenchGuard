@@ -33,7 +33,7 @@ Use this only as migration evidence. The new profile retains the common single-s
 ## Inconsistencies not to copy
 
 - Resource `access.method` uses many ad hoc values.
-- Historical `scoring_tier` and `target_policy` strings are not normalized; new Authoring packages use canonical `quality_tier = RESULT_ENHANCED`.
+- Historical `scoring_tier` and `target_policy` strings are not normalized; new Authoring packages use canonical `quality_tier = BASELINE_CORRECT` or `RESULT_ENHANCED`.
 - Bundled resources are sometimes declared without files or mappings.
 - `resources_mapping` is positional; it is not keyed by `resources[].id`.
 - Some instructions hard-code `/app/resources/...`; others use root-relative files.
@@ -58,4 +58,4 @@ Across 1,860 legacy final decisions:
 - failed hard gates included 546 `CHECKER_CORE_TASK_UNASSESSED`, 142 `INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE`, and 100 `SCIENTIFIC_TARGET_INVALID`;
 - open findings were concentrated in checker/Gold coverage, parameter/workflow continuity, resource readiness, tolerance/numeric robustness, and scientific scope.
 
-Legacy audits used an older policy and may include stronger process/anti-hacking expectations than current Baseline-first Review. Use the counts only to prioritize authoring prevention: select valid targets, close assets, freeze Gold before checker generation, and require one affordable enhanced result check.
+Legacy audits used an older policy and may include stronger process/anti-hacking expectations than current Baseline-first Review. Use the counts only to prioritize authoring prevention: select valid targets, close assets, freeze Gold before checker generation, and choose Enhanced only for a scientifically grounded, risk-targeted, discriminating, cost-compliant result check.

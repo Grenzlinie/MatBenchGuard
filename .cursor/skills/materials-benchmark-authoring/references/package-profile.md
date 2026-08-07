@@ -128,6 +128,6 @@ instruction.md
 
 Derived files may mirror but never add a scientific requirement. Generate tests and the Oracle fixture as independent consumers of the frozen instruction/Gold contract; do not let either one self-certify the other.
 
-Use `quality_tier = "RESULT_ENHANCED"` in `tests/grading_spec.json`. The legacy lowercase `scoring_tier` spelling is rejected so package-aware Review validation cannot silently skip tier consistency.
+Use canonical `quality_tier = "BASELINE_CORRECT"` or `"RESULT_ENHANCED"` in `tests/grading_spec.json`. Baseline uses Gold 1.0/result checks 0.0. Enhanced uses Gold 0.60--0.80/result checks 0.20--0.40. The legacy lowercase `scoring_tier` spelling is rejected so package-aware Review validation cannot silently skip tier consistency.
 
 When `--authoring-record` is supplied, package validation closes the resource loop: every package resource must have a matching `resource_records` entry, and every ready or indispensable record must exist in `resources.json`; IDs, package types, mapping `resource_type`, bundled filenames, positional mappings, and actual files must agree.

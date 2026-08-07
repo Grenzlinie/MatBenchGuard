@@ -10,17 +10,17 @@ import math
 from pathlib import Path, PurePath, PurePosixPath
 from typing import Any
 
-SCHEMA = "materials-benchmark-authoring/1.1"
+SCHEMA = "materials-benchmark-authoring/1.2"
 STATUSES = {
     "DRAFT",
     "BLOCKED_SOURCE_PARSE",
     "BLOCKED_RESOURCE",
     "BLOCKED_ORACLE_VALIDATION",
-    "NO_ENHANCED_CANDIDATE",
     "READY_FOR_REVIEW",
-    "REVIEW_FAILED",
-    "REVIEW_PASSED_ENHANCED",
+    "REVIEW_HANDOFF",
+    "REVIEW_PASSED",
 }
+QUALITY_TIERS = {"BASELINE_CORRECT", "RESULT_ENHANCED"}
 PARAMETER_CLASSES = {
     "PAPER_FIXED",
     "SOLVER_SEARCHABLE",
@@ -224,6 +224,20 @@ class Validator:
         if not package_path:
             self.error("package_path is required")
 
+        if self.data.get("status") == "REVIEW_HANDOFF":
+            review = self.data.get("independent_review")
+            if (
+                not isinstance(review, dict)
+                or review.get("schema_version") != "materials-core-review/3.3"
+                or review.get("verdict") not in {
+                    "PASS", "REPAIR_REQUIRED", "REAUTHOR_REQUIRED", "REJECTED", "BLOCKED"
+                }
+                or review.get("publishable") is not False
+                or not isinstance(review.get("artifact_path"), str)
+                or not review["artifact_path"].strip()
+            ):
+                self.error("REVIEW_HANDOFF requires a non-publishable Review 3.3 artifact summary")
+
         if self.stage in {"review-ready", "publish"}:
             self.validate_review_ready(candidates, resources, gold, workflows, outputs)
         if self.stage == "publish":
@@ -235,8 +249,9 @@ class Validator:
                     self.error("publish requires independent_review.schema_version = materials-core-review/3.3")
                 if review.get("verdict") != "PASS":
                     self.error("publish requires independent_review.verdict = PASS")
-                if review.get("quality_tier") != "RESULT_ENHANCED":
-                    self.error("publish requires quality_tier = RESULT_ENHANCED")
+                review_tier = review.get("quality_tier")
+                if review_tier not in QUALITY_TIERS:
+                    self.error("publish requires a canonical quality_tier")
                 if review.get("publishable") is not True:
                     self.error("publish requires independent_review.publishable = true")
                 artifact_path = review.get("artifact_path")
@@ -258,10 +273,8 @@ class Validator:
                         if not isinstance(grading, dict):
                             self.error("publish grading_spec root must be an object")
                         else:
-                            if grading.get("quality_tier") != "RESULT_ENHANCED":
-                                self.error(
-                                    "publish requires grading_spec.quality_tier = RESULT_ENHANCED"
-                                )
+                            if grading.get("quality_tier") != review_tier:
+                                self.error("grading_spec.quality_tier must match Review quality_tier")
                             if "scoring_tier" in grading:
                                 self.error(
                                     "publish grading_spec must not use legacy scoring_tier"
@@ -298,8 +311,8 @@ class Validator:
                                     self.error(
                                         f"review artifact {field} does not match independent_review summary"
                                     )
-            if self.data.get("status") != "REVIEW_PASSED_ENHANCED":
-                self.error("publish requires status REVIEW_PASSED_ENHANCED")
+            if self.data.get("status") != "REVIEW_PASSED":
+                self.error("publish requires status REVIEW_PASSED")
         return self.errors
 
     def validate_review_ready(
@@ -322,9 +335,8 @@ class Validator:
                 self.error("selected candidate decision must be SELECTED")
             if candidate.get("q0_status") != "PASS":
                 self.error("selected candidate must pass Q0")
-            checkpoints = candidate.get("checkpoint_ids")
-            if not isinstance(checkpoints, list) or not checkpoints:
-                self.error("selected candidate needs an enhanced checkpoint")
+            if not isinstance(candidate.get("checkpoint_ids"), list):
+                self.error("selected candidate checkpoint_ids must be a list")
         if self.data.get("blockers"):
             self.error("review-ready requires no blockers")
         if not gold:
@@ -345,21 +357,39 @@ class Validator:
         if not isinstance(enhancement, dict):
             self.error("enhancement must be an object")
         else:
+            status = enhancement.get("status")
             gold_weight = enhancement.get("gold_weight")
             result_weight = enhancement.get("result_weight")
-            if not isinstance(gold_weight, (int, float)) or not 0.60 <= gold_weight <= 0.80:
-                self.error("enhancement.gold_weight must be 0.60--0.80")
-            if not isinstance(result_weight, (int, float)) or not 0.20 <= result_weight <= 0.40:
-                self.error("enhancement.result_weight must be 0.20--0.40")
-            if (
-                isinstance(gold_weight, (int, float))
-                and isinstance(result_weight, (int, float))
-                and not math.isclose(gold_weight + result_weight, 1.0, abs_tol=1e-9)
-            ):
-                self.error("Gold and result weights must sum to 1.0")
             checks = enhancement.get("result_checks")
-            if not isinstance(checks, list) or not checks:
-                self.error("review-ready requires at least one result check")
+            if status == "PASS":
+                candidate = candidates.get(selected, {})
+                checkpoint_ids = candidate.get("checkpoint_ids")
+                if not isinstance(checkpoint_ids, list) or not checkpoint_ids:
+                    self.error("RESULT_ENHANCED requires selected candidate checkpoint_ids")
+                if isinstance(gold_weight, bool) or not isinstance(gold_weight, (int, float)) or not 0.60 <= gold_weight <= 0.80:
+                    self.error("enhancement.gold_weight must be 0.60--0.80")
+                if isinstance(result_weight, bool) or not isinstance(result_weight, (int, float)) or not 0.20 <= result_weight <= 0.40:
+                    self.error("enhancement.result_weight must be 0.20--0.40")
+                if (
+                    isinstance(gold_weight, (int, float))
+                    and not isinstance(gold_weight, bool)
+                    and isinstance(result_weight, (int, float))
+                    and not isinstance(result_weight, bool)
+                    and not math.isclose(gold_weight + result_weight, 1.0, abs_tol=1e-9)
+                ):
+                    self.error("Gold and result weights must sum to 1.0")
+                if not isinstance(checks, list) or not checks:
+                    self.error("Enhanced authoring requires at least one result check")
+                for field in ("scientific_basis", "hacking_risk", "wrong_science_discrimination"):
+                    if not isinstance(enhancement.get(field), str) or not enhancement[field].strip():
+                        self.error(f"enhancement.{field} is required for RESULT_ENHANCED")
+                if enhancement.get("cost_compliant") is not True:
+                    self.error("enhancement.cost_compliant must be true for RESULT_ENHANCED")
+            elif status == "NOT_SELECTED":
+                if gold_weight != 1.0 or result_weight != 0.0 or checks != []:
+                    self.error("Baseline enhancement weights must be Gold 1.0 and result 0.0 with no checks")
+            else:
+                self.error("enhancement.status must be PASS or NOT_SELECTED")
 
         probe_types = {
             item.get("probe_type")
@@ -369,7 +399,7 @@ class Validator:
         missing = BASELINE_PROBES - probe_types
         if missing:
             self.error(f"missing passing Baseline probes: {sorted(missing)}")
-        if not (ENHANCED_PROBES & probe_types):
+        if isinstance(enhancement, dict) and enhancement.get("status") == "PASS" and not (ENHANCED_PROBES & probe_types):
             self.error("missing passing enhancement probe")
 
         oracle = self.data.get("oracle_validation")

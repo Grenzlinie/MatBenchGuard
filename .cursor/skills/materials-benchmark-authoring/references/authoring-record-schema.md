@@ -4,7 +4,7 @@
 
 ## Top-level fields
 
-- `schema_version`: `materials-benchmark-authoring/1.1`.
+- `schema_version`: `materials-benchmark-authoring/1.2`.
 - `authoring_id`: stable local ID.
 - `status`: authoring state.
 - `source`: PDF path, SHA-256, UniParser metadata, and Markdown path.
@@ -18,7 +18,7 @@
 - `tolerance_records`: evidence and boundaries.
 - `workflow_records`: producer/consumer edges.
 - `output_contract`: public outputs.
-- `enhancement`: weights, result checks, and affordability.
+- `enhancement`: optional tier selection, weights, result checks, scientific basis, concrete hacking risk, wrong-science discrimination, and cost compliance.
 - `probe_records`: baseline and enhancement probes.
 - `checker_cost_record`: real-scale resource measurement.
 - `oracle_validation`: full-score-fixture purpose, no-scientific-execution attestation, Harbor Oracle reward/components, command, and external evidence.
@@ -43,15 +43,17 @@ Additionally requires:
 - all target and condition references closed;
 - Gold provenance and tolerance records complete;
 - public output paths under `/app/outputs`;
-- Gold/result weights in range and summing to 1;
-- at least one enhanced result check;
-- five Baseline probes plus one enhancement probe;
+- Baseline Gold-only weights, or Enhanced Gold/result weights in range and summing to 1;
+- five Baseline probes for every candidate;
+- for Enhanced only, at least one result check, four value-gate records, and one enhancement probe;
 - real-scale checker cost pass.
 - the only `solution/` entry is executable `solve.sh`, and its `CHECKER_FULL_SCORE_FIXTURE` has passed Harbor Oracle with reward `1.0`, every component full, and retained evidence outside the candidate package.
 
 ### `publish`
 
-Additionally requires an independent, complete `materials-core-review/3.3` JSON artifact with `verdict = PASS`, `publishable = true`, and `quality_tier = RESULT_ENHANCED`. The publish validator reads `artifact_path`, requires it to stay outside the candidate package, runs the actual Review 3.3 schema and package-aware validator, and then matches the summary fields. A copied four-field summary cannot replace the real Review artifact.
+Additionally requires an independent, complete `materials-core-review/3.3` JSON artifact with `verdict = PASS`, `publishable = true`, and `quality_tier = BASELINE_CORRECT` or `RESULT_ENHANCED`. The package tier must match Review. The publish validator reads `artifact_path`, requires it to stay outside the candidate package, runs the actual Review 3.3 schema and package-aware validator, and then matches the summary fields. A copied four-field summary cannot replace the real Review artifact.
+
+After a non-publishable first Review, set `status = REVIEW_HANDOFF`, retain its Review 3.3 artifact summary and path, and stop Authoring. Existing Review/Repair routing owns subsequent scientific changes. `REVIEW_PASSED` is the tier-neutral success status.
 
 ## Invariants
 
@@ -66,7 +68,7 @@ Additionally requires an independent, complete `materials-core-review/3.3` JSON 
 - Every output path is canonical under `/app/outputs`; `..`, backslashes, and directory-only paths are invalid.
 - `paper_id` is one safe path component, never a path.
 - `resource_records`, `resources.json`, positional mappings, and bundled files agree by resource ID, type, and filename.
-- Package and Review use `quality_tier = RESULT_ENHANCED`, not the legacy lowercase `scoring_tier` alias.
+- Package and Review use matching canonical `quality_tier` values, not the legacy lowercase `scoring_tier` alias.
 - A GPU cost record uses `hardware_class = SINGLE_GPU`, names exactly one GPU, and explicitly attests `h100_equivalent_or_less = true`.
 - Real-scale cost requires non-negative finite wall time, peak memory, and bytes read plus a non-empty measurement rationale; booleans are not numeric measurements.
 - An authoring record may describe failure faithfully; only `review-ready` and `publish` stages demand success.
